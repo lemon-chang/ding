@@ -1,0 +1,30 @@
+
+  app:
+    name: "dingding"
+    mode: "dev"
+    port: 18888
+    version: "v0.0.1"
+    start_time: "2020-07-01"
+    machine_id: 1
+    #测试数据库
+  mysql:
+    host: "121.43.119.224"
+    port: "3306"
+    user: "root"
+    password: "18737480171..Yy"
+    dbname: "dingding"
+    max_open_conns: 200
+    max_idle_conns: 50
+  redis:
+    db: 2
+    addr: 121.43.119.224:6379
+    password: "18737480171..Yy"
+  #  正式数据库
+  log:
+    level: "info"
+    filename: "web_app.log"
+    max_size: 200
+    max_age: 30
+    max_backups: 7
+  auth:
+    jwt_expire: 8760

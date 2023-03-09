@@ -57,6 +57,7 @@ type DingUser struct {
 	Title               string     `json:"title"` //职位
 	JianShuAddr         string     `json:"jianshu_addr"`
 	BlogAddr            string     `json:"blog_addr"`
+	AuthToken           string     `json:"auth_token" gorm:"-"`
 	DingToken           `json:"ding_token" gorm:"-"`
 	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
 	BlogArticleURL      Strs `gorm:"type:longtext" json:"blog_article_url"`
@@ -91,7 +92,7 @@ func (d *DingUser) Login() (user *DingUser, err error) {
 		zap.L().Debug("JWT生成错误")
 		return
 	}
-	user.Token = token
+	user.AuthToken = token
 	return user, err
 }
 func encryptPassword(oPassword string) string {
@@ -109,8 +110,8 @@ func Login(user *DingUser) (err error) {
 		return result.Error
 	}
 	//如果到了这里还没有结束的话，那就说明该用户至少是存在的，于是我们解析一下密码
-
-	password := encryptPassword(opassword)
+	//password := encryptPassword(opassword)
+	password := opassword
 	//拿到解析后的密码，我们看看是否正确
 	if password != user.Password {
 		return ErrorInvalidPassword
@@ -590,13 +591,9 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 					Scale:  1,
 				}).Do(ctx)
 			username, _ := c.Get(global.CtxUserNameKey)
-			if err := ioutil.WriteFile(fmt.Sprintf("./Screenshot_%s.png", username), buf, 0644); err != nil {
-				print(err)
-			}
-			log.Println("图片写入完成")
-
+			err = ioutil.WriteFile(fmt.Sprintf("./Screenshot_%s.png", username), buf, 0644)
 			if err != nil {
-				return err
+				zap.L().Error("二维码写入失败", zap.Error(err))
 			}
 			return nil
 		}),
@@ -641,10 +638,11 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 			return nil
 		}),
 	); err != nil {
-		log.Fatal(err)
+		zap.L().Error("使用chromedp失败")
+		return nil, "", "", err
 	}
 	if &d == nil {
-		return buf, "", "", err
+		return nil, "", "", err
 	}
 	return buf, d.Result.ChatId, d.Result.Title, err
 }

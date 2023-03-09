@@ -34,14 +34,14 @@ func SetupDing(System *gin.RouterGroup) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
-		User.GET("getQRCode", ding.GetQRCode)
+		User.GET("getQRCode", ding.GetQRCode) //获取群聊基本信息已经群成员id
 	}
 	Robot := System.Group("robot")
 	{
-		Robot.POST("/addRobot", ding.AddRobot)       //将钉钉用户导入到数据库中
-		Robot.POST("/removeRobot", ding.RemoveRobot) // 更新用户的博客和简书地址
-		Robot.POST("/updateRobot", ding.UpdateRobot) // 查询所有用户信息
-		Robot.GET("/getRobots", ding.GetRobots)      //获取机器人列表
+		Robot.POST("/addRobot", ding.AddRobot)
+		Robot.POST("/removeRobot", ding.RemoveRobot)
+		Robot.POST("/updateRobot", ding.AddRobot) //更新机器人直接使用
+		Robot.GET("/getRobots", ding.GetRobots)
 		//Robot.POST("/send", ding.Send)
 	}
 

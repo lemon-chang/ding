@@ -15,6 +15,8 @@ import (
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -36,18 +38,19 @@ var (
 )
 
 type DingRobot struct {
-	RobotId            string     `gorm:"primaryKey;foreignKey:RobotId" json:"robot_id"` //机器人的token
-	Type               string     `json:"type"`                                          //机器人类型
-	TypeDetail         string     `json:"type_detail"`
-	ChatBotUserId      string     `json:"chat_bot_user_id"`
-	Secret             string     `json:"secret"`
-	DingUserID         string     `json:"ding_user_id"`
-	DingUsers          []DingUser `json:"ding_users" gorm:"many2many:user_robot"` //机器人@多个人，一个人可以被多个机器人@
-	UserName           string     `json:"user_name"`
-	ChatId             string     `json:"chat_id"`
-	OpenConversationID string     `json:"open_conversation_id"`
-	Tasks              []Task     `gorm:"foreignKey:RobotId;references:RobotId"` //机器人拥有多个任务
-	Name               string     `json:"name"`
+	RobotId            string         `gorm:"primaryKey;foreignKey:RobotId" json:"robot_id"` //机器人的token
+	Deleted            gorm.DeletedAt `json:"deleted"`                                       //软删除字段
+	Type               string         `json:"type"`                                          //机器人类型，1为企业内部机器人，2为自定义webhook机器人
+	TypeDetail         string         `json:"type_detail"`                                   //具体机器人类型
+	ChatBotUserId      string         `json:"chat_bot_user_id"`                              //加密的机器人id，该字段无用
+	Secret             string         `json:"secret"`                                        //如果是自定义成机器人， 则存在此字段
+	DingUserID         string         `json:"ding_user_id"`                                  // 机器人所属用户id
+	UserName           string         `json:"user_name"`                                     //机器人所属用户名
+	DingUsers          []DingUser     `json:"ding_users" gorm:"many2many:user_robot"`        //机器人@多个人，一个人可以被多个机器人@
+	ChatId             string         `json:"chat_id"`                                       //机器人所在的群聊chatId
+	OpenConversationID string         `json:"open_conversation_id"`                          //机器人所在的群聊openConversationID
+	Tasks              []Task         `gorm:"foreignKey:RobotId;references:RobotId"`         //机器人拥有多个任务
+	Name               string         `json:"name"`                                          //机器人的名称
 	DingToken          `json:"ding_token" gorm:"-"`
 }
 
@@ -85,6 +88,7 @@ type ResponseSendMessage struct {
 }
 
 func (r *DingRobot) AddDingRobot() (err error) {
+
 	err = global.GLOAB_DB.Create(r).Error
 	return
 }
@@ -93,8 +97,10 @@ func (r *DingRobot) RemoveRobot() (err error) {
 	return
 }
 
-func (r *DingRobot) UpdateRobot() (err error) {
-	err = global.GLOAB_DB.Updates(r).Error
+func (r *DingRobot) CreateOrUpdateRobot() (err error) {
+	err = global.GLOAB_DB.Clauses(clause.OnConflict{
+		UpdateAll: true,
+	}).Create(r).Error
 	return
 }
 func (r *DingRobot) GetRobotByRobotId() (robot DingRobot, err error) {
@@ -716,7 +722,8 @@ func HandleSpec(p *ParamCronSend) (spec, detailTimeForUser string, err error) {
 }
 
 //获取机器人所在的群聊的userIdList ，前提是获取到OpenConversationId，获取到OpenConverstaionId的前提是获取到二维码
-func (r *DingRobot) GetUserIds(access_token, OpenConversationId string) (userIds []string, _err error) {
+func (r *DingRobot) GetGroupUserIds() (userIds []string, _err error) {
+	//所需参数access_token, OpenConversationId string
 	olduserIds := []*string{}
 	client, _err := createClient()
 	if _err != nil {

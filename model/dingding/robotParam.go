@@ -5,15 +5,10 @@ import (
 )
 
 type ParamAddRobot struct {
-	Type               string     `json:"type"`     //机器人类型
-	RobotId            string     `json:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
-	ChatBotUserId      string     `json:"chat_bot_user_id"`
-	Secret             string     `json:"secret"`
-	DingUsers          []DingUser `json:"ding_users"`
-	UserName           string     `json:"user_name"`
-	ChatId             string     `json:"chat_id"`
-	OpenConversationID string     `json:"open_conversation_id"`
-	Name               string     `json:"name"`
+	Type    string `json:"type"`     //机器人类型
+	RobotId string `json:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
+	Secret  string `json:"secret"`
+	Name    string `json:"name"` //type = 2为自定义webhook的时候，才能自己给机器人起名字
 }
 type ParamRemoveRobot struct {
 	RobotId string `json:"robot_id" binding:"required"`

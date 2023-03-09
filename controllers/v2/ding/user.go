@@ -84,7 +84,7 @@ func LoginHandler(c *gin.Context) {
 	}
 	//2.业务逻辑处理
 	//3.返回响应
-	user, err := (&dingding2.DingUser{}).Login()
+	user, err := (&dingding2.DingUser{Name: "闫佳鹏", Password: p.Password}).Login()
 	if err != nil {
 		response.FailWithMessage("用户登录失败", c)
 	} else {
@@ -95,17 +95,26 @@ func LoginHandler(c *gin.Context) {
 func GetQRCode(c *gin.Context) {
 	buf, ChatID, title, err := (&dingding2.DingUser{}).GetQRCode(c)
 	if err != nil {
-		zap.L().Error("获取二维码错误", zap.Error(err))
-		response.FailWithMessage("获取二维码错误", c)
+		zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
+		response.FailWithMessage("截取二维码和获取群聊基本错误", c)
 	}
+	token, err := (&dingding2.DingToken{}).GetAccessToken()
+	if err != nil {
+		zap.L().Error("获取token失败", zap.Error(err))
+		return
+	}
+	openConversationID := (&dingding2.DingGroup{Token: dingding2.DingToken{Token: token}, ChatID: ChatID}).GetOpenConversationID()
+	userIds, err := (&dingding2.DingRobot{DingToken: dingding2.DingToken{Token: token}, OpenConversationID: openConversationID}).GetGroupUserIds()
 	result := struct {
-		buf    []byte
-		ChatId string
-		Title  string
+		buf     []byte
+		ChatId  string
+		Title   string
+		UserIds []string
 	}{
-		buf:    buf,
-		ChatId: ChatID,
-		Title:  title,
+		buf:     buf,
+		ChatId:  ChatID,
+		Title:   title,
+		UserIds: userIds,
 	}
 	response.OkWithDetailed(result, "获取二维码成功", c)
 }

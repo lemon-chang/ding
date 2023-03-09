@@ -27,4 +27,4 @@
     max_age: 30
     max_backups: 7
   auth:
-    jwt_expire: 8760
+    jwt_expire: 876000000

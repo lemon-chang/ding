@@ -3,8 +3,6 @@ package main
 import (
 	"ding/dao/mysql"
 	"ding/dao/redis"
-	"ding/global"
-	"ding/initialize"
 	"ding/initialize/logger"
 	"ding/routers"
 	"ding/settings"
@@ -40,10 +38,10 @@ func main() {
 		return
 	}
 
-	err = initialize.RegisterTables(global.GLOAB_DB)
-	if err != nil {
-		return
-	}
+	//err = initialize.RegisterTables(global.GLOAB_DB)
+	//if err != nil {
+	//	return
+	//}
 
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {
@@ -69,12 +67,12 @@ func main() {
 	//	zap.L().Debug("重启定时任务成功...")
 	//}
 
-	err = initialize.AttendanceByRobot()
-	if err != nil {
-		zap.L().Error("AttendanceByRobot init fail...")
-		return
-
-	}
+	//err = initialize.AttendanceByRobot()
+	//if err != nil {
+	//	zap.L().Error("AttendanceByRobot init fail...")
+	//	return
+	//
+	//}
 	zap.L().Debug("AttendanceByRobot init success...")
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {

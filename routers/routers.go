@@ -46,7 +46,9 @@ func Setup(mode string) *gin.Engine {
 	//V2.GET("/getAttendances", ding.GetAttendances)
 	System := r.Group("/api/system")
 	system.SetupSystem(System)
+
 	Ding := r.Group("/api/ding")
+	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)
 
 	V2.GET("upload", func(c *gin.Context) {

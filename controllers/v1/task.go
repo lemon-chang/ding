@@ -138,7 +138,7 @@ func ReStartTask(c *gin.Context) {
 	}
 	//数据库中已经更新了，后面需要再跑一边定时任务的逻辑
 	//具体逻辑怎么跑呢？数据库中已经存了后端cron包所需的spec定时规则，我们直接取出来用即可
-	p1 := &dingding.ParamCronSend{}
+	p1 := &dingding.ParamCronTask{}
 	err = global.GLOAB_DB.Model(&task).Preload("msg_texts.at_mobiles").First(p1).Error
 	if err != nil {
 		return

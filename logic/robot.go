@@ -10,16 +10,15 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"strconv"
 	"strings"
 )
 
-func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err error) {
+func HandleSpec(p *dingding.ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""
 	detailTimeForUser = ""
 	n := len(p.DetailTime)
-	if p.RepeateTime == "仅发送一次" {
+	if p.RepeatTime == "仅发送一次" {
 		second := p.DetailTime[n-2:]
 		minute := p.DetailTime[n-5 : n-3]
 		hour := p.DetailTime[n-8 : n-6]
@@ -30,10 +29,10 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
 		detailTimeForUser = "仅在" + p.DetailTime + "发送一次"
 	}
-	if string([]rune(p.RepeateTime)[0:3]) == "周重复" {
+	if string([]rune(p.RepeatTime)[0:3]) == "周重复" {
 		M := map[string]string{"0": "周日", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六"}
 		detailTimeForUser = "周重复 ："
-		weeks := strings.Split(p.RepeateTime, "/")[1:]
+		weeks := strings.Split(p.RepeatTime, "/")[1:]
 		week := ""
 		for i := 0; i < len(weeks); i++ {
 			detailTimeForUser += M[weeks[i]]
@@ -50,14 +49,14 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
 	}
 
-	if string([]rune(p.RepeateTime)[0:3]) == "月重复" {
+	if string([]rune(p.RepeatTime)[0:3]) == "月重复" {
 		var daymap map[int]string
 		daymap = make(map[int]string)
 		for i := 1; i <= 31; i++ {
 			daymap[i] += strconv.Itoa(i) + "号"
 		}
 		//字符串数组
-		days := strings.Split(p.RepeateTime, "/")[1:]
+		days := strings.Split(p.RepeatTime, "/")[1:]
 		detailTimeForUser = "月重复 ："
 		day := ""
 		for i := 0; i < len(days); i++ {
@@ -82,7 +81,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 	return spec, detailTimeForUser, nil
 }
 
-//func Send(c *gin.Context, p *params.ParamCronSend) (err error, task dingding.Task) {
+//func Send(c *gin.Context, p *params.ParamCronTask) (err error, task dingding.Task) {
 //	spec, detailTimeForUser, err := HandleSpec(p)
 //	tid := "0"
 //	uid, err := global.GetCurrentID(c)
@@ -114,7 +113,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //		//	zap.L().Error("通过人名查询电话号码失败", zap.Error(err))
 //		//	return
 //		//}
-//		if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+//		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 //			zap.L().Info("进入即时发送消息模式")
 //			err := d.SendMessage(p)
 //			if err != nil {
@@ -132,7 +131,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //				RobotSecret:       robot.Secret,
 //				DetailTimeForUser: detailTimeForUser, //给用户看的
 //				Spec:              spec,              //cron后端定时规则
-//				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+//				FrontRepateTime:   p.RepeatTime,     // 前端给的原始数据
 //				FrontDetailTime:   p.DetailTime,
 //				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 //				//MsgLink:           p.MsgLink,
@@ -167,7 +166,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //				RobotSecret:       robot.Secret,      //机器人Secret
 //				DetailTimeForUser: detailTimeForUser, //给用户看的
 //				Spec:              spec,              //cron后端定时规则
-//				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+//				FrontRepateTime:   p.RepeatTime,     // 前端给的原始数据
 //				FrontDetailTime:   p.DetailTime,
 //				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 //				//MsgLink:           p.MsgLink,
@@ -181,7 +180,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", user.Name, robot.Title, p.DetailTime))
 //		}
 //	} else if p.MsgLink.Msgtype == "link" {
-//		if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+//		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 //			zap.L().Info("进入即时发送消息模式")
 //			err := d.SendMessage(p)
 //			if err != nil {
@@ -221,7 +220,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //				RobotSecret:       robot.Secret,      //机器人Secret
 //				DetailTimeForUser: detailTimeForUser, //给用户看的
 //				Spec:              spec,              //cron后端定时规则
-//				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+//				FrontRepateTime:   p.RepeatTime,     // 前端给的原始数据
 //				FrontDetailTime:   p.DetailTime,
 //				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 //				//MsgLink:           p.MsgLink,
@@ -240,7 +239,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //		//	zap.L().Error("通过人名查询电话号码失败", zap.Error(err))
 //		//	return
 //		//}
-//		//if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+//		//if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 //		//	zap.L().Info("进入即时发送消息模式")
 //		//	err := d.SendMessage(p)
 //		//	if err != nil {
@@ -260,7 +259,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //		//		RobotSecret:       robot.Secret,
 //		//		DetailTimeForUser: detailTimeForUser, //给用户看的
 //		//		Spec:              spec,              //cron后端定时规则
-//		//		FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+//		//		FrontRepateTime:   p.RepeatTime,     // 前端给的原始数据
 //		//		FrontDetailTime:   p.DetailTime,
 //		//		MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 //		//		//MsgLink:           p.MsgLink,
@@ -296,7 +295,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //		//		RobotSecret:       robot.Secret,      //机器人Secret
 //		//		DetailTimeForUser: detailTimeForUser, //给用户看的
 //		//		Spec:              spec,              //cron后端定时规则
-//		//		FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+//		//		FrontRepateTime:   p.RepeatTime,     // 前端给的原始数据
 //		//		FrontDetailTime:   p.DetailTime,
 //		//		MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 //		//		//MsgLink:           p.MsgLink,
@@ -320,7 +319,7 @@ func HandleSpec(p *dingding.ParamCronSend) (spec, detailTimeForUser string, err 
 //}
 
 //关闭后重新开启定时任务，之前更新的deleted_at字段，现在需要更新task_id字段
-func ReStart(c *gin.Context, p *dingding.ParamCronSend, oldTask dingding.Task) (err error, task dingding.Task) {
+func ReStart(c *gin.Context, p *dingding.ParamCronTask, oldTask dingding.Task) (err error, task dingding.Task) {
 	spec, detailTimeForUser, err := HandleSpec(p)
 	tid := "0"
 	user_id, err := global.GetCurrentUserId(c)
@@ -367,7 +366,7 @@ func ReStart(c *gin.Context, p *dingding.ParamCronSend, oldTask dingding.Task) (
 		//把tele1中的所有字符串，赋值给finalTele
 		p.MsgText.At.AtMobiles = finalTele
 	}
-	if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+	if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 		zap.L().Info("进入即时发送消息模式")
 		err := d.SendMessage(p)
 		if err != nil {
@@ -382,10 +381,10 @@ func ReStart(c *gin.Context, p *dingding.ParamCronSend, oldTask dingding.Task) (
 			UserId:            user.UserId,
 			RobotId:           robot.RobotId,
 			RobotName:         robot.Name,
-			RobotSecret:       robot.Secret,
+			Secret:            robot.Secret,
 			DetailTimeForUser: detailTimeForUser, //给用户看的
 			Spec:              spec,              //cron后端定时规则
-			FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+			FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 			FrontDetailTime:   p.DetailTime,
 			MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 			//MsgLink:           p.MsgLink,
@@ -413,9 +412,6 @@ func ReStart(c *gin.Context, p *dingding.ParamCronSend, oldTask dingding.Task) (
 		}
 		//把定时任务添加到数据库中
 		task := dingding.Task{
-			Model: gorm.Model{
-				ID: oldTask.ID,
-			},
 			TaskID: tid, //我们只用更新task_id这一个字段就可以了
 		}
 		username, _ := c.Get(global.CtxUserNameKey)

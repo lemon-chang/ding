@@ -25,7 +25,7 @@ func SetupDing(System *gin.RouterGroup) {
 	}
 	User := System.Group("user")
 	{
-		User.POST("ImportDingUserData", ding.ImportDingUserData) //将钉钉用户导入到数据库中
+		//User.POST("ImportDingUserData", ding.ImportDingUserData) //将钉钉用户导入到数据库中
 		User.POST("UpdateDingUserAddr", ding.UpdateDingUserAddr) // 更新用户的博客和简书地址
 		User.GET("GetAllUsers", ding.SelectAllUsers)             // 查询所有用户信息
 		User.GET("GetAllJinAndBlog", ding.FindAllJinAndBlog)
@@ -39,10 +39,12 @@ func SetupDing(System *gin.RouterGroup) {
 	Robot := System.Group("robot")
 	{
 		Robot.POST("/addRobot", ding.AddRobot)
-		Robot.POST("/removeRobot", ding.RemoveRobot)
-		Robot.POST("/updateRobot", ding.AddRobot) //更新机器人直接使用
+		Robot.DELETE("/removeRobot", ding.RemoveRobot)
+		Robot.PUT("/updateRobot", ding.AddRobot) //更新机器人直接使用
+		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
+		Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
 		Robot.GET("/getRobots", ding.GetRobots)
-		//Robot.POST("/send", ding.Send)
+		Robot.POST("/cronTask", ding.CronTask)
 	}
 
 }

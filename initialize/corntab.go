@@ -1,4 +1,4 @@
-package utils
+package initialize
 
 import (
 	"ding/global"
@@ -10,10 +10,8 @@ import (
 //		cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor)
 //	return cron.New(cron.WithParser(secondParser), cron.WithChain())
 //}
-func InitCorn()  {
+func InitCorn() {
 	var Gcontab = cron.New(cron.WithSeconds()) //精确到秒
 	global.GLOAB_CORN = Gcontab
 	global.GLOAB_CORN.Start()
 }
-
-

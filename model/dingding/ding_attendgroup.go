@@ -816,7 +816,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info("开始封装发送信息参数")
-			pSend := &ParamCronSend{
+			pSend := &ParamCronTask{
 				MsgText: common.MsgText{
 					At: common.At{IsAtAll: false},
 					Text: common.Text{
@@ -935,7 +935,7 @@ func SundayLeaveExec(startWeek int, r *DingRobot) {
 		deptAveCount := v.Score
 		message += fmt.Sprintf("%v. %v请假总次数为: %v, 平均请假次数为: %v\n", i+1, deptName, deptCount, deptAveCount)
 	}
-	pSend := &ParamCronSend{
+	pSend := &ParamCronTask{
 		MsgText: common.MsgText{
 			At: common.At{IsAtAll: false},
 			Text: common.Text{
@@ -969,7 +969,7 @@ func SundayLateExec(startWeek int, r *DingRobot) {
 		message += fmt.Sprintf("%v. %v迟到总次数为: %v, 平均迟到次数为: %v\n", i+1, deptName, deptCount, deptAveCount)
 	}
 	// 要发送的信息
-	pSend := &ParamCronSend{
+	pSend := &ParamCronTask{
 		MsgText: common.MsgText{
 			At: common.At{IsAtAll: false},
 			Text: common.Text{
@@ -1090,7 +1090,7 @@ func DeptFirstShowUpMorning(p *params.ParamGetDeptFirstShowUpMorning) (err error
 		d := DingRobot{
 			RobotId: utils.TestRobotToken,
 		}
-		pSend := &ParamCronSend{
+		pSend := &ParamCronTask{
 			MsgText: common.MsgText{
 				At: common.At{IsAtAll: true},
 				Text: common.Text{
@@ -1136,7 +1136,7 @@ func DeptFirstShowUpMorning(p *params.ParamGetDeptFirstShowUpMorning) (err error
 	}
 
 	AfternoonEntryID, err := global.GLOAB_CORN.AddFunc(utils.SpecAfternoon, CronTask)
-	task.ID = 0
+
 	task.TaskName = "下午推送各部门最早出勤人员"
 	task.Spec = utils.SpecAfternoon
 	task.TaskID = strconv.Itoa(int(AfternoonEntryID))
@@ -1146,7 +1146,7 @@ func DeptFirstShowUpMorning(p *params.ParamGetDeptFirstShowUpMorning) (err error
 	}
 
 	EveningEntryID, err := global.GLOAB_CORN.AddFunc(utils.SpecEvening, CronTask)
-	task.ID = 0
+
 	task.Spec = utils.SpecEvening
 	task.TaskName = "晚上推送各部门最早出勤人员"
 	task.TaskID = strconv.Itoa(int(EveningEntryID))

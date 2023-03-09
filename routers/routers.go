@@ -57,7 +57,6 @@ func Setup(mode string) *gin.Engine {
 	})
 	{
 		V1.GET("/", v1.WelcomeHandler)
-
 	}
 	//注册业务路由
 	V1.Use(middlewares.JWTAuthMiddleware()) //中间件是会把路由改变的

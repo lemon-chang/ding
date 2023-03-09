@@ -95,7 +95,66 @@ func AddRobot(c *gin.Context) {
 	}
 
 }
-
+func GetRobotDetailByRobotId(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if UserId == "" || err != nil {
+		response.ResponseError(c, response.CodeLoginEror)
+		return
+	}
+	//1.获取参数和参数校验
+	var p *dingding.ParamGetRobotBase
+	err = c.ShouldBindQuery(&p)
+	if err != nil {
+		zap.L().Error("Add Robot invaild param", zap.Error(err))
+		errs, ok := err.(validator.ValidationErrors)
+		if !ok {
+			response.ResponseError(c, response.CodeInvalidParam)
+			return
+		}
+		response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
+		return
+	}
+	//说明插入的内部机器人
+	dingRobot := &dingding.DingRobot{
+		RobotId: p.RobotId,
+	}
+	err = global.GLOAB_DB.Where("robot_id = ? and ding_user_id = ?", p.RobotId, UserId).Preload("DingUsers").Preload("Tasks").First(dingRobot).Error
+	if err != nil {
+		zap.L().Error("通过机器人id和所属用户id查询机器人基本信息失败", zap.Error(err))
+		response.FailWithMessage("获取机器人信息失败", c)
+	} else {
+		response.OkWithDetailed(dingRobot, "获取机器人信息成功", c)
+	}
+}
+func GetRobotBaseList(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if UserId == "" || err != nil {
+		response.ResponseError(c, response.CodeLoginEror)
+		return
+	}
+	//1.获取参数和参数校验
+	var p *dingding.ParamGetRobotListBase
+	err = c.ShouldBindQuery(&p)
+	if err != nil {
+		zap.L().Error("Add Robot invaild param", zap.Error(err))
+		errs, ok := err.(validator.ValidationErrors)
+		if !ok {
+			response.ResponseError(c, response.CodeInvalidParam)
+			return
+		}
+		response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
+		return
+	}
+	//说明插入的内部机器人
+	var dingRobotList []dingding.DingRobot
+	err = global.GLOAB_DB.Where("ding_user_id = ?", UserId).Find(&dingRobotList).Error
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("获取用户%v拥有的所有机器人列表基本信息失败", UserId), zap.Error(err))
+		response.FailWithMessage("获取机器人列表基本信息失败", c)
+	} else {
+		response.OkWithDetailed(dingRobotList, "获取机器人列表基本信息失败", c)
+	}
+}
 func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
 	if err := c.ShouldBindJSON(&p); err != nil {
@@ -108,7 +167,7 @@ func RemoveRobot(c *gin.Context) {
 		response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
 		return
 	}
-	err := (&dingding.DingRobot{}).RemoveRobot()
+	err := (&dingding.DingRobot{RobotId: p.RobotId}).RemoveRobot()
 	if err != nil {
 		response.FailWithMessage("移除机器人失败", c)
 	} else {
@@ -163,5 +222,28 @@ func UpdateRobot(c *gin.Context) {
 		response.FailWithMessage("更新机器人失败", c)
 	} else {
 		response.OkWithDetailed(dingRobot, "更新机器人成功", c)
+	}
+}
+
+func CronTask(c *gin.Context) {
+	var p *dingding.ParamCronTask
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err, task := (&dingding.DingRobot{}).CronSend(c, p)
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		UserId = ""
+	}
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	if err != nil {
+		CurrentUser = dingding.DingUser{}
+	}
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+		response.FailWithMessage("发送定时任务失败", c)
+	} else {
+		response.OkWithDetailed(task, "发送定时任务成功", c)
 	}
 }

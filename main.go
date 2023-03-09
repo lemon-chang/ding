@@ -3,6 +3,8 @@ package main
 import (
 	"ding/dao/mysql"
 	"ding/dao/redis"
+	"ding/global"
+	"ding/initialize"
 	"ding/initialize/logger"
 	"ding/routers"
 	"ding/settings"
@@ -30,7 +32,7 @@ func main() {
 	//初始化连接飞书
 	//global.InitFeishu()
 	//初始化corn定时器
-	//utils.InitCorn()
+	initialize.InitCorn()
 	//初始化链接mysql,刚好使用一下gorm，没有用到连表查询，所以比较简单
 	if err := mysql.Init(settings.Conf.MySQLConfig); err != nil {
 		fmt.Printf("init mysql failed ,err:%v\n", err)
@@ -38,10 +40,10 @@ func main() {
 		return
 	}
 
-	//err = initialize.RegisterTables(global.GLOAB_DB)
-	//if err != nil {
-	//	return
-	//}
+	err = initialize.RegisterTables(global.GLOAB_DB)
+	if err != nil {
+		return
+	}
 
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {

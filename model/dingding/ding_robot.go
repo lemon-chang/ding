@@ -68,14 +68,10 @@ func (r *DingRobot) PingRobot() (err error) {
 		zap.L().Error("测试机器人发送消息失败，机器人id或者secret为空")
 		return
 	}
-	d := DingRobot{
-		RobotId: robot.RobotId,
-		Secret:  robot.Secret,
-	}
-	p := &ParamCronSend{}
+	p := &ParamCronTask{}
 	p.MsgText.Msgtype = "text"
 	p.MsgText.Text.Content = "测试"
-	err = d.SendMessage(p)
+	err = robot.SendMessage(p)
 	if err != nil {
 		zap.L().Error("测试机器人发送消息失败", zap.Error(err))
 		return
@@ -107,67 +103,41 @@ func (r *DingRobot) GetRobotByRobotId() (robot DingRobot, err error) {
 	err = global.GLOAB_DB.Where("robot_id = ?", r.RobotId).First(&robot).Error
 	return
 }
-func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task Task) {
+func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	spec, detailTimeForUser, err := HandleSpec(p)
 	tid := "0"
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
 		UserId = ""
 	}
-
 	CurrentUser, err := (&DingUser{UserId: UserId}).GetUserByUserId()
 	if err != nil {
 		CurrentUser = DingUser{}
 	}
-
 	robot, err := (&DingRobot{RobotId: p.RobotId}).GetRobotByRobotId()
 	if err != nil {
 		zap.L().Error("通过机器人的robot_id获取机器人失败", zap.Error(err))
 	}
 	//到了这里就说明这个用户有这个小机器人
-	d := DingRobot{
-		RobotId: p.RobotId,
-		Secret:  robot.Secret,
-	}
+
 	//crontab := cron.New(cron.WithSeconds()) //精确到秒
 	//spec := "* 30 22 * * ?" //cron表达式，每五秒一次
 	if p.MsgText.Msgtype == "text" {
-		//err = AtMobiles(p, &robot, &user)
-		//if err != nil {
-		//	zap.L().Error("通过人名查询电话号码失败", zap.Error(err))
-		//	return
-		//}
-		if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 			zap.L().Info("进入即时发送消息模式")
-			err = d.SendMessage(p)
+			err = robot.SendMessage(p)
 			if err != nil {
 				return err, Task{}
 			} else {
 				zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, robot.Name))
 			}
 			//定时任务
-			task = Task{
-				TaskID:            tid,
-				TaskName:          p.TaskName,
-				UserId:            CurrentUser.UserId,
-				UserName:          CurrentUser.Name,
-				RobotId:           robot.RobotId,
-				RobotName:         robot.Name,
-				RobotSecret:       robot.Secret,
-				DetailTimeForUser: detailTimeForUser, //给用户看的
-				Spec:              spec,              //cron后端定时规则
-				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
-				FrontDetailTime:   p.DetailTime,
-				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				//MsgLink:           p.MsgLink,
-				//MsgMarkDown:       p.MsgMarkDown,
-			}
 			return err, task
 		} else { //我要做定时任务
 			tasker := func() {}
 			zap.L().Info("进入定时任务模式")
 			tasker = func() {
-				err := d.SendMessage(p)
+				err := robot.SendMessage(p)
 				if err != nil {
 					return
 				} else {
@@ -188,10 +158,10 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 				UserName:          CurrentUser.Name,
 				RobotId:           robot.RobotId,
 				RobotName:         robot.Name,
-				RobotSecret:       robot.Secret,
+				Secret:            robot.Secret,
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
-				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 				FrontDetailTime:   p.DetailTime,
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 				//MsgLink:           p.MsgLink,
@@ -205,9 +175,9 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, robot.Name, p.DetailTime))
 		}
 	} else if p.MsgLink.Msgtype == "link" {
-		if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 			zap.L().Info("进入即时发送消息模式")
-			err := d.SendMessage(p)
+			err := robot.SendMessage(p)
 			if err != nil {
 				return err, Task{}
 			} else {
@@ -221,10 +191,10 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 				UserName:          CurrentUser.Name,
 				RobotId:           robot.RobotId,
 				RobotName:         robot.Name,
-				RobotSecret:       robot.Secret,
+				Secret:            robot.Secret,
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
-				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 				FrontDetailTime:   p.DetailTime,
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 				//MsgLink:           p.MsgLink,
@@ -235,7 +205,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 			tasker := func() {}
 			zap.L().Info("进入定时任务模式")
 			tasker = func() {
-				err := d.SendMessage(p)
+				err := robot.SendMessage(p)
 				if err != nil {
 					return
 				} else {
@@ -256,10 +226,10 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 				UserName:          CurrentUser.Name,
 				RobotId:           robot.RobotId,
 				RobotName:         robot.Name,
-				RobotSecret:       robot.Secret,
+				Secret:            robot.Secret,
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
-				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 				FrontDetailTime:   p.DetailTime,
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 				//MsgLink:           p.MsgLink,
@@ -278,9 +248,9 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 			zap.L().Error("通过人名查询电话号码失败", zap.Error(err))
 			return
 		}
-		if (p.RepeateTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
+		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 			zap.L().Info("进入即时发送消息模式")
-			err := d.SendMessage(p)
+			err := robot.SendMessage(p)
 			if err != nil {
 				return err, Task{}
 			} else {
@@ -294,10 +264,10 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 				UserName:          CurrentUser.Name,
 				RobotId:           robot.RobotId,
 				RobotName:         robot.Name,
-				RobotSecret:       robot.Secret,
+				Secret:            robot.Secret,
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
-				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 				FrontDetailTime:   p.DetailTime,
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 				//MsgLink:           p.MsgLink,
@@ -308,7 +278,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 			tasker := func() {}
 			zap.L().Info("进入定时任务模式")
 			tasker = func() {
-				err := d.SendMessage(p)
+				err := robot.SendMessage(p)
 				if err != nil {
 					return
 				} else {
@@ -329,10 +299,10 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 				UserName:          CurrentUser.Name,
 				RobotId:           robot.RobotId,
 				RobotName:         robot.Name,
-				RobotSecret:       robot.Secret,
+				Secret:            robot.Secret,
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
-				FrontRepateTime:   p.RepeateTime,     // 前端给的原始数据
+				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 				FrontDetailTime:   p.DetailTime,
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 				//MsgLink:           p.MsgLink,
@@ -355,7 +325,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronSend) (err error, task 
 
 // SendMessage Function to send message
 //goland:noinspection GoUnhandledErrorResult
-func (t *DingRobot) SendMessage(p *ParamCronSend) error {
+func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 	b := []byte{}
 	//我们需要在文本，链接，markdown三种其中的一个
 	if p.MsgText.Msgtype == "text" {
@@ -446,7 +416,7 @@ func (t *DingRobot) SendMessage(p *ParamCronSend) error {
 
 	var resp *http.Response
 	var err error
-	if p.Type == "1" || t.Secret == "" {
+	if t.Type == "1" || t.Secret == "" {
 		resp, err = http.Post(t.getURLV2(), "application/json", bytes.NewBuffer(b))
 	} else {
 		resp, err = http.Post(t.getURL(), "application/json", bytes.NewBuffer(b))
@@ -654,11 +624,11 @@ func SendSessionWebHook(p *ParamReveiver) (err error) {
 	//	}
 	return nil
 }
-func HandleSpec(p *ParamCronSend) (spec, detailTimeForUser string, err error) {
+func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""
 	detailTimeForUser = ""
 	n := len(p.DetailTime)
-	if p.RepeateTime == "仅发送一次" {
+	if p.RepeatTime == "仅发送一次" {
 		second := p.DetailTime[n-2:]
 		minute := p.DetailTime[n-5 : n-3]
 		hour := p.DetailTime[n-8 : n-6]
@@ -669,10 +639,10 @@ func HandleSpec(p *ParamCronSend) (spec, detailTimeForUser string, err error) {
 		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
 		detailTimeForUser = "仅在" + p.DetailTime + "发送一次"
 	}
-	if string([]rune(p.RepeateTime)[0:3]) == "周重复" {
+	if string([]rune(p.RepeatTime)[0:3]) == "周重复" {
 		M := map[string]string{"0": "周日", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六"}
 		detailTimeForUser = "周重复 ："
-		weeks := strings.Split(p.RepeateTime, "/")[1:]
+		weeks := strings.Split(p.RepeatTime, "/")[1:]
 		week := ""
 		for i := 0; i < len(weeks); i++ {
 			detailTimeForUser += M[weeks[i]]
@@ -689,14 +659,14 @@ func HandleSpec(p *ParamCronSend) (spec, detailTimeForUser string, err error) {
 		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
 	}
 
-	if string([]rune(p.RepeateTime)[0:3]) == "月重复" {
+	if string([]rune(p.RepeatTime)[0:3]) == "月重复" {
 		var daymap map[int]string
 		daymap = make(map[int]string)
 		for i := 1; i <= 31; i++ {
 			daymap[i] += strconv.Itoa(i) + "号"
 		}
 		//字符串数组
-		days := strings.Split(p.RepeateTime, "/")[1:]
+		days := strings.Split(p.RepeatTime, "/")[1:]
 		detailTimeForUser = "月重复 ："
 		day := ""
 		for i := 0; i < len(days); i++ {

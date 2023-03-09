@@ -19,7 +19,7 @@ func Reboot() (err error) {
 	tid := -1
 	tasker := func() {}
 	for _, task := range tasks {
-		p := dingding2.ParamCronSend{
+		p := dingding2.ParamCronTask{
 			MsgText:     task.MsgText,
 			MsgLink:     task.MsgLink,
 			MsgMarkDown: task.MsgMarkDown,
@@ -27,7 +27,7 @@ func Reboot() (err error) {
 		}
 		d := dingding2.DingRobot{
 			RobotId: task.RobotId,
-			Secret:  task.RobotSecret,
+			Secret:  task.Secret,
 		}
 		tasker = func() {
 			err := d.SendMessage(&p)

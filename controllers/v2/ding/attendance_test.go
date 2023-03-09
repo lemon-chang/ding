@@ -1,9 +1,9 @@
 package ding
 
 import (
+	"ding/initialize"
 	v2 "ding/logic/v2"
 	"ding/model/params"
-	"ding/utils"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +14,7 @@ func TestDeptFirstShowUpMorning(t *testing.T) {
 		GroupID: 952645016,
 		Token:   "427528104bfe34ca8cfcd29553274d01",
 	}
-	utils.InitCorn()
+	initialize.InitCorn()
 	v2.DeptFirstShowUpMorning(p)
 }
 func TestTimeTransFrom(t *testing.T) {

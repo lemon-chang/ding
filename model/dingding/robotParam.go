@@ -2,6 +2,7 @@ package dingding
 
 import (
 	"ding/model/common"
+	"ding/model/common/request"
 )
 
 type ParamAddRobot struct {
@@ -9,6 +10,13 @@ type ParamAddRobot struct {
 	RobotId string `json:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
 	Secret  string `json:"secret"`
 	Name    string `json:"name"` //type = 2为自定义webhook的时候，才能自己给机器人起名字
+}
+type ParamGetRobotBase struct {
+	RobotId string `json:"robot_id" form:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
+}
+type ParamGetRobotListBase struct {
+	request.PageInfo
+	UserId string `json:"user_id" form:"user_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
 }
 type ParamRemoveRobot struct {
 	RobotId string `json:"robot_id" binding:"required"`
@@ -18,13 +26,12 @@ type ParamPingRobot struct {
 	RobotId string `binding:"required" json:"robot_id"`
 }
 
-type ParamCronSend struct {
-	Type        string             `json:"type"`
+type ParamCronTask struct {
 	MsgText     common.MsgText     `json:"msg_text"`
 	MsgLink     common.MsgLink     `json:"msg_link"`
 	MsgMarkDown common.MsgMarkDown `json:"msg_mark_down"`
 	RobotId     string             `json:"robot_id" binding:"required"` //使用机器人的robot_id来确定机器人
-	RepeateTime string             `json:"repeate_time" `               //前端给的重复频率，仅重复一次，周重复，月重复
+	RepeatTime  string             `json:"repeat_time" `                //前端给的重复频率，仅重复一次，周重复，月重复
 	DetailTime  string             `json:"detail_time"`                 //在给定的重复频率下的具体执行时间
 	TaskName    string             `json:"task_name"`                   //给这个任务起一个名字
 }

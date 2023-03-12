@@ -1,4 +1,5 @@
 package params
+
 type ParamGetTasks struct {
 	RobotId string `json:"robot_id" binding:"required"`
 }

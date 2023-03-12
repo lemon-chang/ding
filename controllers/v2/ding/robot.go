@@ -3,6 +3,7 @@ package ding
 import (
 	"ding/controllers"
 	"ding/global"
+	"ding/model/common"
 	"ding/model/dingding"
 	"ding/response"
 	"fmt"
@@ -226,12 +227,6 @@ func UpdateRobot(c *gin.Context) {
 }
 
 func CronTask(c *gin.Context) {
-	var p *dingding.ParamCronTask
-	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-	}
-	err, task := (&dingding.DingRobot{}).CronSend(c, p)
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
 		UserId = ""
@@ -240,6 +235,13 @@ func CronTask(c *gin.Context) {
 	if err != nil {
 		CurrentUser = dingding.DingUser{}
 	}
+	var p *dingding.ParamCronTask
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err, task := (&dingding.DingRobot{}).CronSend(c, p)
+
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
 		response.FailWithMessage("发送定时任务失败", c)
@@ -247,3 +249,54 @@ func CronTask(c *gin.Context) {
 		response.OkWithDetailed(task, "发送定时任务成功", c)
 	}
 }
+func PingRobot(c *gin.Context) {
+	var p *dingding.ParamCronTask
+	p = &dingding.ParamCronTask{
+		MsgText:    common.MsgText{Text: common.Text{Content: "机器人测试成功"}, At: common.At{}, Msgtype: "text"},
+		RepeatTime: "立即发送",
+	}
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		UserId = ""
+	}
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	if err != nil {
+		CurrentUser = dingding.DingUser{}
+	}
+
+	err, _ = (&dingding.DingRobot{}).CronSend(c, p)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("测试机器人失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+		response.FailWithMessage("发送定时任务失败", c)
+	} else {
+		response.OkWithMessage("发送定时任务成功", c)
+	}
+}
+
+//func StopTask(c *gin.Context) {
+//	UserId, err := global.GetCurrentUserId(c)
+//	if err != nil {
+//		UserId = ""
+//	}
+//	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+//	if err != nil {
+//		CurrentUser = dingding.DingUser{}
+//	}
+//	var p *dingding.ParamStopTask
+//	if err := c.ShouldBindJSON(&p); err != nil {
+//		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+//		response.FailWithMessage("参数错误", c)
+//	}
+//	err, task := (&dingding.DingRobot{}).StopTask(p.TaskID)
+//
+//	if err != nil {
+//		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+//		response.FailWithMessage("发送定时任务失败", c)
+//	} else {
+//		response.OkWithDetailed(task, "发送定时任务成功", c)
+//	}
+//}

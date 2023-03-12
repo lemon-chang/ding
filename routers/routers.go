@@ -63,12 +63,12 @@ func Setup(mode string) *gin.Engine {
 	{
 		//我在send里面对全局的Gcontab进行操作
 
-		V1.POST("/getTasks", v1.GetTasks) //获取到定时任务
+		//V1.POST("/getTasks", v1.GetTasks) //获取到定时任务
 		//一个机器人可以有多个电话号码，一个电话号码可以有多个机器人
 
-		V1.POST("/stopTask", v1.StopTask)       //停止定时任务
-		V1.POST("/removeTask", v1.RemoveTask)   //删除定时任务
-		V1.POST("/reStartTask", v1.ReStartTask) // 恢复定时任务
+		//V1.POST("/stopTask", v1.StopTask) //停止定时任务
+		//V1.POST("/removeTask", v1.RemoveTask)   //删除定时任务
+		//V1.POST("/reStartTask", v1.ReStartTask) // 恢复定时任务
 	}
 
 	r.NoRoute(func(c *gin.Context) {

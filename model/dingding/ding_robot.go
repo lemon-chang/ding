@@ -104,7 +104,11 @@ func (r *DingRobot) GetRobotByRobotId() (robot DingRobot, err error) {
 	return
 }
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
+
 	spec, detailTimeForUser, err := HandleSpec(p)
+	if p.Spec != "" {
+		spec = p.Spec
+	}
 	tid := "0"
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -147,7 +151,9 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			TaskID, err := global.GLOAB_CORN.AddFunc(spec, tasker)
 			tid = strconv.Itoa(int(TaskID))
 			if err != nil {
+				zap.L().Error("定时任务启动失败", zap.Error(err))
 				err = ErrorSpecInvalid
+
 				return err, Task{}
 			}
 			//把定时任务添加到数据库中
@@ -459,6 +465,18 @@ func (t *DingRobot) getURLV2() string {
 	return url
 }
 
+//func (t *DingRobot) StopTask(id string) (err error) {
+//	task := Task{
+//		TaskID: id,
+//	}
+//	taskID, err := mysql.StopTask(task)
+//
+//	if errors.Is(err, mysql.ErrorNotHasTask) {
+//		return mysql.ErrorNotHasTask
+//	}
+//	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
+//	return err
+//}
 func SendSessionWebHook(p *ParamReveiver) (err error) {
 	//	//currentTime := time.Now().Format("15:04:05")         //15:04:05固定写法，可以获取到当前时间的时分秒
 	//	//formatTime, _ := time.Parse("15:04:05", currentTime) //把时间字符串转化成时间格式，时间格式可以直接比较
@@ -628,7 +646,7 @@ func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""
 	detailTimeForUser = ""
 	n := len(p.DetailTime)
-	if p.RepeatTime == "仅发送一次" {
+	if p.RepeatTime == "1" {
 		second := p.DetailTime[n-2:]
 		minute := p.DetailTime[n-5 : n-3]
 		hour := p.DetailTime[n-8 : n-6]

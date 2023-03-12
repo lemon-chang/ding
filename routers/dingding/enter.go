@@ -38,6 +38,7 @@ func SetupDing(System *gin.RouterGroup) {
 	}
 	Robot := System.Group("robot")
 	{
+		Robot.POST("/pingRobot", ding.PingRobot)
 		Robot.POST("/addRobot", ding.AddRobot)
 		Robot.DELETE("/removeRobot", ding.RemoveRobot)
 		Robot.PUT("/updateRobot", ding.AddRobot) //更新机器人直接使用
@@ -45,6 +46,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
 		Robot.GET("/getRobots", ding.GetRobots)
 		Robot.POST("/cronTask", ding.CronTask)
+		//Robot.POST("stopTask", ding.StopTask)
 	}
 
 }

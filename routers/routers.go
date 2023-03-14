@@ -2,7 +2,7 @@ package routers
 
 import (
 	v1 "ding/controllers/v1"
-	v2 "ding/controllers/v2"
+	"ding/controllers/v2/ding"
 	"ding/global"
 	"ding/initialize/logger"
 	"ding/routers/dingding"
@@ -39,7 +39,7 @@ func Setup(mode string) *gin.Engine {
 	V3.POST("lxy", v1.Lxy)
 	//V3.Use(middlewares.JWTAuthMiddleware())
 
-	V3.POST("/outgoing", v2.OutGoing) //outgoing接口是让官方
+	V3.POST("/outgoing", ding.OutGoing) //outgoing接口是让官方
 	//V3.GET("/getAttendances", ding.GetAttendances)
 	System := r.Group("/api/system")
 	system.SetupSystem(System)
@@ -60,9 +60,8 @@ func Setup(mode string) *gin.Engine {
 	{
 		//我在send里面对全局的Gcontab进行操作
 
-		//V3.POST("/getTasks", v1.GetTasks) //获取到定时任务
+		V3.POST("/getTasks", v1.GetTasks) //获取到定时任务
 		//一个机器人可以有多个电话号码，一个电话号码可以有多个机器人
-
 		//V3.POST("/stopTask", v1.StopTask) //停止定时任务
 		//V3.POST("/removeTask", v1.RemoveTask)   //删除定时任务
 		//V3.POST("/reStartTask", v1.ReStartTask) // 恢复定时任务

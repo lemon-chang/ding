@@ -45,8 +45,11 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
 		Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
 		Robot.GET("/getRobots", ding.GetRobots)
-		Robot.POST("/cronTask", ding.CronTask)
-		//Robot.POST("stopTask", ding.StopTask)
+		Robot.POST("/cronTask", ding.CronTask)      //发送定时任务
+		Robot.POST("getTaskList", ding.GetTaskList) //获取定时任务列表
+		Robot.POST("stopTask", ding.StopTask)       //暂停定时任务
+		Robot.DELETE("removeTask", ding.RemoveTask)
+		Robot.POST("reStartTask", ding.ReStartTask)
 	}
 
 }

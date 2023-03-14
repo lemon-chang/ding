@@ -12,6 +12,32 @@ import (
 	"go.uber.org/zap"
 )
 
+func OutGoing(c *gin.Context) {
+	var p dingding.ParamReveiver
+	err := c.ShouldBindJSON(&p)
+	err = c.ShouldBindHeader(&p)
+	if err != nil {
+		zap.L().Error("OutGoing invaild param", zap.Error(err))
+		errs, ok := err.(validator.ValidationErrors)
+		if !ok {
+			response.ResponseError(c, response.CodeInvalidParam)
+			return
+		} else {
+			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
+			return
+		}
+	}
+
+	err = dingding.SendSessionWebHook(&p)
+	if err != nil {
+		zap.L().Error("钉钉机器人回调出错", zap.Error(err))
+		response.ResponseErrorWithMsg(c, response.CodeServerBusy, "钉钉机器人回调出错")
+		return
+	}
+	response.ResponseSuccess(c, "回调成功")
+
+}
+
 //addRobot 添加机器人
 //思路如下：
 //当前登录的用户添加了一个属于自己的机器人
@@ -277,26 +303,79 @@ func PingRobot(c *gin.Context) {
 	}
 }
 
-//func StopTask(c *gin.Context) {
-//	UserId, err := global.GetCurrentUserId(c)
-//	if err != nil {
-//		UserId = ""
-//	}
-//	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
-//	if err != nil {
-//		CurrentUser = dingding.DingUser{}
-//	}
-//	var p *dingding.ParamStopTask
-//	if err := c.ShouldBindJSON(&p); err != nil {
-//		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-//		response.FailWithMessage("参数错误", c)
-//	}
-//	err, task := (&dingding.DingRobot{}).StopTask(p.TaskID)
-//
-//	if err != nil {
-//		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
-//		response.FailWithMessage("发送定时任务失败", c)
-//	} else {
-//		response.OkWithDetailed(task, "发送定时任务成功", c)
-//	}
-//}
+func StopTask(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		UserId = ""
+	}
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	if err != nil {
+		CurrentUser = dingding.DingUser{}
+	}
+	var p *dingding.ParamStopTask
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err = (&dingding.DingRobot{}).StopTask(p.TaskID)
+
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+		response.FailWithMessage("发送定时任务失败", c)
+	} else {
+		response.OkWithMessage("发送定时任务成功", c)
+	}
+}
+func GetTaskList(c *gin.Context) {
+	//UserId, err := global.GetCurrentUserId(c)
+	//if err != nil {
+	//	UserId = ""
+	//}
+	//CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	//if err != nil {
+	//	CurrentUser = dingding.DingUser{}
+	//}
+	var p *dingding.ParamGetTaskList
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("GetTaskList做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	tasks, err := (&dingding.DingRobot{}).GetTaskList(p.RobotId)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("获取定时任务列表失败"), zap.Error(err))
+		response.FailWithMessage("获取定时任务列表失败", c)
+	} else {
+		response.OkWithDetailed(tasks, "获取定时任务列表成功", c)
+	}
+
+}
+func RemoveTask(c *gin.Context) {
+
+	var p *dingding.ParamStopTask
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err := (&dingding.DingRobot{}).RemoveTask(p.TaskID)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("移除定时任务失败"), zap.Error(err))
+		response.FailWithMessage("移除定时任务失败", c)
+	} else {
+		response.OkWithMessage("移除定时任务失败", c)
+	}
+}
+func ReStartTask(c *gin.Context) {
+	var p *dingding.ParamRestartTask
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err := (&dingding.DingRobot{}).RemoveTask(p.TaskID)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
+		response.FailWithMessage("ReStartTask定时任务失败", c)
+	} else {
+		response.OkWithMessage("ReStartTask定时任务失败", c)
+	}
+
+}

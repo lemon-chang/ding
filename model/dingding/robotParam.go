@@ -26,7 +26,19 @@ type ParamPingRobot struct {
 	RobotId string `binding:"required" json:"robot_id"`
 }
 type ParamStopTask struct {
-	TaskID int `json:"task_id"`
+	TaskID string `json:"task_id"`
+}
+type ParamRestartTask struct {
+	TaskID string `json:"task_id"`
+}
+type ParamGetTaskDeatil struct {
+	TaskID string `json:"task_id"`
+}
+type ParamRemoveTask struct {
+	TaskID string `json:"task_id"`
+}
+type ParamGetTaskList struct {
+	RobotId string `json:"robot_id"`
 }
 type ParamCronTask struct {
 	MsgText     common.MsgText     `json:"msg_text"`

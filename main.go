@@ -3,6 +3,7 @@ package main
 import (
 	"ding/dao/mysql"
 	"ding/dao/redis"
+	"ding/global"
 	"ding/initialize"
 	"ding/initialize/logger"
 	"ding/routers"
@@ -39,10 +40,10 @@ func main() {
 		return
 	}
 
-	//err = initialize.RegisterTables(global.GLOAB_DB)
-	//if err != nil {
-	//	return
-	//}
+	err = initialize.RegisterTables(global.GLOAB_DB)
+	if err != nil {
+		return
+	}
 
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {
@@ -59,14 +60,14 @@ func main() {
 	//go utils.Timing(&utils.localTime)
 	//初始化路由
 
-	//err = initialize.Reboot()
-	//if err != nil {
-	//	fmt.Printf("重启定时任务失败,err:%v\n", err)
-	//	zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
-	//
-	//} else {
-	//	zap.L().Debug("重启定时任务成功...")
-	//}
+	err = initialize.Reboot()
+	if err != nil {
+		fmt.Printf("重启定时任务失败,err:%v\n", err)
+		zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
+
+	} else {
+		zap.L().Debug("重启定时任务成功...")
+	}
 
 	//err = initialize.AttendanceByRobot()
 	//if err != nil {

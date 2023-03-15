@@ -9,23 +9,14 @@ type ParamSignUp struct {
 
 // ParamLogin 登录时请求参数
 type ParamLogin struct {
-	Username string `json:"username" binding:"required"`
+	Mobile   string `json:"mobile" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-
-
-
-
-
 type ParamOutGoing struct {
 }
-
 
 type ParamSearchUser struct {
 	RobotId    string `json:"robot_id" binding:"required"`
 	PersonName string `json:"person_name" binding:"required"`
 }
-
-
-

@@ -79,7 +79,7 @@ func (d *DingUser) GetUserByUserId() (user DingUser, err error) {
 
 func (d *DingUser) Login() (user *DingUser, err error) {
 	user = &DingUser{
-		Name:     d.Name,
+		Mobile:   d.Mobile,
 		Password: d.Password,
 	}
 	//此处的Login函数传递的是一个指针类型的数据
@@ -102,7 +102,7 @@ func encryptPassword(oPassword string) string {
 }
 func Login(user *DingUser) (err error) {
 	opassword := user.Password //此处是用户输入的密码，不一定是对的
-	result := global.GLOAB_DB.Where(&DingUser{Name: user.Name}).First(user)
+	result := global.GLOAB_DB.Where(&DingUser{Mobile: user.Mobile}).First(user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return ErrorUserNotExist
 	}
@@ -516,6 +516,7 @@ func (m Strs) Value() (driver.Value, error) {
 
 //获取二维码buf，chatId, title
 func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, err error) {
+	zap.L().Info("进入到了chromedp")
 	d := data{}
 	opts := append(
 		chromedp.DefaultExecAllocatorOptions[:],
@@ -539,11 +540,11 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 		allocCtx,
 		chromedp.WithLogf(log.Printf),
 	)
-	//defer cancel()
+	defer cancel()
 
 	// 创建超时上下文
 	ctx, cancel = context.WithTimeout(ctx, 10*time.Minute)
-	//defer cancel()
+	defer cancel()
 
 	// navigate to a page, wait for an element, click
 
@@ -648,8 +649,8 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 }
 
 func (u *DingUser) GetRobotList() (RobotList []DingRobot, err error) {
-	err = global.GLOAB_DB.Where("user_id = ?", u.UserId).Find(&RobotList).Error
-	err = global.GLOAB_DB.Model(u).Association("DingUsers").Find(&RobotList)
+	//err = global.GLOAB_DB.Where("ding_user_id = ?", u.UserId).Find(&RobotList).Error
+	err = global.GLOAB_DB.Model(u).Association("DingRobots").Find(&RobotList)
 	return
 }
 

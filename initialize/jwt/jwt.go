@@ -13,7 +13,7 @@ var MySecret = []byte("夏天夏天悄悄过去")
 
 type MyClaims struct {
 	UserId   string `json:"user_id"`
-	Username string `json:"username"`
+	Username string `json:"user_name"`
 	jwt.StandardClaims
 }
 

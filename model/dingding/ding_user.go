@@ -553,7 +553,7 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 	// capture entire browser viewport, returning png with quality=90
 	var html string
 
-	if err := chromedp.Run(ctx,
+	err = chromedp.Run(ctx,
 		//打开网页
 		chromedp.Navigate(`https://open-dev.dingtalk.com/apiExplorer?spm=ding_open_doc.document.0.0.20bf4063FEGqWg#/jsapi?api=biz.chat.chooseConversationByCorpId`),
 		//定位登录按钮
@@ -638,8 +638,9 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 			}
 			return nil
 		}),
-	); err != nil {
-		zap.L().Error("使用chromedp失败")
+	)
+	if err != nil {
+		zap.L().Error("使用chromedp失败", zap.Error(err))
 		return nil, "", "", err
 	}
 	if &d == nil {

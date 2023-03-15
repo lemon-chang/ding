@@ -1,11 +1,16 @@
 package ding
 
 import (
+	"context"
 	"ding/controllers"
+	"ding/dao/redis"
+	"ding/global"
 	dingding2 "ding/model/dingding"
 	"ding/model/params"
 	"ding/model/params/ding"
 	"ding/response"
+	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -84,7 +89,7 @@ func LoginHandler(c *gin.Context) {
 	}
 	//2.业务逻辑处理
 	//3.返回响应
-	user, err := (&dingding2.DingUser{Name: "闫佳鹏", Password: p.Password}).Login()
+	user, err := (&dingding2.DingUser{Mobile: p.Mobile, Password: p.Password}).Login()
 	if err != nil {
 		response.FailWithMessage("用户登录失败", c)
 	} else {
@@ -117,4 +122,41 @@ func GetQRCode(c *gin.Context) {
 		UserIds: userIds,
 	}
 	response.OkWithDetailed(result, "获取二维码成功", c)
+}
+func GetAllActiveTask(c *gin.Context) {
+	//先删除所有的任务，然后再重新加载一遍
+	activeTasksKeys, err := global.GLOBAL_REDIS.Keys(context.Background(), fmt.Sprintf("%s*", redis.Perfix+redis.ActiveTask)).Result()
+	if err != nil {
+		zap.L().Error("从redis中获取旧的活跃任务的key失败", zap.Error(err))
+		return
+	}
+	//删除所有的key
+	global.GLOBAL_REDIS.Del(context.Background(), activeTasksKeys...)
+
+	//拿到所有的任务的id
+	entries := global.GLOAB_CORN.Entries()
+	//拿到所有任务的id
+	var entriesInt = make([]int, len(entries))
+	for index, value := range entries {
+		entriesInt[index] = int(value.ID)
+	}
+	// 根据id查询数据库，拿到详细的任务信息，存放到redis中
+	var tasks []dingding2.Task                                         //拿到所有的活跃任务
+	global.GLOAB_DB.Table("tasks").Where("spec != ?", "").Find(&tasks) //查询所有的在线任务
+	//把找到的数据存储到redis中 ，现在先写成手动获取
+	//应该是存放在一个集合里面，集合里面存放着此条任务的所有信息，以id作为标识
+	//哈希特别适合存储对象，所以我们用哈希来存储
+	for _, task := range tasks {
+		taskValue, err := json.Marshal(task) //把对象序列化成为一个json字符串
+		if err != nil {
+			return
+		}
+		err = global.GLOBAL_REDIS.Set(context.Background(), redis.GetTaskKey(task.TaskID), string(taskValue), 0).Err()
+		if err != nil {
+			zap.L().Error(fmt.Sprintf("从mysql获取所有活跃任务存入redis失败，失败任务id：%s，任务名：%s,执行人：%s,对应机器人：%s", task.TaskID, task.TaskName, task.UserName, task.RobotName), zap.Error(err))
+			return
+		}
+	}
+	zap.L().Info("获取所有获取定时任务成功")
+	response.ResponseSuccess(c, "获取所有获取定时任务成功")
 }

@@ -825,7 +825,7 @@ func (t *DingRobot) RemoveTask(taskId string) (err error) {
 	return err
 }
 func (t *DingRobot) GetTaskByID(id string) (task Task, err error) {
-	err = global.GLOAB_DB.Unscoped().First(&task, id).Error
+	err = global.GLOAB_DB.Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").First(&task, id).Error
 	if err != nil {
 		zap.L().Error("通过主键id查询定时任务失败", zap.Error(err))
 		return
@@ -835,7 +835,41 @@ func (t *DingRobot) GetTaskByID(id string) (task Task, err error) {
 func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
 	task, err = t.GetTaskByID(id)
 	//根据这个id主键查询到被删除的数据
-	err = global.GLOAB_DB.Unscoped().Model(&task).Update("deleted_at", nil).Error //这个地方必须加上Unscoped()，否则不报错，但是却无法更新
+	err = global.GLOAB_DB.Unscoped().Model(&task).Update("deleted", nil).Error //这个地方必须加上Unscoped()，否则不报错，但是却无法更新
+	p := ParamCronTask{
+		MsgText:     task.MsgText,
+		MsgLink:     task.MsgLink,
+		MsgMarkDown: task.MsgMarkDown,
+		RobotId:     task.RobotId,
+	}
+	d := DingRobot{
+		RobotId: task.RobotId,
+		Secret:  task.Secret,
+	}
+	tasker := func() {
+		err := d.SendMessage(&p)
+		if err != nil {
+			//zap.L().Error(fmt.Sprintf("恢复任务失败！发送人:%s,对应机器人:%s", username, robotname), zap.Error(err))
+			return
+		} else {
+			//zap.L().Info(fmt.Sprintf("恢复任务成功！发送人:%s,对应机器人:%s", username, robotname))
+		}
+	}
+	//	// 添加定时任务
+	TaskID, err := global.GLOAB_CORN.AddFunc(task.Spec, tasker)
+	if err != nil {
+		//zap.L().Error("项目重启后恢复定时任务失败,失败原因：", zap.Error(err))
+		//zap.L().Error(fmt.Sprintf("该任务所属人：%s,所属机器人：%s,"+
+		//"人物名：%s,任务具体消息:%s,任务具体定时规则：%s", username, robotname, message, detailTimeForUser))
+		return
+	}
+	tid := int(TaskID)
+	oldId := task.TaskID
+	err = global.GLOAB_DB.Table("tasks").Where("task_id = ? ", oldId).Update("task_id", tid).Error
+	if err != nil {
+		//zap.L().Error("重启项目后更新任务id失败", zap.Error(err))
+		return
+	}
 	return
 }
 

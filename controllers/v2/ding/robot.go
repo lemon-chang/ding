@@ -314,16 +314,16 @@ func StopTask(c *gin.Context) {
 	}
 	var p *dingding.ParamStopTask
 	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
+		zap.L().Error("暂停定时任务参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
 	err = (&dingding.DingRobot{}).StopTask(p.TaskID)
 
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
-		response.FailWithMessage("发送定时任务失败", c)
+		zap.L().Error(fmt.Sprintf("暂停定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+		response.FailWithMessage("暂停定时任务失败", c)
 	} else {
-		response.OkWithMessage("发送定时任务成功", c)
+		response.OkWithMessage("暂停定时任务成功", c)
 	}
 }
 func GetTaskList(c *gin.Context) {
@@ -370,12 +370,26 @@ func ReStartTask(c *gin.Context) {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
-	err := (&dingding.DingRobot{}).RemoveTask(p.TaskID)
+	_, err := (&dingding.DingRobot{}).ReStartTask(p.TaskID)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
 		response.FailWithMessage("ReStartTask定时任务失败", c)
 	} else {
-		response.OkWithMessage("ReStartTask定时任务失败", c)
+		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
 
+}
+func GetTaskDetail(c *gin.Context) {
+	var p *dingding.ParamGetTaskDeatil
+	if err := c.ShouldBindQuery(&p); err != nil {
+		zap.L().Error("GetTaskDetail参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	task, err := (&dingding.DingRobot{}).GetTaskByID(p.TaskID)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
+		response.FailWithMessage("ReStartTask定时任务失败", c)
+	} else {
+		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
+	}
 }

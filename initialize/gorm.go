@@ -1,7 +1,7 @@
 package initialize
 
 import (
-	dingding2 "ding/model/dingding"
+	"ding/model/common"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"os"
@@ -10,9 +10,9 @@ import (
 func RegisterTables(db *gorm.DB) (err error) {
 	//err = db.AutoMigrate(&dingding2.DingUser{})
 	//err = db.AutoMigrate(&dingding2.DingRobot{})
-	err = db.AutoMigrate(&dingding2.DingDept{})
+	//err = db.AutoMigrate(&dingding2.DingDept{})
 	//err = db.AutoMigrate(&dingding2.DingAttendGroup{})
-	err = db.AutoMigrate(&dingding2.Task{})
+	//err = db.AutoMigrate(&dingding2.Task{})
 	//err = db.AutoMigrate(&common.MsgText{})
 	//err = db.AutoMigrate(&common.MsgLink{})
 	//err = db.AutoMigrate(&common.MsgMarkDown{})
@@ -20,6 +20,7 @@ func RegisterTables(db *gorm.DB) (err error) {
 	//err = db.AutoMigrate(&common.At{})
 	//err = db.AutoMigrate(&common.Text{})
 	//err = db.AutoMigrate(&common.AtMobile{})
+	err = db.AutoMigrate(&common.AtUserId{})
 	//err = db.AutoMigrate(&system.Config{})
 	//err = db.AutoMigrate(&system.SysDataDictionary{})
 	//err = db.AutoMigrate(&system.SysDataDictionaryDetail{})

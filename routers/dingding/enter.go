@@ -34,7 +34,8 @@ func SetupDing(System *gin.RouterGroup) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
-		User.GET("getQRCode", ding.GetQRCode) //获取群聊基本信息已经群成员id
+		User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
+		User.GET("/getActiveTask", ding.GetAllActiveTask) //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
 	}
 	Robot := System.Group("robot")
 	{
@@ -43,13 +44,16 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.DELETE("/removeRobot", ding.RemoveRobot)
 		Robot.PUT("/updateRobot", ding.AddRobot) //更新机器人直接使用
 		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
-		Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
-		Robot.GET("/getRobots", ding.GetRobots)
-		Robot.POST("/cronTask", ding.CronTask)      //发送定时任务
-		Robot.POST("getTaskList", ding.GetTaskList) //获取定时任务列表
-		Robot.POST("stopTask", ding.StopTask)       //暂停定时任务
-		Robot.DELETE("removeTask", ding.RemoveTask)
-		Robot.POST("reStartTask", ding.ReStartTask)
+		//Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
+		Robot.GET("/getRobotBaseList", ding.GetRobots) //获取所有及重庆人
+
+		Robot.POST("/cronTask", ding.CronTask)          //发送定时任务
+		Robot.POST("getTaskList", ding.GetTaskList)     //加载定时任务
+		Robot.POST("stopTask", ding.StopTask)           //暂停定时任务
+		Robot.DELETE("removeTask", ding.RemoveTask)     //移除定时任务
+		Robot.POST("reStartTask", ding.ReStartTask)     //重启定时任务
+		Robot.GET("/getTaskDetail", ding.GetTaskDetail) //获取定时任务详情
+
 	}
 
 }

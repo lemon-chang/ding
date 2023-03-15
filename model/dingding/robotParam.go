@@ -31,6 +31,9 @@ type ParamStopTask struct {
 type ParamRestartTask struct {
 	TaskID string `json:"task_id"`
 }
+type ParamGetTaskDeatil struct {
+	TaskID string `json:"task_id"`
+}
 type ParamRemoveTask struct {
 	TaskID string `json:"task_id"`
 }

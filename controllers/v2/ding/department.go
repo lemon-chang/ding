@@ -93,7 +93,7 @@ func GetSubDepartmentListByID(c *gin.Context) {
 	response.OkWithDetailed(subDepartments, "获取子部门信息成功", c)
 }
 
-//获取子部门通过id （官方接口）
+//获取子部门通过id （mysql）
 func GetSubDepartmentListByID2(c *gin.Context) {
 	var p params.ParamGetDepartmentListByID2
 	if err := c.ShouldBindQuery(&p); err != nil {
@@ -121,9 +121,33 @@ func GetSubDepartmentListByID2(c *gin.Context) {
 	response.OkWithDetailed(subDepartments, "获取子部门信息成功", c)
 }
 
+func GetDeptListFromMysql(c *gin.Context) {
+	var p params.ParamGetDeptListFromMysql
+	if err := c.ShouldBindQuery(&p); err != nil {
+		zap.L().Error("GetDepartmentListByID invaild param", zap.Error(err))
+		errs, ok := err.(validator.ValidationErrors)
+		if !ok {
+			response.ResponseError(c, response.CodeInvalidParam)
+			return
+		} else {
+			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
+			return
+		}
+	}
+	//var t dingding2.DingToken
+	//token, err := t.GetAccessToken()
+	var d dingding2.DingDept
+	DepartmentList, total, err := d.GetDeptByListFromMysql(&p)
+	if err != nil {
+		response.FailWithMessage("获取子部门信息失败！", c)
+		return
+	}
+	response.OkWithDetailed(gin.H{"list": DepartmentList, "total": total}, "获取部门信息成功", c)
+}
+
 //更新部门信息
 func UpdateDept(c *gin.Context) {
-	var p ding.ParamUpdateDept
+	var p ding.ParamUpdateDeptToCron
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("UpdateDept invaild param", zap.Error(err))
 		errs, ok := err.(validator.ValidationErrors)
@@ -135,20 +159,12 @@ func UpdateDept(c *gin.Context) {
 			return
 		}
 	}
-	if p.Name == "" || p.DeptID == 0 {
+	if p.DeptID == 0 {
 		response.FailWithMessage("部门名称或者部门id不能为空", c)
 		return
 	}
-	t := dingding2.DingToken{}
-	token, err := t.GetAccessToken()
-	if err != nil {
-		response.FailWithMessage("钉钉token获取失败！", c)
-		return
-	}
-	var d dingding2.DingDept
-	d.DingToken.Token = token
-	d.DeptId = 0 //根部门id
-	err = d.UpdateDept(&p)
+	d := dingding2.DingDept{}
+	err := d.UpdateDept(&p)
 	if err != nil {
 		response.FailWithMessage("更新部门信息失败！", c)
 		return

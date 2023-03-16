@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"net/http"
 	"sort"
@@ -51,7 +52,7 @@ type DingAttendGroup struct {
 	RobotAttendTaskID int  `json:"robot_attend_task_id"`
 	IsSendFirstPerson int  `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
 	IsInSchool        bool `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
-	IsReady           bool `json:"is_ready"`             //是否预备
+	IsReady           int  `json:"is_ready"`             //是否预备
 	ReadyTime         int  `json:"ready_time"`           //如果预备了，提前几分钟
 }
 type DingAttendanceGroupMemberList struct {
@@ -120,10 +121,10 @@ func (a *DingAttendGroup) GetAttendancesGroups(offset int, size int) (groups []D
 	}
 	// 此处举行具体的逻辑判断，然后返回即可
 	groups = r.Result.Groups
-	//err = global.GLOAB_DB.Clauses(clause.OnConflict{
-	//	Columns:   []clause.Column{{Name: "group_id"}},
-	//	DoUpdates: clause.AssignmentColumns([]string{"group_name", "member_count"}),
-	//}).Create(&groups).Error
+	err = global.GLOAB_DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "group_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"group_name", "member_count"}),
+	}).Create(&groups).Error
 	return groups, nil
 }
 
@@ -355,7 +356,7 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 		if err != nil {
 			return err
 		}
-		AttendGroup := &DingAttendGroup{GroupId: p.GroupId, GroupName: p.GroupName, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance}
+		AttendGroup := &DingAttendGroup{GroupId: p.GroupId, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, IsReady: p.IsReady, ReadyTime: p.ReadyTime}
 		err = tx.Updates(AttendGroup).Error
 		if err != nil {
 			return err
@@ -370,8 +371,8 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 				zap.L().Error("开启定时任务失败", zap.Error(err))
 				return err
 			}
-
 			err = tx.Model(&AttendGroup).Update("robot_attend_task_id", int(taskID)).Error
+			zap.L().Info("开启考勤组考勤定时任务成功！")
 			return err
 		} else if old.IsRobotAttendance == true && AttendGroup.IsRobotAttendance == false {
 			//关闭定时任务
@@ -380,6 +381,7 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 				zap.L().Error("关闭考勤任务，查询旧的定时任务id时失败", zap.Error(err))
 			}
 			global.GLOAB_CORN.Remove(cron.EntryID(old.RobotAttendTaskID))
+			zap.L().Info("关闭考勤组考勤定时任务成功！")
 		}
 		return err
 	})

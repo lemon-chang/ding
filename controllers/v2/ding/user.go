@@ -98,7 +98,7 @@ func LoginHandler(c *gin.Context) {
 }
 
 func GetQRCode(c *gin.Context) {
-	buf, ChatID, title, err := (&dingding2.DingUser{}).GetQRCode(c)
+	buf, ChatID, title, err := (&dingding2.DingUser{}).GetQRCode1(c)
 	if err != nil {
 		zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
 		response.FailWithMessage("截取二维码和获取群聊基本错误", c)

@@ -3,6 +3,7 @@ package dingding
 import (
 	"crypto/tls"
 	"ding/global"
+	"ding/model/params"
 	"ding/model/params/ding"
 	"encoding/json"
 	"errors"
@@ -25,8 +26,8 @@ type DingDept struct {
 	DingToken
 	IsSendFirstPerson int    `json:"is_send_first_person"` // 0为不推送，1为推送
 	RobotToken        string `json:"robot_token"`
-	IsRobotAttendance bool   `json:"is_robot_attendance"` //是否
-	IsJianShuOrBlog   bool   `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+	IsRobotAttendance int    `json:"is_robot_attendance"` //是否
+	IsJianShuOrBlog   int    `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 }
 
 type JinAndBlogClassify struct {
@@ -358,6 +359,19 @@ func (d *DingDept) GetDeptByIDFromMysql() (dept DingDept, err error) {
 	err = global.GLOAB_DB.First(&dept, d.DeptId).Error
 	return
 }
+func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (deptList []DingDept, total int64, err error) {
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+	err = global.GLOAB_DB.Limit(limit).Offset(offset).Find(&deptList).Error
+	if err != nil {
+		zap.L().Error("查询部门列表失败", zap.Error(err))
+	}
+	err = global.GLOAB_DB.Model(&DingDept{}).Count(&total).Error
+	if err != nil {
+		zap.L().Error("查询部门列表失败", zap.Error(err))
+	}
+	return
+}
 
 //查看部门推送情况开启推送情况
 func (d *DingDept) SendFirstPerson(cursor, size int) {
@@ -421,8 +435,8 @@ func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
 }
 
 //更新部门信息
-func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
-	dept := &DingDept{DeptId: p.DeptID, Name: p.Name, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken}
+func (d *DingDept) UpdateDept(p *ding.ParamUpdateDeptToCron) (err error) {
+	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog}
 	err = global.GLOAB_DB.Updates(dept).Error
 	return err
 }

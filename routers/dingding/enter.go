@@ -14,7 +14,8 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.GET("ImportDeptData", ding.ImportDeptData)                       // 递归获取部门列表存储到数据库
 		Dept.GET("getSubDepartmentListById", ding.GetSubDepartmentListByID)   // 官方接口获取子部门
 		Dept.GET("getSubDepartmentListById2", ding.GetSubDepartmentListByID2) // 从数据库中一层一层的取出部门
-		Dept.PUT("updateDept", ding.UpdateDept)                               // 更新部门信息，用来设置机器人token，各种开关
+		Dept.GET("getDeptListFromMysql", ding.GetDeptListFromMysql)
+		Dept.PUT("updateDept", ding.UpdateDept) // 更新部门信息，用来设置机器人token，各种开关
 	}
 	AttendanceGroup := System.Group("attendanceGroup")
 	{

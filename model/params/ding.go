@@ -1,5 +1,7 @@
 package params
 
+import "ding/model/common/request"
+
 type ParamGetAccessToken struct {
 	AppKey    string `json:"app_key"`
 	AppSecret string `json:"app_secret"`
@@ -18,4 +20,7 @@ type ParamGetDepartmentListByID struct {
 }
 type ParamGetDepartmentListByID2 struct {
 	ID int `json:"id" form:"id"` // 部门id，如果最初是1，则代表是根部门
+}
+type ParamGetDeptListFromMysql struct {
+	request.PageInfo
 }

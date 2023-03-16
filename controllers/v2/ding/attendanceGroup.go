@@ -40,7 +40,7 @@ func UpdateAttendanceGroup(c *gin.Context) {
 			return
 		}
 	}
-	if p.GroupName == "" || p.GroupId == 0 {
+	if p.GroupId == 0 {
 		response.FailWithMessage("考勤名称或者id不能为空", c)
 		return
 	}

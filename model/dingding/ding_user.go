@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -543,7 +544,7 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 	defer cancel()
 
 	// 创建超时上下文
-	ctx, cancel = context.WithTimeout(ctx, 10*time.Minute)
+	ctx, cancel = context.WithTimeout(ctx, 1*time.Minute)
 	defer cancel()
 
 	// navigate to a page, wait for an element, click
@@ -552,7 +553,7 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 
 	// capture entire browser viewport, returning png with quality=90
 	var html string
-
+	fmt.Println("开始运行chromedp")
 	err = chromedp.Run(ctx,
 		//打开网页
 		chromedp.Navigate(`https://open-dev.dingtalk.com/apiExplorer?spm=ding_open_doc.document.0.0.20bf4063FEGqWg#/jsapi?api=biz.chat.chooseConversationByCorpId`),
@@ -649,6 +650,150 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 	return buf, d.Result.ChatId, d.Result.Title, err
 }
 
+var ChromeCtx context.Context
+
+func GetChromeCtx(focus bool) context.Context {
+	if ChromeCtx == nil || focus {
+		allocOpts := chromedp.DefaultExecAllocatorOptions[:]
+		allocOpts = append(
+			chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.DisableGPU,
+			//chromedp.NoDefaultBrowserCheck, //不检查默认浏览器
+			//chromedp.Flag("headless", false),
+			chromedp.Flag("blink-settings", "imagesEnabled=false"), //开启图像界面,重点是开启这个
+			chromedp.Flag("ignore-certificate-errors", true),       //忽略错误
+			chromedp.Flag("disable-web-security", true),            //禁用网络安全标志
+			chromedp.Flag("disable-extensions", true),              //开启插件支持
+			chromedp.Flag("accept-language", `zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6`),
+			//chromedp.Flag("disable-default-apps", true),
+			//chromedp.NoFirstRun, //设置网站不是首次运行
+			chromedp.WindowSize(1921, 1024),
+			chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
+		)
+
+		if checkChromePort() {
+			// 不知道为何，不能直接使用 NewExecAllocator ，因此增加 使用 ws://127.0.0.1:9222/ 来调用
+			c, _ := chromedp.NewRemoteAllocator(context.Background(), "ws://127.0.0.1:9222/")
+			ChromeCtx, _ = chromedp.NewContext(c)
+		} else {
+			c, _ := chromedp.NewExecAllocator(context.Background(), allocOpts...)
+			ChromeCtx, _ = chromedp.NewContext(c)
+		}
+	}
+
+	return ChromeCtx
+}
+func (u *DingUser) GetQRCode1(c *gin.Context) (buf []byte, chatId, title string, err error) {
+
+	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 30*time.Second)
+	defer cancel()
+	d := data{}
+	var html string
+	fmt.Println("开始运行chromedp")
+	err = chromedp.Run(timeCtx,
+		//打开网页
+		chromedp.Navigate(`https://open-dev.dingtalk.com/apiExplorer?spm=ding_open_doc.document.0.0.20bf4063FEGqWg#/jsapi?api=biz.chat.chooseConversationByCorpId`),
+		//定位登录按钮
+		chromedp.Click(`document.querySelector(".ant-btn.ant-btn-primary")`, chromedp.ByJSPath),
+		//等二维码出现
+		chromedp.WaitVisible(`document.querySelector(".ant-modal")`, chromedp.ByJSPath),
+		//截图
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			// get layout metrics
+			_, _, _, _, _, contentSize, err := page.GetLayoutMetrics().Do(ctx)
+			if err != nil {
+				return err
+			}
+
+			width, height := int64(math.Ceil(contentSize.Width)), int64(math.Ceil(contentSize.Height))
+
+			// force viewport emulation
+			err = emulation.SetDeviceMetricsOverride(width, height, 1, false).
+				WithScreenOrientation(&emulation.ScreenOrientation{
+					Type:  emulation.OrientationTypePortraitPrimary,
+					Angle: 0,
+				}).
+				Do(ctx)
+			if err != nil {
+				return err
+			}
+
+			// capture screenshot
+			buf, err = page.CaptureScreenshot().
+				WithQuality(90).
+				WithClip(&page.Viewport{
+					X:      contentSize.X,
+					Y:      contentSize.Y,
+					Width:  contentSize.Width,
+					Height: contentSize.Height,
+					Scale:  1,
+				}).Do(ctx)
+			username, _ := c.Get(global.CtxUserNameKey)
+			err = ioutil.WriteFile(fmt.Sprintf("./Screenshot_%s.png", username), buf, 0644)
+			if err != nil {
+				zap.L().Error("二维码写入失败", zap.Error(err))
+			}
+			return nil
+		}),
+		//等待用户扫码连接成功
+		chromedp.WaitVisible(`document.querySelector(".connect-info")`, chromedp.ByJSPath),
+		//chromedp.SendKeys(`document.querySelector("#corpId")`, "caonima",chromedp.ByJSPath),
+		//设置输入框中的值为空
+		chromedp.SetValue(`document.querySelector("#corpId")`, "", chromedp.ByJSPath),
+		//chromedp.Click(`document.querySelector(".ant-btn.ant-btn-primary")`, chromedp.ByJSPath),
+		//chromedp.Clear(`#corpId`,chromedp.ByID),
+		//输入正确的值
+		chromedp.SendKeys(`document.querySelector("#corpId")`, "ding7625646e1d05915a35c2f4657eb6378f", chromedp.ByJSPath),
+		//点击发起调用按钮
+		chromedp.Click(`document.querySelector(".ant-btn.ant-btn-primary")`, chromedp.ByJSPath),
+
+		chromedp.WaitVisible(`document.querySelector("#dingapp > div > div > div.api-explorer-wrap > div.api-info > div > div.ant-tabs-content.ant-tabs-content-animated.ant-tabs-top-content > div.ant-tabs-tabpane.ant-tabs-tabpane-active > div.debug-result > div.code-mirror > div.code-content > div > div > div.CodeMirror-scroll > div.CodeMirror-sizer > div > div > div > div.CodeMirror-code > div:nth-child(2) > pre > span > span.cm-tab")`, chromedp.ByJSPath),
+		//自定义函数进行爬虫
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			//b := chromedp.WaitEnabled(`document.querySelector("#dingapp > div > div > div.api-explorer-wrap > div.api-info > div > div.ant-tabs-content.ant-tabs-content-animated.ant-tabs-top-content > div.ant-tabs-tabpane.ant-tabs-tabpane-active > div.debug-result > div.code-mirror > div.code-content > div > div > div.CodeMirror-scroll > div.CodeMirror-sizer > div > div > div > div.CodeMirror-code > div > pre")`, chromedp.ByJSPath)
+			//b.Do(ctx)
+			a := chromedp.OuterHTML(`document.querySelector("body")`, &html, chromedp.ByJSPath)
+			a.Do(ctx)
+			dom, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+			if err != nil {
+				fmt.Println("123", err.Error())
+				return err
+			}
+			var data string
+			dom.Find("#dingapp > div > div > div.api-explorer-wrap > div.api-info > div > div.ant-tabs-content.ant-tabs-content-animated.ant-tabs-top-content > div.ant-tabs-tabpane.ant-tabs-tabpane-active > div.debug-result > div.code-mirror > div.code-content > div > div > div.CodeMirror-scroll > div.CodeMirror-sizer > div > div > div > div.CodeMirror-code > div > pre").Each(func(i int, selection *goquery.Selection) {
+				data = data + selection.Text()
+				selection.Next()
+			})
+			data = strings.ReplaceAll(data, " ", "")
+			data = strings.ReplaceAll(data, "\n", "")
+			reader := strings.NewReader(data)
+			bytearr, err := ioutil.ReadAll(reader)
+
+			err1 := json.Unmarshal(bytearr, &d)
+			if err1 != nil {
+
+			}
+			return nil
+		}),
+	)
+	if err != nil {
+		zap.L().Error("使用chromedp失败", zap.Error(err))
+		return nil, "", "", err
+	}
+	if &d == nil {
+		return nil, "", "", err
+	}
+	return buf, d.Result.ChatId, d.Result.Title, err
+}
+func checkChromePort() bool {
+	addr := net.JoinHostPort("", "9222")
+	conn, err := net.DialTimeout("tcp", addr, 1*time.Second)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+	return true
+}
 func (u *DingUser) GetRobotList() (RobotList []DingRobot, err error) {
 	//err = global.GLOAB_DB.Where("ding_user_id = ?", u.UserId).Find(&RobotList).Error
 	err = global.GLOAB_DB.Model(u).Association("DingRobots").Find(&RobotList)

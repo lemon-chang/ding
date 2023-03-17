@@ -745,8 +745,8 @@ func (u *DingUser) GetQRCode1(c *gin.Context) (buf []byte, chatId, title string,
 		//输入正确的值
 		chromedp.SendKeys(`document.querySelector("#corpId")`, "ding7625646e1d05915a35c2f4657eb6378f", chromedp.ByJSPath),
 		//点击发起调用按钮
+		chromedp.Click(`document.querySelector("#dingapp > div > div > div.api-explorer-wrap > div.param-list > div > div.api-param-footer > button")`, chromedp.ByJSPath),
 		chromedp.Click(`document.querySelector(".ant-btn.ant-btn-primary")`, chromedp.ByJSPath),
-
 		chromedp.WaitVisible(`document.querySelector("#dingapp > div > div > div.api-explorer-wrap > div.api-info > div > div.ant-tabs-content.ant-tabs-content-animated.ant-tabs-top-content > div.ant-tabs-tabpane.ant-tabs-tabpane-active > div.debug-result > div.code-mirror > div.code-content > div > div > div.CodeMirror-scroll > div.CodeMirror-sizer > div > div > div > div.CodeMirror-code > div:nth-child(2) > pre > span > span.cm-tab")`, chromedp.ByJSPath),
 		//自定义函数进行爬虫
 		chromedp.ActionFunc(func(ctx context.Context) error {

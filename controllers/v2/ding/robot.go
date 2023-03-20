@@ -84,7 +84,7 @@ func AddRobot(c *gin.Context) {
 	if p.Type == "1" {
 		//我们需要让用户扫码，添加群成员信息
 		//此处展示二维码
-		_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode1(c)
+		_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode(c)
 		if err != nil {
 			zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
 		}

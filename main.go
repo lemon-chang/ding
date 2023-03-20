@@ -3,7 +3,6 @@ package main
 import (
 	"ding/dao/mysql"
 	"ding/dao/redis"
-	"ding/global"
 	"ding/initialize"
 	"ding/initialize/logger"
 	"ding/routers"
@@ -40,10 +39,10 @@ func main() {
 		return
 	}
 
-	err = initialize.RegisterTables(global.GLOAB_DB)
-	if err != nil {
-		return
-	}
+	//err = initialize.RegisterTables(global.GLOAB_DB)
+	//if err != nil {
+	//	return
+	//}
 
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {

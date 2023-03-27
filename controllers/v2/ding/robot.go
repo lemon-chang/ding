@@ -84,18 +84,18 @@ func AddRobot(c *gin.Context) {
 	if p.Type == "1" {
 		//我们需要让用户扫码，添加群成员信息
 		//此处展示二维码
-		_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode(c)
+		//_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode(c)
 		if err != nil {
 			zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
 		}
-		dingRobot.ChatId = ChatID
-		dingRobot.Name = title
+		//dingRobot.ChatId = ChatID
+		dingRobot.Name = p.Name
 		token, err1 := (&dingding.DingToken{}).GetAccessToken()
 		if err1 != nil {
 			zap.L().Error("获取token失败", zap.Error(err))
 			return
 		}
-		openConversationID := (&dingding.DingGroup{Token: dingding.DingToken{Token: token}, ChatID: ChatID}).GetOpenConversationID()
+		openConversationID := (&dingding.DingGroup{Token: dingding.DingToken{Token: token}}).GetOpenConversationID()
 		dingRobot.OpenConversationID = openConversationID
 		userIds, err := (&dingding.DingRobot{DingToken: dingding.DingToken{Token: token}, OpenConversationID: openConversationID}).GetGroupUserIds()
 		var users []dingding.DingUser

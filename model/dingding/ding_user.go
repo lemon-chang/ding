@@ -214,17 +214,16 @@ func (d *DingUser) ImportUserToMysql() error {
 
 func (d *DingUser) FindDingUsers() (us []DingUser, err error) {
 	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()
-
-	err = global.GLOAB_DB.Model(&DingUser{}).Find(&us).Error
+	err = global.GLOAB_DB.Model(&DingUser{}).Select("user_id", "name", "mobile").Find(&us).Error
 	//往redis中做一份缓存
-	for i := 0; i < len(us); i++ {
-		batchData := make(map[string]interface{})
-		batchData["name"] = us[i].Name
-		_, err := global.GLOBAL_REDIS.HMSet(context.Background(), "user:"+us[i].UserId, batchData).Result()
-		if err != nil {
-			zap.L().Error("把数据缓存到redis中失败", zap.Error(err))
-		}
-	}
+	//for i := 0; i < len(us); i++ {
+	//	batchData := make(map[string]interface{})
+	//	batchData["name"] = us[i].Name
+	//	_, err := global.GLOBAL_REDIS.HMSet(context.Background(), "user:"+us[i].UserId, batchData).Result()
+	//	if err != nil {
+	//		zap.L().Error("把数据缓存到redis中失败", zap.Error(err))
+	//	}
+	//}
 	return
 }
 

@@ -361,7 +361,7 @@ func RemoveTask(c *gin.Context) {
 		zap.L().Error(fmt.Sprintf("移除定时任务失败"), zap.Error(err))
 		response.FailWithMessage("移除定时任务失败", c)
 	} else {
-		response.OkWithMessage("移除定时任务失败", c)
+		response.OkWithMessage("移除定时任务成功", c)
 	}
 }
 func ReStartTask(c *gin.Context) {

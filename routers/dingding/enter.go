@@ -35,7 +35,7 @@ func SetupDing(System *gin.RouterGroup) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
-		User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
+		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
 		User.GET("/getActiveTask", ding.GetAllActiveTask) //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
 	}
 	Robot := System.Group("robot")

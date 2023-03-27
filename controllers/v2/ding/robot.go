@@ -84,7 +84,7 @@ func AddRobot(c *gin.Context) {
 	if p.Type == "1" {
 		//我们需要让用户扫码，添加群成员信息
 		//此处展示二维码
-		_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode1(c)
+		_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode(c)
 		if err != nil {
 			zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
 		}
@@ -361,7 +361,7 @@ func RemoveTask(c *gin.Context) {
 		zap.L().Error(fmt.Sprintf("移除定时任务失败"), zap.Error(err))
 		response.FailWithMessage("移除定时任务失败", c)
 	} else {
-		response.OkWithMessage("移除定时任务失败", c)
+		response.OkWithMessage("移除定时任务成功", c)
 	}
 }
 func ReStartTask(c *gin.Context) {

@@ -593,10 +593,12 @@ func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, 
 					Scale:  1,
 				}).Do(ctx)
 			username, _ := c.Get(global.CtxUserNameKey)
+			fmt.Println(username)
 			err = ioutil.WriteFile(fmt.Sprintf("./Screenshot_%s.png", username), buf, 0644)
 			if err != nil {
 				zap.L().Error("二维码写入失败", zap.Error(err))
 			}
+			zap.L().Info("写入二维码成功", zap.Error(err))
 			return nil
 		}),
 		//等待用户扫码连接成功
@@ -745,8 +747,8 @@ func (u *DingUser) GetQRCode1(c *gin.Context) (buf []byte, chatId, title string,
 		//输入正确的值
 		chromedp.SendKeys(`document.querySelector("#corpId")`, "ding7625646e1d05915a35c2f4657eb6378f", chromedp.ByJSPath),
 		//点击发起调用按钮
-		chromedp.Click(`document.querySelector(".ant-btn.ant-btn-primary")`, chromedp.ByJSPath),
-
+		chromedp.Click(`document.querySelector("#dingapp > div > div > div.api-explorer-wrap > div.param-list > div > div.api-param-footer > button")`, chromedp.ByJSPath),
+		//chromedp.Click(`document.querySelector(".ant-btn.ant-btn-primary")`, chromedp.ByJSPath),
 		chromedp.WaitVisible(`document.querySelector("#dingapp > div > div > div.api-explorer-wrap > div.api-info > div > div.ant-tabs-content.ant-tabs-content-animated.ant-tabs-top-content > div.ant-tabs-tabpane.ant-tabs-tabpane-active > div.debug-result > div.code-mirror > div.code-content > div > div > div.CodeMirror-scroll > div.CodeMirror-sizer > div > div > div > div.CodeMirror-code > div:nth-child(2) > pre > span > span.cm-tab")`, chromedp.ByJSPath),
 		//自定义函数进行爬虫
 		chromedp.ActionFunc(func(ctx context.Context) error {

@@ -433,7 +433,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	spec = "00 11,37,30 08,16,21 * * ?"
+	//spec = "00 11,37,30 08,16,21 * * ?"
 	//if a.IsReady {
 	//	minList := strings.Split(min, ",")
 	//	hourList := strings.Split(hour, ",")

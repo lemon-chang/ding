@@ -134,15 +134,16 @@ func GetAllActiveTask(c *gin.Context) {
 	global.GLOBAL_REDIS.Del(context.Background(), activeTasksKeys...)
 
 	//拿到所有的任务的id
-	entries := global.GLOAB_CORN.Entries()
+	//entries := global.GLOAB_CORN.Entries()
 	//拿到所有任务的id
-	var entriesInt = make([]int, len(entries))
-	for index, value := range entries {
-		entriesInt[index] = int(value.ID)
-	}
+	//var entriesInt = make([]int, len(entries))
+	//for index, value := range entries {
+	//	entriesInt[index] = int(value.ID)
+	//}
 	// 根据id查询数据库，拿到详细的任务信息，存放到redis中
-	var tasks []dingding2.Task                                         //拿到所有的活跃任务
-	global.GLOAB_DB.Table("tasks").Where("spec != ?", "").Find(&tasks) //查询所有的在线任务
+	var tasks []dingding2.Task //拿到所有的活跃任务
+	global.GLOAB_DB.Model(&tasks).Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Where("deleted is null").Find(&tasks)
+	//查询所有的在线任务
 	//把找到的数据存储到redis中 ，现在先写成手动获取
 	//应该是存放在一个集合里面，集合里面存放着此条任务的所有信息，以id作为标识
 	//哈希特别适合存储对象，所以我们用哈希来存储
@@ -158,5 +159,5 @@ func GetAllActiveTask(c *gin.Context) {
 		}
 	}
 	zap.L().Info("获取所有获取定时任务成功")
-	response.ResponseSuccess(c, "获取所有获取定时任务成功")
+	response.OkWithDetailed(tasks, "获取所有获取定时任务成功", c)
 }

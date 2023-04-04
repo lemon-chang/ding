@@ -63,17 +63,16 @@ func main() {
 	if err != nil {
 		fmt.Printf("重启定时任务失败,err:%v\n", err)
 		zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
-
 	} else {
 		zap.L().Debug("重启定时任务成功...")
 	}
 
-	//err = initialize.AttendanceByRobot()
-	//if err != nil {
-	//	zap.L().Error("AttendanceByRobot init fail...")
-	//	return
-	//
-	//}
+	err = initialize.AttendanceByRobot()
+	if err != nil {
+		zap.L().Error("AttendanceByRobot init fail...")
+		return
+
+	}
 	zap.L().Debug("AttendanceByRobot init success...")
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {

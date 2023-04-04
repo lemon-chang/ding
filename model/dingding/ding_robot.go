@@ -105,7 +105,6 @@ func (r *DingRobot) GetRobotByRobotId() (robot DingRobot, err error) {
 	return
 }
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
-
 	spec, detailTimeForUser, err := HandleSpec(p)
 	if p.Spec != "" {
 		spec = p.Spec
@@ -124,7 +123,6 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 		zap.L().Error("通过机器人的robot_id获取机器人失败", zap.Error(err))
 	}
 	//到了这里就说明这个用户有这个小机器人
-
 	//crontab := cron.New(cron.WithSeconds()) //精确到秒
 	//spec := "* 30 22 * * ?" //cron表达式，每五秒一次
 	if p.MsgText.Msgtype == "text" {

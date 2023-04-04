@@ -16,6 +16,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.GET("getSubDepartmentListById2", ding.GetSubDepartmentListByID2) // 从数据库中一层一层的取出部门
 		Dept.GET("getDeptListFromMysql", ding.GetDeptListFromMysql)
 		Dept.PUT("updateDept", ding.UpdateDept) // 更新部门信息，用来设置机器人token，各种开关
+
 	}
 	AttendanceGroup := System.Group("attendanceGroup")
 	{
@@ -37,6 +38,7 @@ func SetupDing(System *gin.RouterGroup) {
 		})
 		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
 		User.GET("/getActiveTask", ding.GetAllActiveTask) //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
+
 	}
 	Robot := System.Group("robot")
 	{

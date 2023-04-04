@@ -375,12 +375,18 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 			zap.L().Info("开启考勤组考勤定时任务成功！")
 			return err
 		} else if old.IsRobotAttendance == true && AttendGroup.IsRobotAttendance == false {
+			AttendGroup.RobotAttendTaskID = -1
+			err = tx.Updates(AttendGroup).Error
+			if err != nil {
+
+			}
 			//关闭定时任务
 			err = tx.First(&old, p.GroupId).Error
 			if err != nil {
 				zap.L().Error("关闭考勤任务，查询旧的定时任务id时失败", zap.Error(err))
 			}
 			global.GLOAB_CORN.Remove(cron.EntryID(old.RobotAttendTaskID))
+
 			zap.L().Info("关闭考勤组考勤定时任务成功！")
 		}
 		return err
@@ -427,7 +433,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	spec = "00 11,36,09 08,14,21 * * ?"
+	spec = "00 11,37,30 08,16,21 * * ?"
 	//if a.IsReady {
 	//	minList := strings.Split(min, ",")
 	//	hourList := strings.Split(hour, ",")
@@ -797,29 +803,34 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			}
 			message := date + DeptDetail.Name + "考勤结果如下:\n"
 
-			for key, value := range result {
+			for key, DingAttendance := range result {
 				if key == "Normal" {
 					message += "正常: "
 				} else if key == "Late" {
 					message += "迟到: "
+
 				} else if key == "Leave" {
 					message += "请假: "
 				} else if key == "HasCourse" {
 					message += "有课: "
 				}
-
-				for _, attendance := range value {
+				//下面的循环每次统计一个部门的一种情况
+				for _, attendance := range DingAttendance {
+					if key == "Leave" {
+						//我们把请假的信息给存入到redis中
+						//我们使用人名作为key，使用请假次数作为value
+					}
 					message += attendance.UserName + " "
 				}
 				message += "\n"
 			}
 			zap.L().Info("message编辑完成")
-			r := DingRobot{
-				RobotId: DeptDetail.RobotToken,
-			}
+			//r := DingRobot{
+			//	RobotId: DeptDetail.RobotToken,
+			//}
 			zap.L().Info("开始封装发送信息参数")
 			pSend := &ParamCronTask{
-				MsgText: common.MsgText{
+				MsgText: &common.MsgText{
 					At: common.At{IsAtAll: false},
 					Text: common.Text{
 						Content: message,
@@ -828,7 +839,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				},
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			err = r.SendMessage(pSend)
+			//err = r.SendMessage(pSend)
 			if err != nil {
 				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
 				continue
@@ -836,7 +847,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			// 向各部门根据请假次数排序的集合中 设置key
 			// 获取此次考勤该部门的请假次数
 			zap.L().Info(fmt.Sprintf("部门：%v开始统计请假迟到信息到redis中", DeptDetail.Name))
-			zap.L().Info(fmt.Sprintf("开始统计请假信息"))
 
 			leaveCount := len(result["Leave"])
 			// 该部门的总人数
@@ -853,14 +863,25 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 
 			// 开启事务
 			pipeline := global.GLOBAL_REDIS.TxPipeline()
-			pipeline.ZAdd(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":", &redisZ.Z{
+			err = pipeline.ZAdd(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":", &redisZ.Z{
 				// 根据平均请假次数排序
 				Score:  score,
 				Member: memberName,
-			}).Result()
+			}).Err()
 
-			// 记录此部门的请假总次数
-			pipeline.IncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(leaveCount))
+			// 记录此部门的请假总次数，拼装键，然后在键上面进行添加
+			//这是普通的key value键值对
+			err = pipeline.IncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(leaveCount)).Err()
+			//我们取到所有请假的同学，然后进行登记
+			err = (&DingDept{}).CountFrequencyLeave(startWeek, result)
+			if err != nil {
+				zap.L().Info("CountFrequencyLeave失败", zap.Error(err))
+			}
+			for i := 0; i < len(result["Leave"]); i++ {
+				//对部门中的每一位同学进行统计
+				//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
+				err = pipeline.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name+":detail:", 1, result["Leave"][i].UserName).Err()
+			}
 
 			// 提交事务
 			_, err = pipeline.Exec(context.Background())
@@ -871,8 +892,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				continue
 			}
 			pipeline.Close()
-			// 以下是对迟到Zset的操作
+			//对每一位同学进行统计
+			DeptDetail.SendFrequencyLeave(startWeek)
 
+			// 以下是对迟到Zset的操作
 			pipeline = global.GLOBAL_REDIS.TxPipeline()
 			lateCount := len(result["Late"])
 			preAveLateScore := global.GLOBAL_REDIS.ZScore(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":", memberName).Val()
@@ -884,6 +907,12 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				Score:  scoreAveLate,
 				Member: memberName,
 			})
+
+			for i := 0; i < len(result["Late"]); i++ {
+				//对部门中的每一位同学进行统计
+				//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
+				err = pipeline.ZIncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name+":detail:", 1, result["Late"][i].UserName).Err()
+			}
 			// 记录此部门的请假总次数
 			pipeline.IncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(lateCount))
 
@@ -894,10 +923,11 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				continue
 			}
 			pipeline.Close()
-
 			// 若是周日就发送各部门平均请假、迟到排行榜
 			if week == 7 && curTime.Duration == 2 {
 				SundayAfternoonExec(startWeek)
+				DeptDetail.SendFrequencyLeave(startWeek) //部门个人请假排行榜
+
 			}
 			zap.L().Info("信息发送成功" + message)
 		}
@@ -938,7 +968,7 @@ func SundayLeaveExec(startWeek int, r *DingRobot) {
 		message += fmt.Sprintf("%v. %v请假总次数为: %v, 平均请假次数为: %v\n", i+1, deptName, deptCount, deptAveCount)
 	}
 	pSend := &ParamCronTask{
-		MsgText: common.MsgText{
+		MsgText: &common.MsgText{
 			At: common.At{IsAtAll: false},
 			Text: common.Text{
 				Content: message,
@@ -972,7 +1002,7 @@ func SundayLateExec(startWeek int, r *DingRobot) {
 	}
 	// 要发送的信息
 	pSend := &ParamCronTask{
-		MsgText: common.MsgText{
+		MsgText: &common.MsgText{
 			At: common.At{IsAtAll: false},
 			Text: common.Text{
 				Content: message,
@@ -1093,7 +1123,7 @@ func DeptFirstShowUpMorning(p *params.ParamGetDeptFirstShowUpMorning) (err error
 			RobotId: utils.TestRobotToken,
 		}
 		pSend := &ParamCronTask{
-			MsgText: common.MsgText{
+			MsgText: &common.MsgText{
 				At: common.At{IsAtAll: true},
 				Text: common.Text{
 					Content: FinalMessage,
@@ -1117,7 +1147,7 @@ func DeptFirstShowUpMorning(p *params.ParamGetDeptFirstShowUpMorning) (err error
 		//UserName:  userName,
 		RobotId:   utils.TestRobotToken,
 		RobotName: utils.LeZhiAllPeopleRobotName,
-		MsgText: common.MsgText{
+		MsgText: &common.MsgText{
 			Text: common.Text{
 				Content: "根据考勤情况而定",
 			},

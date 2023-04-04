@@ -1,7 +1,9 @@
 package dingding
 
 import (
+	"context"
 	"crypto/tls"
+	"ding/dao/redis"
 	"ding/global"
 	"ding/model/params"
 	"ding/model/params/ding"
@@ -13,6 +15,7 @@ import (
 	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -28,6 +31,69 @@ type DingDept struct {
 	RobotToken        string `json:"robot_token"`
 	IsRobotAttendance int    `json:"is_robot_attendance"` //是否
 	IsJianShuOrBlog   int    `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+}
+
+func (d *DingDept) SendFrequencyLeave(startWeek int) error {
+	//从redis中取数据，封装，调用钉钉接口，发送即可
+	key := redis.KeyDeptAveLeave + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
+	//global.GLOBAL_REDIS.ZRevRange().Result()
+	//从小到达进行排序
+	//results, err := global.GLOBAL_REDIS.ZRevRange(context.Background(), key, 0, -1).Result()
+	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
+	if err != nil {
+
+	}
+	msg := ""
+	for i := 0; i < len(results); i++ {
+		name := results[i].Member.(string)
+		time := int(results[i].Score)
+		msg += name + "请假次数：" + strconv.Itoa(time) + "\n"
+	}
+	fmt.Println("发送请假频率了")
+	p := &ParamCronTask{}
+	(&DingRobot{}).CronSend(nil, p)
+	return nil
+}
+func (d *DingDept) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) (err error) {
+	//我们取到所有请假的同学，然后进行登记
+	for i := 0; i < len(result["Leave"]); i++ {
+		//对部门中的每一位同学进行统计
+		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
+		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Leave"][i].UserName).Err()
+	}
+	//此处应该被复用一下
+	return
+}
+func (d *DingDept) SendFrequencyLate(startWeek int) error {
+	//从redis中取数据，封装，调用钉钉接口，发送即可
+	key := redis.KeyDeptAveLate + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
+	//global.GLOBAL_REDIS.ZRevRange().Result()
+	//从小到达进行排序
+	//results, err := global.GLOBAL_REDIS.ZRevRange(context.Background(), key, 0, -1).Result()
+	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
+	if err != nil {
+
+	}
+	msg := ""
+	for i := 0; i < len(results); i++ {
+		name := results[i].Member.(string)
+		time := int(results[i].Score)
+		msg += name + "迟到次数：" + strconv.Itoa(time) + "\n"
+	}
+	fmt.Println("发送迟到频率了")
+	p := &ParamCronTask{}
+	(&DingRobot{}).CronSend(nil, p)
+	return nil
+}
+func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAttendance) (err error) {
+	//我们取到所有请假的同学，然后进行登记
+	for i := 0; i < len(result["Late"]); i++ {
+		//对部门中的每一位同学进行统计
+		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
+		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Late"][i].UserName).Err()
+	}
+	//此处应该被复用一下
+	return
 }
 
 type JinAndBlogClassify struct {

@@ -278,7 +278,7 @@ func CronTask(c *gin.Context) {
 func PingRobot(c *gin.Context) {
 	var p *dingding.ParamCronTask
 	p = &dingding.ParamCronTask{
-		MsgText:    common.MsgText{Text: common.Text{Content: "机器人测试成功"}, At: common.At{}, Msgtype: "text"},
+		MsgText:    &common.MsgText{Text: common.Text{Content: "机器人测试成功"}, At: common.At{}, Msgtype: "text"},
 		RepeatTime: "立即发送",
 	}
 	if err := c.ShouldBindJSON(&p); err != nil {

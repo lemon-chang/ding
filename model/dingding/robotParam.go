@@ -41,14 +41,14 @@ type ParamGetTaskList struct {
 	RobotId string `json:"robot_id"`
 }
 type ParamCronTask struct {
-	MsgText     common.MsgText     `json:"msg_text"`
-	MsgLink     common.MsgLink     `json:"msg_link"`
-	MsgMarkDown common.MsgMarkDown `json:"msg_mark_down"`
-	RobotId     string             `json:"robot_id" binding:"required"`  //使用机器人的robot_id来确定机器人
-	RepeatTime  string             `json:"repeat_time" `                 //前端给的重复频率，仅重复一次，周重复，月重复
-	DetailTime  string             `json:"detail_time"`                  //在给定的重复频率下的具体执行时间
-	TaskName    string             `json:"task_name" binding:"required"` //给这个任务起一个名字
-	Spec        string             `json:"spec"`                         //通过spec进行调用
+	MsgText     *common.MsgText     `json:"msg_text"`
+	MsgLink     *common.MsgLink     `json:"msg_link"`
+	MsgMarkDown *common.MsgMarkDown `json:"msg_mark_down"`
+	RobotId     string              `json:"robot_id" binding:"required"`  //使用机器人的robot_id来确定机器人
+	RepeatTime  string              `json:"repeat_time" `                 //前端给的重复频率，仅重复一次，周重复，月重复
+	DetailTime  string              `json:"detail_time"`                  //在给定的重复频率下的具体执行时间
+	TaskName    string              `json:"task_name" binding:"required"` //给这个任务起一个名字
+	Spec        string              `json:"spec"`                         //通过spec进行调用
 }
 
 type ParamUpdateRobot struct {

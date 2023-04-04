@@ -49,7 +49,7 @@ func Reboot() (err error) {
 		}
 		tid = int(TaskID)
 		oldId := task.TaskID
-		err = global.GLOAB_DB.Table("tasks").Where("task_id = ? ", oldId).Update("task_id", tid).Error
+		err = global.GLOAB_DB.Model(&tasks).Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Where("deleted is null").Where("task_id = ? ", oldId).Update("task_id", tid).Error
 		if err != nil {
 			//zap.L().Error("重启项目后更新任务id失败", zap.Error(err))
 			return err

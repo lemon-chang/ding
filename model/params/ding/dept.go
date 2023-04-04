@@ -7,3 +7,9 @@ type ParamUpdateDeptToCron struct {
 	IsRobotAttendance int    `json:"is_robot_attendance"`
 	IsJianshuOrBlog   int    `json:"is_jianshu_or_blog"`
 }
+type ParamSendFrequencyLeaveDept struct {
+	DeptID int `json:"dept_id"`
+}
+type ParamSendFrequencyLeaveUser struct {
+	UserID int `json:"user_id"`
+}

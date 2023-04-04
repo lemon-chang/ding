@@ -11,7 +11,7 @@ import (
 )
 
 func Init(cfg *settings.MySQLConfig) (err error) {
-	DSN := fmt.Sprintf("%s:%s@tcp(%s:%d)/ding_v2_marchsoft1?charset=utf8&parseTime=True&loc=Local",
+	DSN := fmt.Sprintf("%s:%s@tcp(%s:%d)/ding_v3_marchsoft?charset=utf8&parseTime=True&loc=Local",
 		cfg.User,
 		cfg.Password,
 		cfg.Host,

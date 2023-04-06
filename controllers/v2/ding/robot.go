@@ -267,7 +267,7 @@ func CronTask(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-	err, task := (&dingding.DingRobot{}).CronSend(c, p)
+	err, task := (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
 
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
@@ -295,7 +295,7 @@ func PingRobot(c *gin.Context) {
 		CurrentUser = dingding.DingUser{}
 	}
 
-	err, _ = (&dingding.DingRobot{}).CronSend(c, p)
+	err, _ = (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("测试机器人失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
 		response.FailWithMessage("发送定时任务失败", c)

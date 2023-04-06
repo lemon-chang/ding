@@ -125,7 +125,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 	}
 	r, err = (&DingRobot{RobotId: r.RobotId}).GetRobotByRobotId()
 	if err != nil {
-		zap.L().Error("通过机器人的robot_id获取机器人失败", zap.Error(err))
+		zap.L().Error("通过机器人的robot_id获取机器人失败，是一个没有注册的机器人", zap.Error(err))
 	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		r = &DingRobot{RobotId: robotId}

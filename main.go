@@ -59,13 +59,13 @@ func main() {
 	//go utils.Timing(&utils.localTime)
 	//初始化路由
 
-	//err = initialize.Reboot()
-	//if err != nil {
-	//	fmt.Printf("重启定时任务失败,err:%v\n", err)
-	//	zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
-	//} else {
-	//	zap.L().Debug("重启定时任务成功...")
-	//}
+	err = initialize.Reboot()
+	if err != nil {
+		fmt.Printf("重启定时任务失败,err:%v\n", err)
+		zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
+	} else {
+		zap.L().Debug("重启定时任务成功...")
+	}
 
 	err = initialize.AttendanceByRobot()
 	if err != nil {

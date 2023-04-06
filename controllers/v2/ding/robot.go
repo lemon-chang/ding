@@ -265,6 +265,7 @@ func CronTask(c *gin.Context) {
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
+		return
 	}
 	err, task := (&dingding.DingRobot{}).CronSend(c, p)
 

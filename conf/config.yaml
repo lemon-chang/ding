@@ -16,7 +16,7 @@
     max_open_conns: 200
     max_idle_conns: 50
   redis:
-    db: 3
+    db: 2
     addr: 121.43.119.224:6379
     password: "18737480171..Yy"
   #  正式数据库

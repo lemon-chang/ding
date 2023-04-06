@@ -433,18 +433,8 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 11,37,30 08,16,21 * * ?"
-	//if a.IsReady {
-	//	minList := strings.Split(min, ",")
-	//	hourList := strings.Split(hour, ",")
-	//	//把字符串切片变成数字切片
-	//	for i := 0; i < len(minList); i++ {
-	//		atoi, _ := strconv.Atoi(minList[i])
-	//		if atoi - a.ReadyTime < 0 {
-	//			atoi =
-	//		}
-	//	}
-	//}
+	//spec = "00 12,37,26 08,16,21 * * ?"
+
 	fmt.Println(spec + "******************************************************")
 	task := func() {
 		var isInSchool bool
@@ -541,8 +531,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		for dId := range deptAttendanceUser {
 			fmt.Println(dId)
 		}
+		Len := len(deptAttendanceUser)
+		Count := 0
 		for DeptId, _ := range deptAttendanceUser { //
-
+			Count++
 			var d DingDept
 			d.DingToken.Token = token
 			atoi, _ := strconv.Atoi(DeptId)
@@ -738,7 +730,13 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			}
 			if week == 7 && curTime.Duration == 3 {
 				zap.L().Info("周日晚上跳过")
+				//直接所有部门都不再发送了
 				return
+			}
+			if week == 1 && curTime.Duration == 1 && DeptDetail.DeptId == 440395094 {
+				zap.L().Info("周一上午三期社招跳过")
+				//跳过三期校招，继续循环其他部门
+				continue
 			}
 			var dl DingLeave
 			dl.DingToken.Token = token
@@ -837,9 +835,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 					},
 					Msgtype: "text",
 				},
+				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			//err = r.SendMessage(pSend)
+			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
 			if err != nil {
 				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
 				continue
@@ -872,15 +871,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			// 记录此部门的请假总次数，拼装键，然后在键上面进行添加
 			//这是普通的key value键值对
 			err = pipeline.IncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(leaveCount)).Err()
-			//我们取到所有请假的同学，然后进行登记
-			err = (&DingDept{}).CountFrequencyLeave(startWeek, result)
+			//登记请假情况
+			err = (&DeptDetail).CountFrequencyLeave(startWeek, result)
 			if err != nil {
 				zap.L().Info("CountFrequencyLeave失败", zap.Error(err))
-			}
-			for i := 0; i < len(result["Leave"]); i++ {
-				//对部门中的每一位同学进行统计
-				//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
-				err = pipeline.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name+":detail:", 1, result["Leave"][i].UserName).Err()
 			}
 
 			// 提交事务
@@ -892,7 +886,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				continue
 			}
 			pipeline.Close()
-			//对每一位同学进行统计
+			//发送部门排行榜请假情况
 			DeptDetail.SendFrequencyLeave(startWeek)
 
 			// 以下是对迟到Zset的操作
@@ -907,13 +901,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				Score:  scoreAveLate,
 				Member: memberName,
 			})
+			err = (&DeptDetail).CountFrequencyLate(startWeek, result)
+			if err != nil {
 
-			for i := 0; i < len(result["Late"]); i++ {
-				//对部门中的每一位同学进行统计
-				//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
-				err = pipeline.ZIncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name+":detail:", 1, result["Late"][i].UserName).Err()
 			}
-			// 记录此部门的请假总次数
 			pipeline.IncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(lateCount))
 
 			_, err = pipeline.Exec(context.Background())
@@ -924,10 +915,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			}
 			pipeline.Close()
 			// 若是周日就发送各部门平均请假、迟到排行榜
-			if week == 7 && curTime.Duration == 2 {
+			err = DeptDetail.SendFrequencyLate(startWeek) //部门个人请假排行榜
+			//当遍历到map最后一个元素的时候，我们发送一下所有部门的请假和迟到情况
+			if Count == Len {
 				SundayAfternoonExec(startWeek)
-				DeptDetail.SendFrequencyLeave(startWeek) //部门个人请假排行榜
-
 			}
 			zap.L().Info("信息发送成功" + message)
 		}

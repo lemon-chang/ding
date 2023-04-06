@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"ding/dao/redis"
 	"ding/global"
+	"ding/model/common"
 	"ding/model/params"
 	"ding/model/params/ding"
 	"encoding/json"
@@ -43,15 +44,21 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 	if err != nil {
 
 	}
-	msg := ""
+	msg := d.Name + "请假情况如下：\n"
 	for i := 0; i < len(results); i++ {
 		name := results[i].Member.(string)
 		time := int(results[i].Score)
 		msg += name + "请假次数：" + strconv.Itoa(time) + "\n"
 	}
-	fmt.Println("发送请假频率了")
-	p := &ParamCronTask{}
-	(&DingRobot{}).CronSend(nil, p)
+
+	p := &ParamCronTask{
+		MsgText: &common.MsgText{
+			Msgtype: "text",
+			Text:    common.Text{Content: msg},
+		},
+		RepeatTime: "立即发送",
+	}
+	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(nil, p)
 	return nil
 }
 func (d *DingDept) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) (err error) {
@@ -60,6 +67,9 @@ func (d *DingDept) CountFrequencyLeave(startWeek int, result map[string][]DingAt
 		//对部门中的每一位同学进行统计
 		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
 		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Leave"][i].UserName).Err()
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	//此处应该被复用一下
 	return
@@ -74,15 +84,21 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 	if err != nil {
 
 	}
-	msg := ""
+	msg := d.Name + "迟到次数如下：\n"
 	for i := 0; i < len(results); i++ {
 		name := results[i].Member.(string)
 		time := int(results[i].Score)
 		msg += name + "迟到次数：" + strconv.Itoa(time) + "\n"
 	}
 	fmt.Println("发送迟到频率了")
-	p := &ParamCronTask{}
-	(&DingRobot{}).CronSend(nil, p)
+	p := &ParamCronTask{
+		MsgText: &common.MsgText{
+			Msgtype: "text",
+			Text:    common.Text{Content: msg},
+		},
+		RepeatTime: "立即发送",
+	}
+	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(nil, p)
 	return nil
 }
 func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAttendance) (err error) {
@@ -91,6 +107,9 @@ func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAtt
 		//对部门中的每一位同学进行统计
 		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
 		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Late"][i].UserName).Err()
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	//此处应该被复用一下
 	return

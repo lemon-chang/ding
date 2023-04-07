@@ -31,7 +31,7 @@ func SetupDing(System *gin.RouterGroup) {
 		User.POST("UpdateDingUserAddr", ding.UpdateDingUserAddr) // 更新用户的博客和简书地址
 		User.GET("GetAllUsers", ding.SelectAllUsers)             // 查询所有用户信息
 		User.GET("GetAllJinAndBlog", ding.FindAllJinAndBlog)
-		User.POST("login", ding.LoginHandler)
+
 		User.GET("showQRCode", func(c *gin.Context) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))

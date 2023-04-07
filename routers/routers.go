@@ -45,9 +45,12 @@ func Setup(mode string) *gin.Engine {
 	system.SetupSystem(System)
 
 	Ding := r.Group("/api/ding")
+	{
+
+	}
 	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)
-
+	Ding.POST("login", ding.LoginHandler)
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)
 		c.File(fmt.Sprintf("Screenshot_%s.png", username))

@@ -29,7 +29,7 @@ type ParamStopTask struct {
 	TaskID string `json:"task_id"`
 }
 type ParamRestartTask struct {
-	TaskID string `json:"task_id"`
+	ID string `json:"id"`
 }
 type ParamGetTaskDeatil struct {
 	TaskID string `json:"task_id"`

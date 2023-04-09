@@ -8,12 +8,12 @@ import (
 )
 
 type Task struct {
-	Deleted           gorm.DeletedAt      `json:"deleted"`                   //软删除字段
-	TaskID            string              `json:"task_id" gorm:"primaryKey"` //cron第三方定时库给的id
-	TaskName          string              `json:"task_name"`                 //任务名字
-	UserId            string              `json:"user_id"`                   // 任务所属userID
-	UserName          string              `json:"user_name"`                 //任务所属用户
-	RobotId           string              `json:"robot_id"`                  //任务属于机器人
+	gorm.Model
+	TaskID            string              `json:"task_id" `  //cron第三方定时库给的id
+	TaskName          string              `json:"task_name"` //任务名字
+	UserId            string              `json:"user_id"`   // 任务所属userID
+	UserName          string              `json:"user_name"` //任务所属用户
+	RobotId           string              `json:"robot_id"`  //任务属于机器人
 	Secret            string              `json:"secret"`
 	RobotName         string              `json:"robot_name"`
 	DetailTimeForUser string              `json:"detail_time_for_user"` //这个给用户看

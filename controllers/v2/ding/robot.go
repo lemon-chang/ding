@@ -367,14 +367,15 @@ func RemoveTask(c *gin.Context) {
 }
 func ReStartTask(c *gin.Context) {
 	var p *dingding.ParamRestartTask
-	if err := c.ShouldBindJSON(&p); err != nil {
+	err := c.ShouldBindJSON(&p)
+	if err != nil || p.ID == "" {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
+		response.FailWithMessage(err.Error(), c)
 	}
-	_, err := (&dingding.DingRobot{}).ReStartTask(p.TaskID)
+	_, err = (&dingding.DingRobot{}).ReStartTask(p.ID)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
-		response.FailWithMessage("ReStartTask定时任务失败", c)
+		response.FailWithMessage(err.Error(), c)
 	} else {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
@@ -386,7 +387,7 @@ func GetTaskDetail(c *gin.Context) {
 		zap.L().Error("GetTaskDetail参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
-	task, err := (&dingding.DingRobot{}).GetTaskByID(p.TaskID)
+	task, err := (&dingding.DingRobot{}).GetUnscopedTaskByID(p.TaskID)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
 		response.FailWithMessage("ReStartTask定时任务失败", c)

@@ -836,7 +836,7 @@ func (t *DingRobot) RemoveTask(taskId string) (err error) {
 	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
 	return err
 }
-func (t *DingRobot) GetTaskByID(id string) (task Task, err error) {
+func (t *DingRobot) GetUnscopedTaskByID(id string) (task Task, err error) {
 	err = global.GLOAB_DB.Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").First(&task, id).Error
 	if err != nil {
 		zap.L().Error("通过主键id查询定时任务失败", zap.Error(err))
@@ -845,9 +845,13 @@ func (t *DingRobot) GetTaskByID(id string) (task Task, err error) {
 	return
 }
 func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
-	task, err = t.GetTaskByID(id)
+	err = global.GLOAB_DB.Model(&Task{}).First(&task, id).Error
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return Task{}, errors.New("该定时任务没有暂停，所以无法重启")
+	}
+	task, err = t.GetUnscopedTaskByID(id)
 	//根据这个id主键查询到被删除的数据
-	err = global.GLOAB_DB.Unscoped().Model(&task).Update("deleted", nil).Error //这个地方必须加上Unscoped()，否则不报错，但是却无法更新
+	err = global.GLOAB_DB.Unscoped().Model(&task).Update("deleted_at", nil).Error //这个地方必须加上Unscoped()，否则不报错，但是却无法更新
 	p := ParamCronTask{
 		MsgText:     task.MsgText,
 		MsgLink:     task.MsgLink,

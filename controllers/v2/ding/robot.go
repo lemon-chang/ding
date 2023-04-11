@@ -38,9 +38,9 @@ func OutGoing(c *gin.Context) {
 
 }
 
-//addRobot 添加机器人
-//思路如下：
-//当前登录的用户添加了一个属于自己的机器人
+// addRobot 添加机器人
+// 思路如下：
+// 当前登录的用户添加了一个属于自己的机器人
 func AddRobot(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if UserId == "" || err != nil {
@@ -202,7 +202,7 @@ func RemoveRobot(c *gin.Context) {
 	}
 }
 
-//GetRobots 获得用户自身的所有机器人
+// GetRobots 获得用户自身的所有机器人
 func GetRobots(c *gin.Context) {
 	uid, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -394,4 +394,22 @@ func GetTaskDetail(c *gin.Context) {
 	} else {
 		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
 	}
+}
+func SubscribeTo(c *gin.Context) {
+	p := dingding.ParamCronTask{
+		MsgText: &common.MsgText{
+			At: common.At{
+				IsAtAll: true,
+			},
+			Text: common.Text{
+				Content: "subscription start",
+			},
+			Msgtype: "text",
+		},
+		RepeatTime: "立即发送",
+		TaskName:   "事件订阅",
+	}
+
+	(&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+
 }

@@ -422,6 +422,7 @@ func GetTaskDetail(c *gin.Context) {
 //		response.OkWithMessage("获取消息订阅成功", c)
 //	}
 
+
 //func SubscribeTo(c *gin.Context) {
 //	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
 //	msg, _ := ding.GetEncryptMsg("success")
@@ -450,4 +451,5 @@ func SubscribeTo(c *gin.Context) {
 	}
 	log.Printf("err: %v\n", err)
 	log.Printf("resp: %v\n", resp)
+
 }

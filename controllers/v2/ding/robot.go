@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+	"time"
 )
 
 func OutGoing(c *gin.Context) {
@@ -395,21 +396,34 @@ func GetTaskDetail(c *gin.Context) {
 		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
 	}
 }
+
+//	func SubscribeTo(c *gin.Context) {
+//		p := dingding.ParamCronTask{
+//			MsgText: &common.MsgText{
+//				At: common.At{
+//					IsAtAll: true,
+//				},
+//				Text: common.Text{
+//					Content: "subscription start",
+//				},
+//				Msgtype: "text",
+//			},
+//			RepeatTime: "立即发送",
+//			TaskName:   "事件订阅",
+//		}
+//
+//		err, task := (&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+//		if err != nil {
+//			response.FailWithMessage("获取消息订阅信息失败，详情联系后端", c)
+//			return
+//		}
+//		fmt.Println(task)
+//		response.OkWithMessage("获取消息订阅成功", c)
+//	}
 func SubscribeTo(c *gin.Context) {
-	p := dingding.ParamCronTask{
-		MsgText: &common.MsgText{
-			At: common.At{
-				IsAtAll: true,
-			},
-			Text: common.Text{
-				Content: "subscription start",
-			},
-			Msgtype: "text",
-		},
-		RepeatTime: "立即发送",
-		TaskName:   "事件订阅",
-	}
-
-	(&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
-
+	var ding = dingding.NewDingTalkCrypto("tokenforsubscribebyzhfrommarchsoft", "aeskeyforsubscribebyzhfrommarchsoft", "dingepndjqy7etanalhi")
+	msg, _ := ding.GetEncryptMsg("success")
+	fmt.Println(msg)
+	success, _ := ding.GetDecryptMsg("f36f4ba5337d426c7d4bca0dbcb06b3ddc1388fc", string(time.Now().UnixMilli()), "WelUQl6bCqcBa2fM", "X1VSe9cTJUMZu60d3kyLYTrBq5578ZRJtteU94wG0Q4Uk6E/wQYeJRIC0/UFW5Wkya1Ihz9oXAdLlyC9TRaqsQ==")
+	fmt.Println(success)
 }

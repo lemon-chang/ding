@@ -50,6 +50,7 @@ func NewDingTalkCrypto(token, encodingAESKey, suiteKey string) *DingTalkCrypto {
 
 // GetDecryptMsg 获取解密消息
 func (c *DingTalkCrypto) GetDecryptMsg(signature, timestamp, nonce, secretMsg string) (string, error) {
+	// 验证签名
 	if !c.VerificationSignature(c.Token, timestamp, nonce, secretMsg, signature) {
 		return "", errors.New("ERROR: 签名不匹配")
 	}
@@ -73,21 +74,21 @@ func (c *DingTalkCrypto) GetDecryptMsg(signature, timestamp, nonce, secretMsg st
 	return string(plantText[:size]), nil
 }
 
-// 每次等电梯都好麻烦啊
-// 为什么不设两个电梯 一个只上 一个只下
-// 这样就不用来回再等了
-
 // GetEncryptMsg 获取加密消息
 func (c *DingTalkCrypto) GetEncryptMsg(msg string) (map[string]string, error) {
+	// timestamp 获取时间戳
 	var timestamp = time.Now().Second()
+	// nonce 获取随机数
 	var nonce = randomString(12)
+	// str 加密msg; sign 签名(已加密); err:nil
 	str, sign, err := c.GetEncryptMsgDetail(msg, fmt.Sprint(timestamp), nonce)
-
+	//返回随机数，时间戳，加密字段，基于加密字段的签名
 	return map[string]string{"nonce": nonce, "timeStamp": fmt.Sprint(timestamp), "encrypt": str, "msg_signature": sign}, err
 }
 
 // GetEncryptMsgDetail 获取加密详情
 func (c *DingTalkCrypto) GetEncryptMsgDetail(msg, timestamp, nonce string) (string, string, error) {
+	// 对传入的msg，timestamp，nonce加密开始
 	size := make([]byte, 4)
 	binary.BigEndian.PutUint32(size, uint32(len(msg)))
 	msg = randomString(16) + string(size) + msg + c.SuiteKey
@@ -99,7 +100,10 @@ func (c *DingTalkCrypto) GetEncryptMsgDetail(msg, timestamp, nonce string) (stri
 	chipherText := make([]byte, len(plantText))
 	blockMode.CryptBlocks(chipherText, plantText)
 	outMsg := base64.StdEncoding.EncodeToString(chipherText)
+	// 加密结束
+	// signature 使用token，timestamp，nonce 以及加密的msg创建签名
 	signature := c.CreateSignature(c.Token, timestamp, nonce, string(outMsg))
+	// return 加密消息，签名，空
 	return string(outMsg), signature, nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+	"log"
 	"net/http"
 )
 
@@ -420,16 +421,33 @@ func GetTaskDetail(c *gin.Context) {
 //		fmt.Println(task)
 //		response.OkWithMessage("获取消息订阅成功", c)
 //	}
+
+//func SubscribeTo(c *gin.Context) {
+//	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
+//	msg, _ := ding.GetEncryptMsg("success")
+//	log.Printf("msg: %v\n", msg)
+//	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "X1VSe9cTJUMZu60d3kyLYTrBq5578ZRJtteU94wG0Q4Uk6E/wQYeJRIC0/UFW5Wkya1Ihz9oXAdLlyC9TRaqsQ==")
+//	log.Printf("success: %v\n", success)
+//	c.JSON(http.StatusOK, gin.H{
+//		"msg_signature": "111108bb8e6dbce3c9671d6fdb69d1506xxxx",
+//		"timeStamp":     "1783610513",
+//		"nonce":         "123456",
+//		"encrypt":       "1ojQf0NSvw2WPvW7LijxS8UvISr8pdDP+rXpPbcLGOmIxxxx",
+//	})
+//}
+
+type Resp struct {
+	encrypt string
+}
+
 func SubscribeTo(c *gin.Context) {
-	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
-	msg, _ := ding.GetEncryptMsg("success")
-	fmt.Println(msg)
-	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "X1VSe9cTJUMZu60d3kyLYTrBq5578ZRJtteU94wG0Q4Uk6E/wQYeJRIC0/UFW5Wkya1Ihz9oXAdLlyC9TRaqsQ==")
-	fmt.Println(success)
-	c.JSON(http.StatusOK, gin.H{
-		"msg_signature": "111108bb8e6dbce3c9671d6fdb69d1506xxxx",
-		"timeStamp":     "1783610513",
-		"nonce":         "123456",
-		"encrypt":       "1ojQf0NSvw2WPvW7LijxS8UvISr8pdDP+rXpPbcLGOmIxxxx",
-	})
+	var resp Resp
+	err := c.ShouldBindJSON(&resp)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"error": err,
+		})
+	}
+	log.Printf("err: %v\n", err)
+	log.Printf("resp: %v\n", resp)
 }

@@ -6,11 +6,13 @@ import (
 	"ding/model/common"
 	"ding/model/dingding"
 	"ding/response"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"log"
+	"net/http"
 )
 
 func OutGoing(c *gin.Context) {
@@ -420,10 +422,42 @@ func GetTaskDetail(c *gin.Context) {
 //		fmt.Println(task)
 //		response.OkWithMessage("获取消息订阅成功", c)
 //	}
+
+//func SubscribeTo(c *gin.Context) {
+//	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
+//	msg, _ := ding.GetEncryptMsg("success")
+//	log.Printf("msg: %v\n", msg)
+//	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "X1VSe9cTJUMZu60d3kyLYTrBq5578ZRJtteU94wG0Q4Uk6E/wQYeJRIC0/UFW5Wkya1Ihz9oXAdLlyC9TRaqsQ==")
+//	log.Printf("success: %v\n", success)
+//	c.JSON(http.StatusOK, gin.H{
+//		"msg_signature": "111108bb8e6dbce3c9671d6fdb69d1506xxxx",
+//		"timeStamp":     "1783610513",
+//		"nonce":         "123456",
+//		"encrypt":       "1ojQf0NSvw2WPvW7LijxS8UvISr8pdDP+rXpPbcLGOmIxxxx",
+//	})
+//}
+
 func SubscribeTo(c *gin.Context) {
-	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
-	msg, _ := ding.GetEncryptMsg("success")
-	log.Printf("msg: %v\n", msg)
-	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "rlmRqtlLfm7tTAM8fTim3WNSwyWbd-KM3wTZ8wBtwKX8Pw6M4ZzEiIQVrCqKgCwu")
-	log.Printf("success: %v\n", success)
+	signature := c.Query("signature")
+	timestamp := c.Query("timestamp")
+	nonce := c.Query("nonce")
+
+	data, err := c.GetRawData()
+	if err != nil {
+		log.Printf("c.GetRawData(): %v\n", err)
+	}
+	var body map[string]string
+	err = json.Unmarshal(data, &body)
+	if err != nil {
+		log.Printf("json.Unmarshal: %v\n", err)
+	}
+	//获取json中的key，注意使用["key"]获取
+	encrypt := body["encrypt"]
+	c.JSON(http.StatusOK, gin.H{
+		"massage":   "success",
+		"signature": signature,
+		"timestamp": timestamp,
+		"nonce":     nonce,
+		"encrypt":   encrypt,
+	})
 }

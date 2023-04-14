@@ -6,10 +6,13 @@ import (
 	"ding/model/common"
 	"ding/model/dingding"
 	"ding/response"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+	"log"
+	"net/http"
 )
 
 func OutGoing(c *gin.Context) {
@@ -395,21 +398,76 @@ func GetTaskDetail(c *gin.Context) {
 		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
 	}
 }
+
+//	func SubscribeTo(c *gin.Context) {
+//		p := dingding.ParamCronTask{
+//			MsgText: &common.MsgText{
+//				At: common.At{
+//					IsAtAll: true,
+//				},
+//				Text: common.Text{
+//					Content: "subscription start",
+//				},
+//				Msgtype: "text",
+//			},
+//			RepeatTime: "立即发送",
+//			TaskName:   "事件订阅",
+//		}
+//
+//		err, task := (&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+//		if err != nil {
+//			response.FailWithMessage("获取消息订阅信息失败，详情联系后端", c)
+//			return
+//		}
+//		fmt.Println(task)
+//		response.OkWithMessage("获取消息订阅成功", c)
+//	}
+
+//func SubscribeTo(c *gin.Context) {
+//	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
+//	msg, _ := ding.GetEncryptMsg("success")
+//	log.Printf("msg: %v\n", msg)
+//	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "X1VSe9cTJUMZu60d3kyLYTrBq5578ZRJtteU94wG0Q4Uk6E/wQYeJRIC0/UFW5Wkya1Ihz9oXAdLlyC9TRaqsQ==")
+//	log.Printf("success: %v\n", success)
+//	c.JSON(http.StatusOK, gin.H{
+//		"msg_signature": "111108bb8e6dbce3c9671d6fdb69d1506xxxx",
+//		"timeStamp":     "1783610513",
+//		"nonce":         "123456",
+//		"encrypt":       "1ojQf0NSvw2WPvW7LijxS8UvISr8pdDP+rXpPbcLGOmIxxxx",
+//	})
+//}
+
 func SubscribeTo(c *gin.Context) {
-	p := dingding.ParamCronTask{
-		MsgText: &common.MsgText{
-			At: common.At{
-				IsAtAll: true,
-			},
-			Text: common.Text{
-				Content: "subscription start",
-			},
-			Msgtype: "text",
-		},
-		RepeatTime: "立即发送",
-		TaskName:   "事件订阅",
+	signature := c.Query("signature")
+	timestamp := c.Query("timestamp")
+	nonce := c.Query("nonce")
+	zap.L().Info("signature value: " + signature + ", timestamp value: " + timestamp + ", nonce value: " + nonce)
+	data, err := c.GetRawData()
+	if err != nil {
+		log.Printf("c.GetRawData(): %v\n", err)
 	}
-
-	(&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
-
+	var body map[string]string
+	err = json.Unmarshal(data, &body)
+	if err != nil {
+		log.Printf("json.Unmarshal: %v\n", err)
+	}
+	//获取json中的key，注意使用["key"]获取
+	encrypt := body["encrypt"]
+	zap.L().Info("encrypt value: " + encrypt)
+	c.JSON(http.StatusOK, gin.H{
+		"massage": "success",
+		//"signature": signature,
+		//"timestamp": timestamp,
+		//"nonce":     nonce,
+		//"encrypt":   encrypt,
+	})
 }
+
+/*
+加密 aes_key
+xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj
+签名 token
+R5p85bVU3dEUU
+*/
+
+//HTTP请求结果校验返回字段值失败 HttpRequest: curl 'http://121.43.119.224:8889/api/ding/robot/subscribeTo?signature=78aceec41e36cde1704f7cf1723b26a648e070ec&msg_signature=78aceec41e36cde1704f7cf1723b26a648e070ec&timestamp=1681434486403&nonce=hYyhAr2V' -d '{"encrypt":"oMlO0wbzWgCaEmMXcuoYi8ZUNUJvxVgHzUCC+96bRLxkqc8iWTbUPah37wUhe0ADdTMKugKLuFG1+/a9Zm4slPogEGThEVIGbJkcxQKSb5nqbXo9k3vsz7dXrO7qMs1K"}' -H 'Content-Type:application/json' HttpCode:200 HttpReponse:

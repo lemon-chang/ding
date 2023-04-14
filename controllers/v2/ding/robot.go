@@ -441,7 +441,7 @@ func SubscribeTo(c *gin.Context) {
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-
+	zap.L().Info("signature value: " + signature + ", timestamp value: " + timestamp + ", nonce value: " + nonce)
 	data, err := c.GetRawData()
 	if err != nil {
 		log.Printf("c.GetRawData(): %v\n", err)
@@ -453,11 +453,21 @@ func SubscribeTo(c *gin.Context) {
 	}
 	//获取json中的key，注意使用["key"]获取
 	encrypt := body["encrypt"]
+	zap.L().Info("encrypt value: " + encrypt)
 	c.JSON(http.StatusOK, gin.H{
-		"massage":   "success",
-		"signature": signature,
-		"timestamp": timestamp,
-		"nonce":     nonce,
-		"encrypt":   encrypt,
+		"massage": "success",
+		//"signature": signature,
+		//"timestamp": timestamp,
+		//"nonce":     nonce,
+		//"encrypt":   encrypt,
 	})
 }
+
+/*
+加密 aes_key
+xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj
+签名 token
+R5p85bVU3dEUU
+*/
+
+//HTTP请求结果校验返回字段值失败 HttpRequest: curl 'http://121.43.119.224:8889/api/ding/robot/subscribeTo?signature=78aceec41e36cde1704f7cf1723b26a648e070ec&msg_signature=78aceec41e36cde1704f7cf1723b26a648e070ec&timestamp=1681434486403&nonce=hYyhAr2V' -d '{"encrypt":"oMlO0wbzWgCaEmMXcuoYi8ZUNUJvxVgHzUCC+96bRLxkqc8iWTbUPah37wUhe0ADdTMKugKLuFG1+/a9Zm4slPogEGThEVIGbJkcxQKSb5nqbXo9k3vsz7dXrO7qMs1K"}' -H 'Content-Type:application/json' HttpCode:200 HttpReponse:

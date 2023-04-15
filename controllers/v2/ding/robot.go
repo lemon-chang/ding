@@ -403,13 +403,13 @@ func SubscribeTo(c *gin.Context) {
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce + "\n"))
+	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce))
 	var m map[string]interface{}
 	if err := c.ShouldBindJSON(&m); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	zap.L().Info(fmt.Sprintf("encrypt: %v\n", m))
+	zap.L().Info(fmt.Sprintf("encrypt: %v", m))
 
 	// 2. 参数解密
 	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
@@ -429,7 +429,7 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "chat_update_title" {
 		// 处理群会话更换群名称事件
 		zap.L().Info(eventType + "has occurred")
-		for k, v := range eventType {
+		for k, v := range eventJson {
 			zap.L().Info(fmt.Sprintf("k:%v,v:%v", k, v))
 		}
 	} else {

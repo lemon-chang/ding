@@ -19,13 +19,13 @@ import (
 type DingTalkCrypto struct {
 	Token          string
 	EncodingAESKey string
-	SuiteKey       string
+	appkey         string
 	BKey           []byte
 	Block          cipher.Block
 }
 
-// NewDingTalkCrypto 创建钉钉加密信息
-func NewDingTalkCrypto(token, encodingAESKey, suiteKey string) *DingTalkCrypto {
+// NewDingTalkCrypto 新建钉钉密钥 /**
+func NewDingTalkCrypto(token, encodingAESKey, appkey string) *DingTalkCrypto {
 	//fmt.Println(len(encodingAESKey))
 	if len(encodingAESKey) != int(43) {
 		panic("不合法的EncodingAESKey")
@@ -41,7 +41,7 @@ func NewDingTalkCrypto(token, encodingAESKey, suiteKey string) *DingTalkCrypto {
 	c := &DingTalkCrypto{
 		Token:          token,
 		EncodingAESKey: encodingAESKey,
-		SuiteKey:       suiteKey,
+		appkey:         appkey,
 		BKey:           bkey,
 		Block:          block,
 	}
@@ -68,7 +68,7 @@ func (c *DingTalkCrypto) GetDecryptMsg(signature, timestamp, nonce, secretMsg st
 	size := binary.BigEndian.Uint32(plantText[16:20])
 	plantText = plantText[20:]
 	corpID := plantText[size:]
-	if string(corpID) != c.SuiteKey {
+	if string(corpID) != c.appkey {
 		return "", errors.New("ERROR: CorpID匹配不正确")
 	}
 	return string(plantText[:size]), nil
@@ -91,7 +91,7 @@ func (c *DingTalkCrypto) GetEncryptMsgDetail(msg, timestamp, nonce string) (stri
 	// 对传入的msg，timestamp，nonce加密开始
 	size := make([]byte, 4)
 	binary.BigEndian.PutUint32(size, uint32(len(msg)))
-	msg = randomString(16) + string(size) + msg + c.SuiteKey
+	msg = randomString(16) + string(size) + msg + c.appkey
 	plantText := pkCS7Padding([]byte(msg), c.Block.BlockSize())
 	if len(plantText)%aes.BlockSize != 0 {
 		return "", "", errors.New("ERROR: 消息体size不为16的倍数")

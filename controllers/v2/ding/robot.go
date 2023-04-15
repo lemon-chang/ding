@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
-	"log"
 	"net/http"
 )
 
@@ -399,55 +398,31 @@ func GetTaskDetail(c *gin.Context) {
 	}
 }
 
-//	func SubscribeTo(c *gin.Context) {
-//		p := dingding.ParamCronTask{
-//			MsgText: &common.MsgText{
-//				At: common.At{
-//					IsAtAll: true,
-//				},
-//				Text: common.Text{
-//					Content: "subscription start",
-//				},
-//				Msgtype: "text",
-//			},
-//			RepeatTime: "立即发送",
-//			TaskName:   "事件订阅",
-//		}
-//
-//		err, task := (&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
-//		if err != nil {
-//			response.FailWithMessage("获取消息订阅信息失败，详情联系后端", c)
-//			return
-//		}
-//		fmt.Println(task)
-//		response.OkWithMessage("获取消息订阅成功", c)
-//	}
-
 func SubscribeTo(c *gin.Context) {
 	// 1. 参数获取
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-	zap.L().Info("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce)
+	zap.L().Info("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce + "\n")
 	var m map[string]interface{}
 	if err := c.ShouldBindJSON(&m); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	log.Printf("encrypt: %v\n", m)
+	fmt.Printf("encrypt: %v\n\n", m)
 
 	// 2. 参数解密
-	crypto := dingding.NewDingTalkCrypto("R5p85bVU3dEUU", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
-	msg, _ := crypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
+	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
 	// 3. 反序列化回调事件json数据
 	eventJson := make(map[string]interface{})
-	json.Unmarshal([]byte(msg), &eventJson)
+	json.Unmarshal([]byte(decryptMsg), &eventJson)
 	eventType := eventJson["EventType"].(string)
 
 	// 4.根据EventType分类处理
 	if eventType == "check_url" {
 		// 测试回调url的正确性
-		zap.L().Info("测试回调url的正确性")
+		zap.L().Info("测试回调url的正确性\n")
 	} else if eventType == "user_add_org" {
 		// 处理通讯录用户增加事件
 		zap.L().Info("发生了：" + eventType + "事件")
@@ -457,6 +432,6 @@ func SubscribeTo(c *gin.Context) {
 	}
 
 	// 5. 返回success的加密数据
-	successMap, _ := crypto.GetEncryptMsg("success")
+	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
 }

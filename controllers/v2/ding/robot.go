@@ -403,13 +403,13 @@ func SubscribeTo(c *gin.Context) {
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-	zap.L().Info("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce + "\n")
+	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce))
 	var m map[string]interface{}
 	if err := c.ShouldBindJSON(&m); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("encrypt: %v\n\n", m)
+	zap.L().Info(fmt.Sprintf("encrypt: %v", m))
 
 	// 2. 参数解密
 	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
@@ -426,6 +426,31 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "user_add_org" {
 		// 处理通讯录用户增加事件
 		zap.L().Info("发生了：" + eventType + "事件")
+	} else if eventType == "chat_update_title" {
+		// 处理群会话更换群名称事件
+		zap.L().Info(eventType + "has occurred")
+		for k, v := range eventJson {
+			zap.L().Info(fmt.Sprintf("k:%v,v:%v", k, v))
+		}
+	} else if eventType == "check_in" {
+		zap.L().Info("发生了：" + eventType + "事件")
+		var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", eventJson["EventType"], eventJson["TimeStamp"], eventJson["CorpId"], eventJson["StaffId"])
+		zap.L().Info(checkIn)
+		p := dingding.ParamCronTask{
+			MsgText: &common.MsgText{
+				At: common.At{
+					IsAtAll: true,
+				},
+				Text: common.Text{
+					Content: checkIn,
+				},
+				Msgtype: "text",
+			},
+			RepeatTime: "立即发送",
+			TaskName:   "事件订阅",
+		}
+
+		(&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")

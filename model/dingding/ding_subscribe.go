@@ -26,7 +26,7 @@ type DingTalkCrypto struct {
 
 // NewDingTalkCrypto 创建钉钉加密信息
 func NewDingTalkCrypto(token, encodingAESKey, suiteKey string) *DingTalkCrypto {
-	fmt.Println(len(encodingAESKey))
+	//fmt.Println(len(encodingAESKey))
 	if len(encodingAESKey) != int(43) {
 		panic("不合法的EncodingAESKey")
 	}

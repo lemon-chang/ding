@@ -423,51 +423,40 @@ func GetTaskDetail(c *gin.Context) {
 //		response.OkWithMessage("获取消息订阅成功", c)
 //	}
 
-//func SubscribeTo(c *gin.Context) {
-//	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
-//	msg, _ := ding.GetEncryptMsg("success")
-//	log.Printf("msg: %v\n", msg)
-//	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "X1VSe9cTJUMZu60d3kyLYTrBq5578ZRJtteU94wG0Q4Uk6E/wQYeJRIC0/UFW5Wkya1Ihz9oXAdLlyC9TRaqsQ==")
-//	log.Printf("success: %v\n", success)
-//	c.JSON(http.StatusOK, gin.H{
-//		"msg_signature": "111108bb8e6dbce3c9671d6fdb69d1506xxxx",
-//		"timeStamp":     "1783610513",
-//		"nonce":         "123456",
-//		"encrypt":       "1ojQf0NSvw2WPvW7LijxS8UvISr8pdDP+rXpPbcLGOmIxxxx",
-//	})
-//}
-
 func SubscribeTo(c *gin.Context) {
+	// 1. 参数获取
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-	zap.L().Info("signature value: " + signature + ", timestamp value: " + timestamp + ", nonce value: " + nonce)
-	data, err := c.GetRawData()
-	if err != nil {
-		log.Printf("c.GetRawData(): %v\n", err)
+	zap.L().Info("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce)
+	var m map[string]interface{}
+	if err := c.ShouldBindJSON(&m); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
-	var body map[string]string
-	err = json.Unmarshal(data, &body)
-	if err != nil {
-		log.Printf("json.Unmarshal: %v\n", err)
+	log.Printf("encrypt: %v\n", m)
+
+	// 2. 参数解密
+	crypto := dingding.NewDingTalkCrypto("R5p85bVU3dEUU", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	msg, _ := crypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
+	// 3. 反序列化回调事件json数据
+	eventJson := make(map[string]interface{})
+	json.Unmarshal([]byte(msg), &eventJson)
+	eventType := eventJson["EventType"].(string)
+
+	// 4.根据EventType分类处理
+	if eventType == "check_url" {
+		// 测试回调url的正确性
+		zap.L().Info("测试回调url的正确性")
+	} else if eventType == "user_add_org" {
+		// 处理通讯录用户增加事件
+		zap.L().Info("发生了：" + eventType + "事件")
+	} else {
+		// 添加其他已注册的
+		zap.L().Info("发生了：" + eventType + "事件")
 	}
-	//获取json中的key，注意使用["key"]获取
-	encrypt := body["encrypt"]
-	zap.L().Info("encrypt value: " + encrypt)
-	c.JSON(http.StatusOK, gin.H{
-		"massage": "success",
-		//"signature": signature,
-		//"timestamp": timestamp,
-		//"nonce":     nonce,
-		//"encrypt":   encrypt,
-	})
+
+	// 5. 返回success的加密数据
+	successMap, _ := crypto.GetEncryptMsg("success")
+	c.JSON(http.StatusOK, successMap)
 }
-
-/*
-加密 aes_key
-xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj
-签名 token
-R5p85bVU3dEUU
-*/
-
-//HTTP请求结果校验返回字段值失败 HttpRequest: curl 'http://121.43.119.224:8889/api/ding/robot/subscribeTo?signature=78aceec41e36cde1704f7cf1723b26a648e070ec&msg_signature=78aceec41e36cde1704f7cf1723b26a648e070ec&timestamp=1681434486403&nonce=hYyhAr2V' -d '{"encrypt":"oMlO0wbzWgCaEmMXcuoYi8ZUNUJvxVgHzUCC+96bRLxkqc8iWTbUPah37wUhe0ADdTMKugKLuFG1+/a9Zm4slPogEGThEVIGbJkcxQKSb5nqbXo9k3vsz7dXrO7qMs1K"}' -H 'Content-Type:application/json' HttpCode:200 HttpReponse:

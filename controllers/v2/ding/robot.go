@@ -6,11 +6,12 @@ import (
 	"ding/model/common"
 	"ding/model/dingding"
 	"ding/response"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
-	"log"
+	"net/http"
 )
 
 func OutGoing(c *gin.Context) {
@@ -397,37 +398,40 @@ func GetTaskDetail(c *gin.Context) {
 	}
 }
 
-//	func SubscribeTo(c *gin.Context) {
-//		p := dingding.ParamCronTask{
-//			MsgText: &common.MsgText{
-//				At: common.At{
-//					IsAtAll: true,
-//				},
-//				Text: common.Text{
-//					Content: "subscription start",
-//				},
-//				Msgtype: "text",
-//			},
-//			RepeatTime: "立即发送",
-//			TaskName:   "事件订阅",
-//		}
-//
-//		err, task := (&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
-//		if err != nil {
-//			response.FailWithMessage("获取消息订阅信息失败，详情联系后端", c)
-//			return
-//		}
-//		fmt.Println(task)
-//		response.OkWithMessage("获取消息订阅成功", c)
-//	}
 func SubscribeTo(c *gin.Context) {
-	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
-	fmt.Println(ding.)
-	msg, _ := ding.GetEncryptMsg("success")
-	log.Printf("msg: %v\n", msg)
-	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "rlmRqtlLfm7tTAM8fTim3WNSwyWbd-KM3wTZ8wBtwKX8Pw6M4ZzEiIQVrCqKgCwu")
-	log.Printf("success: %v\n", success)
-	//	accessToken 939ec599fd0c318a809bd7395e88c337
+	// 1. 参数获取
+	signature := c.Query("signature")
+	timestamp := c.Query("timestamp")
+	nonce := c.Query("nonce")
+	zap.L().Info("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce + "\n")
+	var m map[string]interface{}
+	if err := c.ShouldBindJSON(&m); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	fmt.Printf("encrypt: %v\n\n", m)
 
+	// 2. 参数解密
+	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
+	// 3. 反序列化回调事件json数据
+	eventJson := make(map[string]interface{})
+	json.Unmarshal([]byte(decryptMsg), &eventJson)
+	eventType := eventJson["EventType"].(string)
 
+	// 4.根据EventType分类处理
+	if eventType == "check_url" {
+		// 测试回调url的正确性
+		zap.L().Info("测试回调url的正确性\n")
+	} else if eventType == "user_add_org" {
+		// 处理通讯录用户增加事件
+		zap.L().Info("发生了：" + eventType + "事件")
+	} else {
+		// 添加其他已注册的
+		zap.L().Info("发生了：" + eventType + "事件")
+	}
+
+	// 5. 返回success的加密数据
+	successMap, _ := callbackCrypto.GetEncryptMsg("success")
+	c.JSON(http.StatusOK, successMap)
 }

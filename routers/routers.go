@@ -47,6 +47,7 @@ func Setup(mode string) *gin.Engine {
 	Ding := r.Group("/api/ding")
 	{
 		Ding.POST("login", ding.LoginHandler)
+		Ding.POST("/subscribeTo", ding.SubscribeTo)
 	}
 	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)

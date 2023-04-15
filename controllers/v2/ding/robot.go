@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
-	"log"
 	"net/http"
 )
 
@@ -428,13 +427,13 @@ func SubscribeTo(c *gin.Context) {
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
 	nonce := c.Query("nonce")
-	zap.L().Info("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce)
+	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce))
 	var m map[string]interface{}
 	if err := c.ShouldBindJSON(&m); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	log.Printf("encrypt: %v\n", m)
+	zap.L().Info(fmt.Sprintf("encrypt: %v\n", m))
 
 	// 2. 参数解密
 	crypto := dingding.NewDingTalkCrypto("R5p85bVU3dEUU", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")

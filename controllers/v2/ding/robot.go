@@ -422,8 +422,12 @@ func GetTaskDetail(c *gin.Context) {
 //	}
 func SubscribeTo(c *gin.Context) {
 	var ding = dingding.NewDingTalkCrypto("KLkA8WdUV1fJfBN3KxEh6FNxPinwGdC6s7FIPro8LvxYRe37yvgl", "MyOhDfHxAlrzLjBLY6LVR26w8NrPEopY5U8GPDLntp2", "dingepndjqy7etanalhi")
+	fmt.Println(ding.)
 	msg, _ := ding.GetEncryptMsg("success")
 	log.Printf("msg: %v\n", msg)
 	success, _ := ding.GetDecryptMsg("111108bb8e6dbc2xxxx", "1783610513", "380320111", "rlmRqtlLfm7tTAM8fTim3WNSwyWbd-KM3wTZ8wBtwKX8Pw6M4ZzEiIQVrCqKgCwu")
 	log.Printf("success: %v\n", success)
+	//	accessToken 939ec599fd0c318a809bd7395e88c337
+
+
 }

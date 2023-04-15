@@ -428,10 +428,8 @@ func SubscribeTo(c *gin.Context) {
 		zap.L().Info("发生了：" + eventType + "事件")
 	} else if eventType == "chat_update_title" {
 		// 处理群会话更换群名称事件
-		zap.L().Info(eventType + "has occurred")
-		for k, v := range eventJson {
-			zap.L().Info(fmt.Sprintf("k:%v,v:%v", k, v))
-		}
+		zap.L().Info(eventType + " has occurred")
+		chatUpdateTitle(eventJson)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
@@ -440,4 +438,11 @@ func SubscribeTo(c *gin.Context) {
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
+}
+
+// 群更改群名事件
+func chatUpdateTitle(eventJson map[string]interface{}) {
+	for k, v := range eventJson {
+		zap.L().Info(fmt.Sprintf("k:%v, v:%v", k, v))
+	}
 }

@@ -432,6 +432,24 @@ func SubscribeTo(c *gin.Context) {
 		for k, v := range eventJson {
 			zap.L().Info(fmt.Sprintf("k:%v,v:%v", k, v))
 		}
+	} else if eventType == "check_in" {
+		zap.L().Info("发生了：" + eventType + "事件")
+		var checkIn string = "用户签到事件触发\n" + "事件类型:" + eventJson["EventType"].(string) + ";签到时间:" + eventJson["TimeStamp"].(string) + ";签到企业id:" + eventJson["CorpId"].(string) + ";签到用户id:" + eventJson["StaffId"].(string)
+		p := dingding.ParamCronTask{
+			MsgText: &common.MsgText{
+				At: common.At{
+					IsAtAll: true,
+				},
+				Text: common.Text{
+					Content: checkIn,
+				},
+				Msgtype: "text",
+			},
+			RepeatTime: "立即发送",
+			TaskName:   "事件订阅",
+		}
+
+		(&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")

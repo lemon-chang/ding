@@ -56,7 +56,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.DELETE("removeTask", ding.RemoveTask)     //移除定时任务
 		Robot.POST("reStartTask", ding.ReStartTask)     //重启定时任务
 		Robot.GET("/getTaskDetail", ding.GetTaskDetail) //获取定时任务详情
-		Robot.POST("/subscribeTo", ding.SubscribeTo)    //消息订阅
+		//消息订阅
 	}
 
 }

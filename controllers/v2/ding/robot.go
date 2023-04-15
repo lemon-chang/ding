@@ -434,7 +434,8 @@ func SubscribeTo(c *gin.Context) {
 		}
 	} else if eventType == "check_in" {
 		zap.L().Info("发生了：" + eventType + "事件")
-		var checkIn string = "用户签到事件触发\n" + "事件类型:" + eventJson["EventType"].(string) + ";签到时间:" + eventJson["TimeStamp"].(string) + ";签到企业id:" + eventJson["CorpId"].(string) + ";签到用户id:" + eventJson["StaffId"].(string)
+		var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", eventJson["EventType"], eventJson["TimeStamp"], eventJson["CorpId"], eventJson["StaffId"])
+		zap.L().Info(checkIn)
 		p := dingding.ParamCronTask{
 			MsgText: &common.MsgText{
 				At: common.At{

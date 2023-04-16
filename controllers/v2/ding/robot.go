@@ -426,23 +426,25 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "user_add_org" {
 		// 处理通讯录用户增加事件
 		zap.L().Info("发生了：" + eventType + "事件")
-	} else if eventType == "chat_update_title" {
-		// 处理群会话更换群名称事件
+	} else if eventType == "user_leave_org" {
+		// 处理通讯录用户增加减少
 		zap.L().Info(eventType + " has occurred")
-		chatUpdateTitle(eventJson)
+		UserLeaveOrg(eventJson)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
 	}
-
+	//user, err := (&dingding.DingUser{UserId: ""}).GetUserDetailByUserId()
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
 }
 
-// 群更改群名事件
-func chatUpdateTitle(eventJson map[string]interface{}) {
-	for k, v := range eventJson {
-		zap.L().Info(fmt.Sprintf("k:%v, v:%v", k, v))
-	}
+// UserLeaveOrg 用户退出组织
+func UserLeaveOrg(eventJson map[string]interface{}) {
+	user := new(dingding.DingUser)
+	user.UserId = eventJson["UserId"].([]string)[0]
+	user.Token = "939ec599fd0c318a809bd7395e88c337"
+	dingUser, _ := user.GetUserDetailByUserId()
+	fmt.Printf("dingUser: %v\n", dingUser)
 }

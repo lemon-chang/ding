@@ -6,16 +6,47 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha1"
+	"ding/model/common"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	r "math/rand"
 	"sort"
 	"strings"
 	"time"
 )
 
+type DingSubscribe struct {
+	EventJson map[string]interface{}
+}
+
+// CheckIn 用户签到事件
+func (s *DingSubscribe) CheckIn(c *gin.Context, eventType string, eventJson map[string]interface{}) {
+	zap.L().Info("发生了：" + eventType + "事件")
+	var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", eventJson["EventType"], eventJson["TimeStamp"], eventJson["CorpId"], eventJson["StaffId"])
+	zap.L().Info(checkIn)
+	p := ParamCronTask{
+		MsgText: &common.MsgText{
+			At: common.At{
+				IsAtAll: true,
+			},
+			Text: common.Text{
+				Content: checkIn,
+			},
+			Msgtype: "text",
+		},
+		RepeatTime: "立即发送",
+		TaskName:   "事件订阅",
+	}
+
+	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+
+}
+
+// DingTalkCrypto 事件订阅加密
 type DingTalkCrypto struct {
 	Token          string
 	EncodingAESKey string
@@ -24,7 +55,7 @@ type DingTalkCrypto struct {
 	Block          cipher.Block
 }
 
-// NewDingTalkCrypto 新建钉钉密钥 /**
+// NewDingTalkCrypto 新建钉钉密钥
 func NewDingTalkCrypto(token, encodingAESKey, appkey string) *DingTalkCrypto {
 	//fmt.Println(len(encodingAESKey))
 	if len(encodingAESKey) != int(43) {

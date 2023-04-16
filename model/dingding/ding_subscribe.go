@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	r "math/rand"
 	"sort"
 	"strings"
@@ -23,11 +22,13 @@ type DingSubscribe struct {
 	EventJson map[string]interface{}
 }
 
+func NewDingSubscribe(EventJson map[string]interface{}) *DingSubscribe {
+	return &DingSubscribe{EventJson: EventJson}
+}
+
 // CheckIn 用户签到事件
-func (s *DingSubscribe) CheckIn(c *gin.Context, eventType string, eventJson map[string]interface{}) {
-	zap.L().Info("发生了：" + eventType + "事件")
-	var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", eventJson["EventType"], eventJson["TimeStamp"], eventJson["CorpId"], eventJson["StaffId"])
-	zap.L().Info(checkIn)
+func (s *DingSubscribe) CheckIn(c *gin.Context) {
+	var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", s.EventJson["EventType"], s.EventJson["TimeStamp"], s.EventJson["CorpId"], s.EventJson["StaffId"])
 	p := ParamCronTask{
 		MsgText: &common.MsgText{
 			At: common.At{
@@ -43,8 +44,12 @@ func (s *DingSubscribe) CheckIn(c *gin.Context, eventType string, eventJson map[
 	}
 
 	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
-
 }
+
+//群会话添加人员
+
+//群会话删除人员
+//群会话更换群名称
 
 // DingTalkCrypto 事件订阅加密
 type DingTalkCrypto struct {

@@ -418,10 +418,10 @@ func SubscribeTo(c *gin.Context) {
 	eventJson := make(map[string]interface{})
 	json.Unmarshal([]byte(decryptMsg), &eventJson)
 	eventType := eventJson["EventType"].(string)
-
+	subscription := dingding.NewDingSubscribe(eventJson)
 	// 4.根据EventType分类处理
 	if eventType == "check_url" {
-		// 测试回调url的正确性
+		// 测试回调url的正确性,主要用于首次
 		zap.L().Info("测试回调url的正确性\n")
 	} else if eventType == "user_add_org" {
 		// 处理通讯录用户增加事件
@@ -433,7 +433,8 @@ func SubscribeTo(c *gin.Context) {
 			zap.L().Info(fmt.Sprintf("k:%v,v:%v", k, v))
 		}
 	} else if eventType == "check_in" {
-		// 用户签到
+		// 用户签到事件
+		subscription.CheckIn(c)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")

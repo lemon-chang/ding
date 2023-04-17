@@ -53,7 +53,12 @@ func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
 	userIdJson := s.EventJson["UserId"]
 	userIdStrs := userIdJson.([]interface{})
 	user.UserId = userIdStrs[0].(string)
-	user.DingToken.Token = "939ec599fd0c318a809bd7395e88c337"
+	token, err2 := user.DingToken.GetAccessToken()
+	if err2 != nil {
+		zap.L().Error("user.DingToken.GetAccessToken() failed ,err: ", zap.Error(err2))
+	} else {
+		zap.L().Info("user.DingToken.GetAccessToken() success ,token: " + token)
+	}
 	dingUser, _ := user.GetUserDetailByUserId()
 	//输出用户信息，UserId和Token
 	fmt.Printf("dingUser: %v\n", dingUser)
@@ -72,7 +77,12 @@ func (s *DingSubscribe) UserLeaveOrg(c *gin.Context) {
 	userIdJson := s.EventJson["UserId"]
 	userIdStrs := userIdJson.([]interface{})
 	user.UserId = userIdStrs[0].(string)
-	user.DingToken.Token = "939ec599fd0c318a809bd7395e88c337"
+	token, err2 := user.DingToken.GetAccessToken()
+	if err2 != nil {
+		zap.L().Error("user.DingToken.GetAccessToken() failed ,err: ", zap.Error(err2))
+	} else {
+		zap.L().Info("user.DingToken.GetAccessToken() success ,token: " + token)
+	}
 	dingUser, _ := user.GetUserDetailByUserId()
 	//输出用户信息，UserId和Token
 	fmt.Printf("dingUser: %v\n", dingUser)

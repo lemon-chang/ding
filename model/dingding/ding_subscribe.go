@@ -6,16 +6,81 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha1"
+	"ding/model/common"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	r "math/rand"
 	"sort"
 	"strings"
 	"time"
 )
 
+type DingSubscribe struct {
+	EventJson map[string]interface{}
+}
+
+func NewDingSubscribe(EventJson map[string]interface{}) *DingSubscribe {
+	return &DingSubscribe{EventJson: EventJson}
+}
+
+// CheckIn 用户签到事件
+func (s *DingSubscribe) CheckIn(c *gin.Context) {
+	var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", s.EventJson["EventType"], s.EventJson["TimeStamp"], s.EventJson["CorpId"], s.EventJson["StaffId"])
+	p := ParamCronTask{
+		MsgText: &common.MsgText{
+			At: common.At{
+				IsAtAll: true,
+			},
+			Text: common.Text{
+				Content: checkIn,
+			},
+			Msgtype: "text",
+		},
+		RepeatTime: "立即发送",
+		TaskName:   "事件订阅",
+	}
+
+	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+}
+
+// UserAddOrg 用户加入组织
+func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
+	user := new(DingUser)
+	user.UserId = s.EventJson["UserId"].([]string)[0]
+	user.Token = "939ec599fd0c318a809bd7395e88c337"
+	dingUser, _ := user.GetUserDetailByUserId()
+	//输出用户信息，UserId和Token
+	fmt.Printf("dingUser: %v\n", dingUser)
+	//根据官方接口查询用户详细信息
+	detailDingUser, err := dingUser.GetUserDetailByUserId()
+	if err != nil {
+		zap.L().Error("dingUser.GetUserByUserId() failed,err: ", zap.Error(err))
+	}
+	fmt.Printf("detailDingUser: %v\n", detailDingUser)
+
+}
+
+// UserLeaveOrg 用户退出组织
+func (s *DingSubscribe) UserLeaveOrg(c *gin.Context) {
+	user := new(DingUser)
+	user.UserId = s.EventJson["UserId"].([]string)[0]
+	user.Token = "939ec599fd0c318a809bd7395e88c337"
+	dingUser, _ := user.GetUserDetailByUserId()
+	//输出用户信息，UserId和Token
+	fmt.Printf("dingUser: %v\n", dingUser)
+	//根据官方接口查询用户详细信息
+	detailDingUser, err := dingUser.GetUserDetailByUserId()
+	if err != nil {
+		zap.L().Error("dingUser.GetUserByUserId() failed,err: ", zap.Error(err))
+	}
+	fmt.Printf("detailDingUser: %v\n", detailDingUser)
+}
+
+// DingTalkCrypto 事件订阅加密
 type DingTalkCrypto struct {
 	Token          string
 	EncodingAESKey string
@@ -24,7 +89,7 @@ type DingTalkCrypto struct {
 	Block          cipher.Block
 }
 
-// NewDingTalkCrypto 新建钉钉密钥 /**
+// NewDingTalkCrypto 新建钉钉密钥
 func NewDingTalkCrypto(token, encodingAESKey, appkey string) *DingTalkCrypto {
 	//fmt.Println(len(encodingAESKey))
 	if len(encodingAESKey) != int(43) {

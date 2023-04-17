@@ -427,6 +427,7 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "chat_add_member" {
 		// 处理通讯录用户增加事件
 		zap.L().Info("发生了：" + eventType + "事件")
+		subscription.UserAddOrg(c)
 	} else if eventType == "chat_remove_member" {
 		// 处理通讯录用户减少事件
 		zap.L().Info("发生了：" + eventType + "事件")

@@ -418,18 +418,22 @@ func SubscribeTo(c *gin.Context) {
 	eventJson := make(map[string]interface{})
 	json.Unmarshal([]byte(decryptMsg), &eventJson)
 	eventType := eventJson["EventType"].(string)
+	subscription := dingding.NewDingSubscribe(eventJson)
 
 	// 4.根据EventType分类处理
 	if eventType == "check_url" {
 		// 测试回调url的正确性
 		zap.L().Info("测试回调url的正确性\n")
-	} else if eventType == "user_add_org" {
+	} else if eventType == "chat_add_member" {
 		// 处理通讯录用户增加事件
 		zap.L().Info("发生了：" + eventType + "事件")
-	} else if eventType == "user_leave_org" {
-		// 处理通讯录用户增加减少
-		zap.L().Info(eventType + " has occurred")
-		UserLeaveOrg(eventJson)
+	} else if eventType == "chat_remove_member" {
+		// 处理通讯录用户减少事件
+		zap.L().Info("发生了：" + eventType + "事件")
+		subscription.UserLeaveOrg(c)
+	} else if eventType == "check_in" {
+		// 用户签到事件
+		subscription.CheckIn(c)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
@@ -438,13 +442,4 @@ func SubscribeTo(c *gin.Context) {
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
-}
-
-// UserLeaveOrg 用户退出组织
-func UserLeaveOrg(eventJson map[string]interface{}) {
-	user := new(dingding.DingUser)
-	user.UserId = eventJson["UserId"].([]string)[0]
-	user.Token = "939ec599fd0c318a809bd7395e88c337"
-	dingUser, _ := user.GetUserDetailByUserId()
-	fmt.Printf("dingUser: %v\n", dingUser)
 }

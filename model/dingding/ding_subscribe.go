@@ -50,7 +50,9 @@ func (s *DingSubscribe) CheckIn(c *gin.Context) {
 // UserAddOrg 用户加入组织
 func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
 	user := new(DingUser)
-	user.UserId = s.EventJson["UserId"].([]string)[0]
+	userIdJson := s.EventJson["UserId"]
+	userIdStrs := userIdJson.([]string)
+	user.UserId = userIdStrs[0]
 	user.Token = "939ec599fd0c318a809bd7395e88c337"
 	dingUser, _ := user.GetUserDetailByUserId()
 	//输出用户信息，UserId和Token
@@ -67,7 +69,9 @@ func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
 // UserLeaveOrg 用户退出组织
 func (s *DingSubscribe) UserLeaveOrg(c *gin.Context) {
 	user := new(DingUser)
-	user.UserId = s.EventJson["UserId"].([]string)[0]
+	userIdJson := s.EventJson["UserId"]
+	userIdStrs := userIdJson.([]string)
+	user.UserId = userIdStrs[0]
 	user.Token = "939ec599fd0c318a809bd7395e88c337"
 	dingUser, _ := user.GetUserDetailByUserId()
 	//输出用户信息，UserId和Token

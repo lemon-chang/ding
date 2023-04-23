@@ -362,29 +362,30 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 			return err
 		}
 		if old.IsRobotAttendance == false && AttendGroup.IsRobotAttendance == true {
+			zap.L().Error("更新考勤组开启定时任务")
 			//开启定时任务
 			P := &params.ParamAllDepartAttendByRobot{
 				GroupId: p.GroupId,
 			}
 			_, taskID, err := a.AllDepartAttendByRobot(P)
 			if err != nil {
-				zap.L().Error("开启定时任务失败", zap.Error(err))
+				zap.L().Error("开启定时任务AllDepartAttendByRobot()失败", zap.Error(err))
 				return err
 			}
 			err = tx.Model(&AttendGroup).Update("robot_attend_task_id", int(taskID)).Error
-			zap.L().Info("开启考勤组考勤定时任务成功！")
+			if err != nil {
+				zap.L().Error("mysql更新考勤组定时任务task_id失败")
+			}
+			zap.L().Info(fmt.Sprintf("开启考勤组考勤定时任务成功！定时任务id为%s", taskID))
 			return err
 		} else if old.IsRobotAttendance == true && AttendGroup.IsRobotAttendance == false {
+			zap.L().Error("更新考勤组关闭定时任务")
 			AttendGroup.RobotAttendTaskID = -1
 			err = tx.Updates(AttendGroup).Error
 			if err != nil {
-
+				zap.L().Error("更新考勤组定时任务id为-1失败", zap.Error(err))
 			}
-			//关闭定时任务
-			err = tx.First(&old, p.GroupId).Error
-			if err != nil {
-				zap.L().Error("关闭考勤任务，查询旧的定时任务id时失败", zap.Error(err))
-			}
+			zap.L().Info(fmt.Sprintf("关闭cron定时任务，定时任务id为：%v", old.RobotAttendTaskID))
 			global.GLOAB_CORN.Remove(cron.EntryID(old.RobotAttendTaskID))
 
 			zap.L().Info("关闭考勤组考勤定时任务成功！")
@@ -418,9 +419,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
 	commutingTime, err := g.GetCommutingTime()
 	if err != nil {
-		zap.L().Error("根据获取组获取上下班时间失败", zap.Error(err))
+		zap.L().Error("根据考勤组获取上下班时间失败", zap.Error(err))
 		return
 	}
+	//获取到上班时间
 	OnDutyTimeList := commutingTime["OnDuty"]
 	min := ""
 	hour := ""

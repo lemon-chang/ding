@@ -418,44 +418,28 @@ func SubscribeTo(c *gin.Context) {
 	eventJson := make(map[string]interface{})
 	json.Unmarshal([]byte(decryptMsg), &eventJson)
 	eventType := eventJson["EventType"].(string)
+	subscription := dingding.NewDingSubscribe(eventJson)
 
 	// 4.根据EventType分类处理
 	if eventType == "check_url" {
 		// 测试回调url的正确性
 		zap.L().Info("测试回调url的正确性\n")
-	} else if eventType == "user_add_org" {
+	} else if eventType == "chat_add_member" {
 		// 处理通讯录用户增加事件
 		zap.L().Info("发生了：" + eventType + "事件")
-	} else if eventType == "chat_update_title" {
-		// 处理群会话更换群名称事件
-		zap.L().Info(eventType + "has occurred")
-		for k, v := range eventJson {
-			zap.L().Info(fmt.Sprintf("k:%v,v:%v", k, v))
-		}
-	} else if eventType == "check_in" {
+		subscription.UserAddOrg(c)
+	} else if eventType == "chat_remove_member" {
+		// 处理通讯录用户减少事件
 		zap.L().Info("发生了：" + eventType + "事件")
-		var checkIn string = "用户签到事件触发" + fmt.Sprintf("%v;%v;%v;%v", eventJson["EventType"], eventJson["TimeStamp"], eventJson["CorpId"], eventJson["StaffId"])
-		zap.L().Info(checkIn)
-		p := dingding.ParamCronTask{
-			MsgText: &common.MsgText{
-				At: common.At{
-					IsAtAll: true,
-				},
-				Text: common.Text{
-					Content: checkIn,
-				},
-				Msgtype: "text",
-			},
-			RepeatTime: "立即发送",
-			TaskName:   "事件订阅",
-		}
-
-		(&dingding.DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+		subscription.UserLeaveOrg(c)
+	} else if eventType == "check_in" {
+		// 用户签到事件
+		subscription.CheckIn(c)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
 	}
-
+	//user, err := (&dingding.DingUser{UserId: ""}).GetUserDetailByUserId()
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)

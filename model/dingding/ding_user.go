@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/tls"
-	"database/sql/driver"
 	"ding/global"
 	"ding/initialize/jwt"
 	"ding/model/params/ding"
@@ -511,19 +510,7 @@ func (d *DingUser) UpdateDingUserBlog(blogs Strs, id string) (err error) {
 	return nil
 }
 
-func (m *Strs) Scan(val interface{}) error {
-	s := val.([]uint8)
-	ss := strings.Split(string(s), "|")
-	*m = ss
-	return nil
-}
-
-func (m Strs) Value() (driver.Value, error) {
-	str := strings.Join(m, "|")
-	return str, nil
-}
-
-//获取二维码buf，chatId, title
+// 获取二维码buf，chatId, title
 func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, err error) {
 	zap.L().Info("进入到了chromedp")
 	d := data{}

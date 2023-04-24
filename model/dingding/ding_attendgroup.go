@@ -888,7 +888,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			pipeline.Close()
 			//发送部门排行榜请假情况
 			DeptDetail.SendFrequencyLeave(startWeek)
-
 			// 以下是对迟到Zset的操作
 			pipeline = global.GLOBAL_REDIS.TxPipeline()
 			lateCount := len(result["Late"])

@@ -40,6 +40,12 @@ type ParamRemoveTask struct {
 type ParamGetTaskList struct {
 	RobotId string `json:"robot_id"`
 }
+type ParamChat struct {
+	//RobotCode   string   `json:"robotCode"`
+	UserIds  []string `json:"userIds"`
+	Msgkey   string   `json:"msgKey"`
+	MsgParam string   `json:"msgParam"`
+}
 type ParamCronTask struct {
 	MsgText     *common.MsgText     `json:"msg_text"`
 	MsgLink     *common.MsgLink     `json:"msg_link"`

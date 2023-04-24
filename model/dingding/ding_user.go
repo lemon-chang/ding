@@ -65,11 +65,11 @@ type DingUser struct {
 	IsExcellentJianBlog bool `json:"is_excellentBlogJian" `
 }
 
-func (d *DingUser) SendFrequencyLeave() error {
+func (d *DingUser) SendFrequencyLeave(start int) error {
 	fmt.Println("推送个人请假频率")
 	return nil
 }
-func (d *DingUser) CountFrequencyLeave() error {
+func (d *DingUser) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) error {
 	fmt.Println("存储个人请假频率")
 	return nil
 }

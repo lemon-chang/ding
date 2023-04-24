@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/tls"
 	"ding/global"
 	"encoding/base64"
 	"encoding/json"
@@ -104,6 +105,73 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	err = global.GLOAB_DB.Where("robot_id = ?", r.RobotId).First(&robot).Error
 	return
 }
+
+func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	URL := "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend"
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+	//此处是post请求的请求题，我们先初始化一个对象
+	b := struct {
+		MsgParam  string   `json:"msgParam"`
+		MsgKey    string   `json:"msgKey"`
+		RobotCode string   `json:"robotCode"`
+		UserIds   []string `json:"userIds"`
+	}{MsgParam: fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
+		MsgKey:    p.Msgkey,
+		RobotCode: r.RobotId,
+		UserIds:   p.UserIds,
+	}
+
+	//然后把结构体对象序列化一下
+	bodymarshal, err := json.Marshal(&b)
+	if err != nil {
+		return nil
+	}
+	//再处理一下
+	reqBody := strings.NewReader(string(bodymarshal))
+	//然后就可以放入具体的request中的
+	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
+	if err != nil {
+		return nil
+	}
+	request.Header.Set("x-acs-dingtalk-access-token", "939ec599fd0c318a809bd7395e88c337")
+	request.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(request)
+	if err != nil {
+
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return nil
+	}
+	h := struct {
+		Code                      string   `json:"code"`
+		Message                   string   `json:"message"`
+		ProcessQueryKey           string   `json:"processQueryKey"`
+		InvalidStaffIdList        []string `json:"invalidStaffIdList"`
+		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
+	}{}
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return nil
+	}
+	if h.Code != "" {
+		return errors.New(h.Message)
+	}
+	// 此处举行具体的逻辑判断，然后返回即可
+
+	return nil
+}
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
 	spec, detailTimeForUser, err := HandleSpec(p)
@@ -147,7 +215,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			} else {
 				zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
 			}
-			//定时任务
+
 			return err, task
 		} else { //我要做定时任务
 			tasker := func() {}

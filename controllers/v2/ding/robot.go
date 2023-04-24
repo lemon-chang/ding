@@ -253,6 +253,30 @@ func UpdateRobot(c *gin.Context) {
 	}
 }
 
+func ChatHandler(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		UserId = "453562553921462447"
+	}
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	if err != nil {
+		CurrentUser = dingding.DingUser{}
+	}
+	var p *dingding.ParamChat
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("ChatHandler做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	err = (&dingding.DingRobot{RobotId: "dingepndjqy7etanalhi"}).ChatSendMessage(p)
+
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+		response.FailWithDetailed(err, "发送定时任务失败", c)
+	} else {
+		response.OkWithMessage("发送定时任务成功", c)
+	}
+}
 func CronTask(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -296,12 +320,20 @@ func PingRobot(c *gin.Context) {
 		CurrentUser = dingding.DingUser{}
 	}
 
-	err, _ = (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
+	err, task := (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
+
+	r := struct {
+		taskName string `json:"task_name"` //任务名字
+		taskId   int    `json:"task_id"`
+	}{
+		taskName: task.TaskName,
+	}
+
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("测试机器人失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
 		response.FailWithMessage("发送定时任务失败", c)
 	} else {
-		response.OkWithMessage("发送定时任务成功", c)
+		response.OkWithDetailed(r, "发送定时任务成功", c)
 	}
 }
 

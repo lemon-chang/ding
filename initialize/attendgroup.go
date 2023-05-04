@@ -4,6 +4,8 @@ import (
 	"ding/global"
 	"ding/model/dingding"
 	"ding/model/params"
+	"fmt"
+	"go.uber.org/zap"
 )
 
 func AttendanceByRobot() (err error) {
@@ -14,6 +16,7 @@ func AttendanceByRobot() (err error) {
 	}
 	for _, group := range groupList {
 		if group.IsRobotAttendance {
+			zap.L().Info(fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName))
 			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
 			_, taskID, err := group.AllDepartAttendByRobot(p)
 			if err != nil {
@@ -23,6 +26,8 @@ func AttendanceByRobot() (err error) {
 			if err != nil {
 				return err
 			}
+		} else {
+			zap.L().Warn(fmt.Sprintf("考勤组：%v 开启未机器人考勤", group.GroupName))
 		}
 	}
 	return err

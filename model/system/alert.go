@@ -4,6 +4,7 @@ type Check interface {
 	Check(p ApiStatInfo) //放了一个函数
 }
 
+//报警模块
 type Alert struct {
 	AlertHandlers []AlertHandler
 }
@@ -38,15 +39,18 @@ func (aH *PerfectInformationHandler) Check(apiStatInfo ApiStatInfo) {
 		//发送通知
 		aH.notification.notify()
 	}
-
 }
 
 type ApiStatInfo struct {
-	errCount                  int
-	unPerfectInformationCount int //未完善信息数量
+	errCount                  int //项目出错多少次
+	unPerfectInformationCount int //个人信息未完善信息数量
 }
+
+//报警规则
 type AlertRule struct {
 }
+
+//告警通知类，支持邮件，短信，微信等渠道
 type Notification struct {
 }
 

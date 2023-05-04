@@ -445,7 +445,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
 	//spec = "00 12,37,26 08,16,21 * * ?"
-	zap.L().Info("考勤规则：" + spec + "******************************************************")
+
+	//获取考勤组部门成员，已经筛掉了不参与考勤的个人
+	deptAttendanceUser, err := g.GetGroupDeptNumber()
+	zap.L().Info(fmt.Sprintf("考勤规则：%v，考勤人员详情：%v", spec, deptAttendanceUser))
 	task := func() {
 		var isInSchool bool
 		err = global.GLOAB_DB.Model(&DingAttendGroup{GroupId: p.GroupId}).Select("is_in_school").Scan(&isInSchool).Error
@@ -530,8 +533,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			zap.L().Error("获取当前时间失败", zap.Error(err))
 			return
 		}
-		//获取考勤组部门成员，已经筛掉了不参与考勤的个人
-		deptAttendanceUser, err := g.GetGroupDeptNumber()
+
 		if err != nil {
 			zap.L().Error("获取考勤组部门成员(已经筛掉了不参与考勤的个人)失败", zap.Error(err))
 			return

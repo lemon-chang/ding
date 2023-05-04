@@ -445,8 +445,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
 	//spec = "00 12,37,26 08,16,21 * * ?"
-
-	fmt.Println(spec + "******************************************************")
+	zap.L().Info(spec + "******************************************************")
 	task := func() {
 		var isInSchool bool
 		err = global.GLOAB_DB.Model(&DingAttendGroup{GroupId: p.GroupId}).Select("is_in_school").Scan(&isInSchool).Error

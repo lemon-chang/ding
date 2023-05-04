@@ -50,7 +50,6 @@ func AddRobot(c *gin.Context) {
 		return
 	}
 	user, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
-
 	if err != nil {
 		response.ResponseError(c, response.CodeLoginEror)
 		return

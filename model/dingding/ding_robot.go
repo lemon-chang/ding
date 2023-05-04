@@ -86,7 +86,6 @@ type ResponseSendMessage struct {
 }
 
 func (r *DingRobot) AddDingRobot() (err error) {
-
 	err = global.GLOAB_DB.Create(r).Error
 	return
 }

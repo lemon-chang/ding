@@ -421,7 +421,7 @@ func (a *DingAttendGroup) GetAttendanceGroupListFromMysql(info *request.PageInfo
 func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
-	if err != nil {
+	if err != nil || token == "" {
 		zap.L().Error("从redis中取出token失败", zap.Error(err))
 		return
 	}
@@ -444,9 +444,8 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 12,37,26 08,16,21 * * ?"
-
-
+	//spec = "00 12,04,26 08,15,21 * * ?"
+	zap.L().Info(spec)
 	task := func() {
 		//获取考勤组部门成员，已经筛掉了不参与考勤的个人
 		//注意一定要放在task里面，这样当纪检部更新了考勤组之后，每次加载人员都是最近的

@@ -446,10 +446,12 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	//readySpec := ""
 	//spec = "00 12,37,26 08,16,21 * * ?"
 
-	//获取考勤组部门成员，已经筛掉了不参与考勤的个人
-	deptAttendanceUser, err := g.GetGroupDeptNumber()
-	zap.L().Info(fmt.Sprintf("考勤规则：%v，考勤人员详情：%v", spec, deptAttendanceUser))
+
 	task := func() {
+		//获取考勤组部门成员，已经筛掉了不参与考勤的个人
+		//注意一定要放在task里面，这样当纪检部更新了考勤组之后，每次加载人员都是最近的
+		deptAttendanceUser, err := g.GetGroupDeptNumber()
+		zap.L().Info(fmt.Sprintf("考勤规则：%v，考勤人员详情：%v", spec, deptAttendanceUser))
 		var isInSchool bool
 		err = global.GLOAB_DB.Model(&DingAttendGroup{GroupId: p.GroupId}).Select("is_in_school").Scan(&isInSchool).Error
 		if err != nil {

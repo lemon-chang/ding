@@ -24,7 +24,7 @@ func (t *DingToken) IsLegal() bool {
 
 //redis层下拿到access_token，先从redis中取出来，如果取不到的话，再重新申请一遍
 func (t *DingToken) GetAccessToken() (access_token string, err error) {
-	var accessToken string
+	//var accessToken string
 	var expire1 int64
 	fmt.Println(expire1)
 	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.AccessToken).Result()
@@ -33,7 +33,7 @@ func (t *DingToken) GetAccessToken() (access_token string, err error) {
 	}
 	if expire == -2 {
 		//申请新的token
-		accessToken, expire1, err = t.GetAccessTokenDing()
+		access_token, expire1, err = t.GetAccessTokenDing()
 		if err != nil {
 			zap.L().Error("申请新的token失败", zap.Error(err))
 			return
@@ -42,7 +42,7 @@ func (t *DingToken) GetAccessToken() (access_token string, err error) {
 
 		//重新设置token和token的过期时间
 
-		err = global.GLOBAL_REDIS.Set(context.Background(), utils.AccessToken, accessToken, time.Second*7200).Err()
+		err = global.GLOBAL_REDIS.Set(context.Background(), utils.AccessToken, access_token, time.Second*7200).Err()
 		if err != nil {
 			zap.L().Error("重新设置token和token的过期时间失败", zap.Error(err))
 			return

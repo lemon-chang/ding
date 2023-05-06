@@ -22,11 +22,13 @@ import (
 )
 
 type DingDept struct {
-	UserList []DingUser `gorm:"many2many:user_dept"`
-	DeptId   int        `gorm:"primaryKey" json:"dept_id"`
-	Deleted  gorm.DeletedAt
-	Name     string `json:"name"`
-	ParentId int    `json:"parent_id"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UserList  []DingUser `gorm:"many2many:user_dept"`
+	DeptId    int        `gorm:"primaryKey" json:"dept_id"`
+	Deleted   gorm.DeletedAt
+	Name      string `json:"name"`
+	ParentId  int    `json:"parent_id"`
 	DingToken
 	IsSendFirstPerson int    `json:"is_send_first_person"` // 0为不推送，1为推送
 	RobotToken        string `json:"robot_token"`

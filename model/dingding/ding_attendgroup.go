@@ -48,12 +48,13 @@ type DingAttendGroup struct {
 		} `gorm:"-" json:"sections"`
 	} `gorm:"-" json:"selected_class"`
 	DingToken         `gorm:"-"`
-	IsRobotAttendance bool `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
-	RobotAttendTaskID int  `json:"robot_attend_task_id"`
-	IsSendFirstPerson int  `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
-	IsInSchool        bool `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
-	IsReady           int  `json:"is_ready"`             //是否预备
-	ReadyTime         int  `json:"ready_time"`           //如果预备了，提前几分钟
+	IsRobotAttendance bool   `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
+	RobotAttendTaskID int    `json:"robot_attend_task_id"`
+	IsSendFirstPerson int    `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
+	IsInSchool        bool   `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
+	IsReady           int    `json:"is_ready"`             //是否预备
+	ReadyTime         int    `json:"ready_time"`           //如果预备了，提前几分钟
+	NextTime          string `json:"next_time"`            //下次执行时间
 }
 type DingAttendanceGroupMemberList struct {
 	AtcFlag  string `json:"atc_flag"`
@@ -444,7 +445,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 12,04,26 08,15,21 * * ?"
+	//spec = "00 12,21,26 08,16,21 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		//获取考勤组部门成员，已经筛掉了不参与考勤的个人
@@ -939,6 +940,14 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	taskID, err = global.GLOAB_CORN.AddFunc(spec, task)
 	if err != nil {
 		zap.L().Error("启动机器人查考勤定时任务失败", zap.Error(err))
+		return
+	}
+	nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
+	g.NextTime = nextTime
+	err = global.GLOAB_DB.Updates(g).Error
+
+	if err != nil {
+		zap.L().Error("获取定时任务下一次执行时间有误", zap.Error(err))
 		return
 	}
 	return result, taskID, err

@@ -5,6 +5,7 @@ import (
 	"ding/model/common"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"time"
 )
 
 type Task struct {
@@ -23,6 +24,7 @@ type Task struct {
 	MsgText           *common.MsgText     `json:"msg_text"`
 	MsgLink           *common.MsgLink     `json:"msg_link"`
 	MsgMarkDown       *common.MsgMarkDown `json:"msg_mark_down"`
+	NextTime          time.Time           `json:"next_time"`
 }
 
 func (t *Task) InsertTask() (err error) {

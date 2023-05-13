@@ -458,7 +458,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	spec = "00 01,14,08,45,03 9,11,15,17,20 * * ?"
+	//spec = "00 01,14,08,45,03 9,11,15,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		T := localTime.MySelfTime{}
@@ -923,11 +923,11 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			//err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-			//if err != nil {
-			//	zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-			//	continue
-			//}
+			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+			if err != nil {
+				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+				continue
+			}
 			// 向各部门根据请假次数排序的集合中 设置key
 			// 获取此次考勤该部门的请假次数
 			zap.L().Info(fmt.Sprintf("部门：%v开始统计请假迟到信息到redis中", DeptDetail.Name))

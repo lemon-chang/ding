@@ -15,6 +15,7 @@ type Calendar struct {
 	WeekNumber int
 }
 
+//获取现在是第几周
 func (*Calendar) GetWeek() (week int, err error) {
 	var client *http.Client
 	var request *http.Request

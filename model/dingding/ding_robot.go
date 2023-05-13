@@ -54,8 +54,13 @@ type DingRobot struct {
 	Tasks              []Task         `gorm:"foreignKey:RobotId;references:RobotId"`         //机器人拥有多个任务
 	Name               string         `json:"name"`                                          //机器人的名称
 	DingToken          `json:"ding_token" gorm:"-"`
+	IsShared           int `json:"is_shared"`
 }
 
+func (r *DingRobot) GetSharedRobot() (Robots []DingRobot, err error) {
+	err = global.GLOAB_DB.Where("is_shared = ?", 1).Find(&Robots).Error
+	return
+}
 func (r *DingRobot) InsertRobot() (err error) {
 	err = global.GLOAB_DB.Create(r).Error
 	return
@@ -105,6 +110,7 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
+//钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
 	var request *http.Request
@@ -123,11 +129,10 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		RobotCode string   `json:"robotCode"`
 		UserIds   []string `json:"userIds"`
 	}{MsgParam: fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
-		MsgKey:    p.Msgkey,
+		MsgKey:    p.MsgKey,
 		RobotCode: r.RobotId,
 		UserIds:   p.UserIds,
 	}
-
 	//然后把结构体对象序列化一下
 	bodymarshal, err := json.Marshal(&b)
 	if err != nil {
@@ -140,11 +145,14 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	if err != nil {
 		return nil
 	}
-	request.Header.Set("x-acs-dingtalk-access-token", "939ec599fd0c318a809bd7395e88c337")
+	token, err := r.DingToken.GetAccessToken()
+	if err != nil {
+		return err
+	}
+	request.Header.Set("x-acs-dingtalk-access-token", token)
 	request.Header.Set("Content-Type", "application/json")
 	resp, err = client.Do(request)
 	if err != nil {
-
 		return nil
 	}
 	defer resp.Body.Close()
@@ -171,6 +179,7 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 
 	return nil
 }
+
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
 	spec, detailTimeForUser, err := HandleSpec(p)

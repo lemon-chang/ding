@@ -6,10 +6,11 @@ import (
 )
 
 type ParamAddRobot struct {
-	Type    string `json:"type"`     //机器人类型
-	RobotId string `json:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
-	Secret  string `json:"secret"`
-	Name    string `json:"name"`
+	Type     string `json:"type"`     //机器人类型
+	RobotId  string `json:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
+	Secret   string `json:"secret"`
+	Name     string `json:"name"`
+	IsShared int    `json:"is_shared"`
 }
 type ParamGetRobotBase struct {
 	RobotId string `json:"robot_id" form:"robot_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
@@ -41,10 +42,10 @@ type ParamGetTaskList struct {
 	RobotId string `json:"robot_id"`
 }
 type ParamChat struct {
-	//RobotCode   string   `json:"robotCode"`
+	//RobotCode string   `json:"robotCode"`
 	UserIds  []string `json:"userIds"`
-	Msgkey   string   `json:"msgKey"`
-	MsgParam string   `json:"msgParam"`
+	MsgKey   string   `json:"msgKey"`   //SampleText
+	MsgParam string   `json:"msgParam"` //具体内容
 }
 type ParamCronTask struct {
 	MsgText     *common.MsgText     `json:"msg_text"`

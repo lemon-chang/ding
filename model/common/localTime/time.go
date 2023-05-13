@@ -30,7 +30,7 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (T MySelfTime
 	//字符串转成时间格式
 	CurTime, _ := time.Parse("2006-01-02 15:04:05", StringCurTime)
 	T.Time = CurTime
-	zap.L().Info(fmt.Sprintf("时间戳：%v,time.Time：%v,字符串格式：%s", T.TimeStamp, T.Time, T.Format))
+	zap.L().Info(fmt.Sprintf("当前时间的时间戳：%v,time.Time：%v,字符串格式：%s", T.TimeStamp, T.Time, T.Format))
 	if commutingTime == nil || len(commutingTime) == 0 {
 		zap.L().Info("commutingTime为空")
 		AfternoonStart, _ := time.Parse("2006-01-02 15:04:05", StringCurTime[0:10]+" 12:00:00")
@@ -104,6 +104,7 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (T MySelfTime
 		}
 		T.ClassNumber = 1 //直接判定成第一节课
 	} else if len(OnDuty) == 5 {
+		zap.L().Info("进入第二节课考勤判定")
 		//上午第二节课开始
 		MorningSecondClassStart, _ := time.Parse("2006-01-02 15:04:05", OnDuty[1])
 		//下午第二节课开始
@@ -126,8 +127,11 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (T MySelfTime
 				T.ClassNumber = 2
 			}
 		} else if CurTime.After(AfternoonStart) && CurTime.Before(EveningStart) {
+			zap.L().Info("成功判定当前为下午，T.Duration = 2")
 			T.Duration = 2
+			zap.L().Info(fmt.Sprintf("CurTime为%v,AfternoonSecondClassStart为%v,CurTime.After(AfternoonSecondClassStart)的值为%v", CurTime, AfternoonSecondClassStart, CurTime.After(AfternoonSecondClassStart)))
 			if CurTime.After(AfternoonSecondClassStart) {
+				zap.L().Info("成功判定当前是下午第二节课")
 				T.ClassNumber = 2
 			}
 		} else if CurTime.After(EveningStart) {

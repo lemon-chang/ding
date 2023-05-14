@@ -458,7 +458,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 01,14,08,45,03 9,11,15,17,20 * * ?"
+	//spec = "00 56,14,08,45,39 8,11,15,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		T := localTime.MySelfTime{}
@@ -677,7 +677,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 						}
 					}
 					zap.L().Info(fmt.Sprintf("部门：%s,成功获取%v,考勤数据，具体数据:%v", DeptDetail.Name, curTime.Duration, list))
-					attendanceList = append(attendanceList, list...)
 				} else if len(OnDutyTime) == 5 {
 					//如果是第二节课考勤
 					if curTime.Duration == 1 {
@@ -708,10 +707,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 							continue
 						}
 					} else if curTime.Duration == 3 {
-						zap.L().Info(fmt.Sprintf("获取晚上考勤数据,userIds:%v,开始时间%s,结束时间：%s", split, OffDutyTime[4], OnDutyTime[5]))
-						list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
+						zap.L().Info(fmt.Sprintf("获取晚上考勤数据,userIds:%v,开始时间%s,结束时间：%s", split, OffDutyTime[3], OnDutyTime[4]))
+						list, err = a.GetAttendanceList(split, OffDutyTime[3], OnDutyTime[4])
 						if err != nil {
-							zap.L().Error(fmt.Sprintf("获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", DeptDetail.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
+							zap.L().Error(fmt.Sprintf("获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", DeptDetail.Name, OffDutyTime[3], OnDutyTime[4]), zap.Error(err))
 							continue
 						}
 					}

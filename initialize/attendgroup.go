@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"ding/global"
+	"ding/model/common"
 	"ding/model/dingding"
 	"ding/model/params"
 	"fmt"
@@ -16,7 +17,7 @@ func AttendanceByRobot() (err error) {
 	}
 	for _, group := range groupList {
 		if group.IsRobotAttendance {
-			zap.L().Info(fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName))
+
 			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
 			_, taskID, err := group.AllDepartAttendByRobot(p)
 			if err != nil {
@@ -26,6 +27,18 @@ func AttendanceByRobot() (err error) {
 			if err != nil {
 				return err
 			}
+			d := &dingding.ParamCronTask{
+				MsgText: &common.MsgText{
+					Msgtype: "text",
+					At:      common.At{AtMobiles: []common.AtMobile{{AtMobile: "18737480171"}}},
+					Text: common.Text{
+						Content: fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName),
+					},
+				},
+			}
+			zap.L().Info(fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName))
+			(&dingding.DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).
+				SendMessage(d)
 		} else {
 			zap.L().Warn(fmt.Sprintf("考勤组：%v 开启未机器人考勤", group.GroupName))
 		}

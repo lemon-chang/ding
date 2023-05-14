@@ -458,10 +458,9 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 56,14,08,45,39 8,11,15,17,20 * * ?"
+	//spec = "00 56,43,08,45,39 8,10,15,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
-		T := localTime.MySelfTime{}
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
 		a := DingAttendance{DingToken: DingToken{Token: token}}
 		//获取一天上下班的时间
@@ -477,7 +476,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		zap.L().Info(fmt.Sprintf("上班时间：%v", OnDutyTime))
 		zap.L().Info(fmt.Sprintf("下班时间：%v", OffDutyTime))
 		//获取当前时间，curTime是自己封装的时间类型，有各种格式的时间
-		curTime, err := T.GetCurTime(commutingTimes)
+		curTime, err := (&localTime.MySelfTime{}).GetCurTime(commutingTimes)
 		if err != nil {
 			zap.L().Error("获取当前时间失败", zap.Error(err))
 			return
@@ -516,7 +515,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		stamps := make([]int64, 0)
 		for i := 0; i < len(minHour); i++ {
 			//把时间转化成时间戳
-			stamp, err := T.StringToStamp(minHour[i])
+			stamp, err := (&localTime.MySelfTime{}).StringToStamp(minHour[i])
 			if err != nil {
 				zap.L().Error("把一天的该要运行的时间点 字符串转化成int64时间戳失败", zap.Error(err))
 				return

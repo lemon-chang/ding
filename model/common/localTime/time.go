@@ -20,6 +20,7 @@ type MySelfTime struct {
 
 //根据考勤组判断当前时间（时间戳，字符串，time.Time,上午还是下午（根据考勤组规则制定））
 func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (T MySelfTime, err error) {
+	time.Sleep(1 * time.Second)
 	zap.L().Info("进入到了自己封装的时间结构体中")
 	timeStamp := time.Now()
 	//获取到时间戳
@@ -117,13 +118,18 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (T MySelfTime
 		//EveningEnd, _ := time.Parse("2006-01-02 15:04:05", OffDuty[2])
 		zap.L().Info(fmt.Sprintf("上午下午时间分界点为：%s", AfternoonStart))
 		zap.L().Info(fmt.Sprintf("下午晚上时间分界点为：%s", EveningStart))
+		zap.L().Info(fmt.Sprintf("上午第一节课和第二节课的分界点为：%v", MorningSecondClassStart))
+		zap.L().Info(fmt.Sprintf("下午第一节课和第二节课的分界点为：%v", AfternoonSecondClassStart))
 		zap.L().Info(fmt.Sprintf("当前时间为：%v，CurTime.Before(AfternoonStart) 的值为:%v", CurTime, CurTime.Before(AfternoonStart)))
 		zap.L().Info(fmt.Sprintf("当前时间为：%v，CurTime.After(AfternoonStart) && CurTime.Before(EveningStart):%v", CurTime, CurTime.After(AfternoonStart) && CurTime.Before(EveningStart)))
 		zap.L().Info(fmt.Sprintf("当前时间为：%v，CurTime.After(EveningStart) 的值为:%v", CurTime, CurTime.After(EveningStart)))
 		T.ClassNumber = 1
 		if CurTime.Before(AfternoonStart) {
+			zap.L().Info("现在是上午时间")
 			T.Duration = 1
+			zap.L().Info(fmt.Sprintf("CurTime.After(MorningSecondClassStart)为 %v", CurTime.After(MorningSecondClassStart)))
 			if CurTime.After(MorningSecondClassStart) {
+				zap.L().Info("CurTime.After(MorningSecondClassStart) 为true,现在是上午第二节课")
 				T.ClassNumber = 2
 			}
 		} else if CurTime.After(AfternoonStart) && CurTime.Before(EveningStart) {
@@ -178,7 +184,7 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (T MySelfTime
 			T.Duration = 3
 		}
 	}
-	zap.L().Info(fmt.Sprintf("T.Duration = %v", T.Duration))
+	zap.L().Info(fmt.Sprintf("T = %v", T))
 	return
 }
 

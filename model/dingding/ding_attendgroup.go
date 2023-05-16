@@ -458,7 +458,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 56,43,08,45,39 8,10,15,17,20 * * ?"
+	spec = "00 11,43,08,45,39 8,10,15,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}

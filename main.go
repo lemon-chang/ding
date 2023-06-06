@@ -40,9 +40,9 @@ func main() {
 	}
 
 	//err = initialize.RegisterTables(global.GLOAB_DB)
-	//if err != nil {
-	//	return
-	//}
+	if err != nil {
+		return
+	}
 
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {

@@ -17,7 +17,6 @@ func AttendanceByRobot() (err error) {
 	}
 	for _, group := range groupList {
 		if group.IsRobotAttendance {
-
 			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
 			_, taskID, err := group.AllDepartAttendByRobot(p)
 			if err != nil {

@@ -436,6 +436,9 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	if err != nil || token == "" {
+		if token == "" {
+			err = errors.New("token取出的时候为空")
+		}
 		zap.L().Error("从redis中取出token失败", zap.Error(err))
 		return
 	}
@@ -458,7 +461,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	spec = "00 11,43,08,45,39 8,10,15,17,20 * * ?"
+	spec = "00 03,33,33 8,14,19 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -471,6 +474,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		}
 		//获取上班时间
 		OnDutyTime := commutingTimes["OnDuty"]
+		time.Now()
 		//获取下班时间
 		OffDutyTime := commutingTimes["OffDuty"]
 		zap.L().Info(fmt.Sprintf("上班时间：%v", OnDutyTime))

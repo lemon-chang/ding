@@ -482,11 +482,13 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "check_in" {
 		// 用户签到事件
 		subscription.CheckIn(c)
+	} else if eventType == "leave" {
+		subscription.Leave(c)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
 	}
-	//user, err := (&dingding.DingUser{UserId: ""}).GetUserDetailByUserId()
+
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)

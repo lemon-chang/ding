@@ -45,6 +45,8 @@ func Setup(mode string) *gin.Engine {
 	{
 		Ding.POST("login", ding.LoginHandler)
 		Ding.POST("singleChat", ding.ChatHandler)
+		//放给钉钉用的接口
+		Ding.POST("subscribeTo", ding.SubscribeTo)
 	}
 
 	Ding.Use(middlewares.JWTAuthMiddleware())
@@ -58,8 +60,9 @@ func Setup(mode string) *gin.Engine {
 		V3.GET("/", v1.WelcomeHandler)
 	}
 	//注册业务路由
-	V3.Use(middlewares.JWTAuthMiddleware()) //中间件是会把路由改变的
-	{
+	V3.Use(middlewares.JWTAuthMiddleware())
+	{ //中间件是会把路由改变的
+
 		//我在send里面对全局的Gcontab进行操作
 		V3.POST("/getTasks", v1.GetTasks) //获取到定时任务
 	}

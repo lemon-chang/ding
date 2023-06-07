@@ -216,6 +216,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 		p.MsgText.Msgtype = "text"
 		p.RepeatTime = "立即发送"
 	}
+
 	if p.MsgText.Msgtype == "text" {
 		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 			zap.L().Info("进入即时发送消息模式")

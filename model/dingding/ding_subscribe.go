@@ -19,6 +19,7 @@ import (
 	"time"
 )
 
+//结构体，消息订阅
 type DingSubscribe struct {
 	EventJson map[string]interface{}
 }
@@ -45,6 +46,25 @@ func (s *DingSubscribe) CheckIn(c *gin.Context) {
 	}
 
 	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
+}
+
+//订阅请假事件
+func (s *DingSubscribe) Leave(c *gin.Context) {
+	//userid := c.Query("user_id")
+	//c.Query("startTime")
+	//c.Query("endTime")
+	//user, err := (&DingUser{UserId: userid}).GetUserByUserId()
+	////去数据库里面查一下谁订阅了他
+	//
+	//var userids []int
+	//
+	////调用机器人进行推送
+	//var p ParamChat
+	//p.UserIds = userids
+	//p.MsgKey = "sampleText"
+	//p.MsgParam = fmt.Sprintf("姓名：%s,请假开始时间:%s，请假结束时间：%s", user.Name)
+	//(&DingRobot{}).ChatSendMessage(p)
+
 }
 
 // UserAddOrg 用户加入组织

@@ -24,8 +24,12 @@ func SetupDing(System *gin.RouterGroup) {
 		AttendanceGroup.GET("ImportAttendanceGroupData", ding.ImportAttendanceGroupData)    //将考勤组信息导入到数据库中
 		AttendanceGroup.PUT("updateAttendanceGroup", ding.UpdateAttendanceGroup)            //更新部门信息，用来设置机器人token，各种开关
 		AttendanceGroup.GET("GetAttendanceGroupList", ding.GetAttendanceGroupListFromMysql) //批量获取考勤组
-	}
 
+	}
+	LeaveGroup := System.Group("leave")
+	{
+		LeaveGroup.POST("curd")
+	}
 	User := System.Group("user")
 	{
 		//User.POST("ImportDingUserData", ding.ImportDingUserData) //将钉钉用户导入到数据库中

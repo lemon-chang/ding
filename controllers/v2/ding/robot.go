@@ -30,7 +30,7 @@ func OutGoing(c *gin.Context) {
 		}
 	}
 
-	err = dingding.SendSessionWebHook(&p)
+	err = (&dingding.DingRobot{}).SendSessionWebHook(&p)
 	if err != nil {
 		zap.L().Error("钉钉机器人回调出错", zap.Error(err))
 		response.ResponseErrorWithMsg(c, response.CodeServerBusy, "钉钉机器人回调出错")

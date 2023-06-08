@@ -42,14 +42,14 @@ func SetupDing(System *gin.RouterGroup) {
 	}
 	Robot := System.Group("robot")
 	{
+
 		Robot.POST("/pingRobot", ding.PingRobot)
 		Robot.POST("/addRobot", ding.AddRobot)
 		Robot.DELETE("/removeRobot", ding.RemoveRobot)
 		Robot.PUT("/updateRobot", ding.AddRobot) //更新机器人直接使用
 		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
 		//Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
-		Robot.GET("/getRobotBaseList", ding.GetRobots) //获取所有及重庆人
-
+		Robot.GET("/getRobotBaseList", ding.GetRobots)  //获取所有及重庆人
 		Robot.POST("/cronTask", ding.CronTask)          //发送定时任务
 		Robot.POST("getTaskList", ding.GetTaskList)     //加载定时任务
 		Robot.POST("stopTask", ding.StopTask)           //暂停定时任务

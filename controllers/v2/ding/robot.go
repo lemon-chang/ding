@@ -75,6 +75,7 @@ func AddRobot(c *gin.Context) {
 		DingUserID: UserId,
 		UserName:   user.Name,
 		Name:       p.Name,
+		IsShared:   p.IsShared,
 	}
 	if p.Type == "" {
 		zap.L().Info("前端没有告知机器人的类型,我们前往数据库进行查询")
@@ -121,7 +122,13 @@ func AddRobot(c *gin.Context) {
 	} else {
 		response.OkWithDetailed(dingRobot, "添加机器人成功", c)
 	}
+}
+func GetSharedRobot(c *gin.Context) {
+	robot, err := (&dingding.DingRobot{}).GetSharedRobot()
+	if err != nil {
 
+	}
+	response.OkWithDetailed(robot, "获取成功", c)
 }
 func GetRobotDetailByRobotId(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
@@ -429,6 +436,15 @@ func GetTaskDetail(c *gin.Context) {
 	}
 }
 
+//进行单聊
+func SingleChat(c *gin.Context) {
+	var p dingding.ParamChat
+	err := c.ShouldBindJSON(&p)
+	if err != nil {
+
+	}
+	err = (&dingding.DingRobot{}).ChatSendMessage(&p)
+}
 func SubscribeTo(c *gin.Context) {
 	// 1. 参数获取
 	signature := c.Query("signature")
@@ -466,11 +482,13 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "check_in" {
 		// 用户签到事件
 		subscription.CheckIn(c)
+	} else if eventType == "leave" {
+		subscription.Leave(c)
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
 	}
-	//user, err := (&dingding.DingUser{UserId: ""}).GetUserDetailByUserId()
+
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)

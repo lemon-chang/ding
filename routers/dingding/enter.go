@@ -18,12 +18,17 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.PUT("updateDept", ding.UpdateDept) // 更新部门信息，用来设置机器人token，各种开关
 
 	}
+
 	AttendanceGroup := System.Group("attendanceGroup")
 	{
 		AttendanceGroup.GET("ImportAttendanceGroupData", ding.ImportAttendanceGroupData)    //将考勤组信息导入到数据库中
 		AttendanceGroup.PUT("updateAttendanceGroup", ding.UpdateAttendanceGroup)            //更新部门信息，用来设置机器人token，各种开关
 		AttendanceGroup.GET("GetAttendanceGroupList", ding.GetAttendanceGroupListFromMysql) //批量获取考勤组
 
+	}
+	LeaveGroup := System.Group("leave")
+	{
+		LeaveGroup.POST("curd")
 	}
 	User := System.Group("user")
 	{
@@ -38,8 +43,8 @@ func SetupDing(System *gin.RouterGroup) {
 		})
 		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
 		User.GET("/getActiveTask", ding.GetAllActiveTask) //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
-
 	}
+
 	Robot := System.Group("robot")
 	{
 
@@ -47,6 +52,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.POST("/addRobot", ding.AddRobot)
 		Robot.DELETE("/removeRobot", ding.RemoveRobot)
 		Robot.PUT("/updateRobot", ding.AddRobot) //更新机器人直接使用
+		Robot.GET("getSharedRobot", ding.GetSharedRobot)
 		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
 		//Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
 		Robot.GET("/getRobotBaseList", ding.GetRobots)  //获取所有及重庆人
@@ -56,7 +62,8 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.DELETE("removeTask", ding.RemoveTask)     //移除定时任务
 		Robot.POST("reStartTask", ding.ReStartTask)     //重启定时任务
 		Robot.GET("/getTaskDetail", ding.GetTaskDetail) //获取定时任务详情
-		//消息订阅
+
+		Robot.POST("singleChat", ding.SingleChat)
 	}
 
 }

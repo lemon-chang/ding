@@ -1,6 +1,7 @@
 package ding
 
 import (
+	"bytes"
 	"ding/controllers"
 	"ding/global"
 	"ding/model/common"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
+	"strings"
 )
 
 func OutGoing(c *gin.Context) {
@@ -436,7 +438,7 @@ func GetTaskDetail(c *gin.Context) {
 	}
 }
 
-//进行单聊
+// 进行单聊
 func SingleChat(c *gin.Context) {
 	var p dingding.ParamChat
 	err := c.ShouldBindJSON(&p)
@@ -492,4 +494,34 @@ func SubscribeTo(c *gin.Context) {
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
+}
+func RobotAt(c *gin.Context) {
+	var resp *dingding.RobotAtResp
+	if err := c.ShouldBindJSON(&resp); err != nil {
+		zap.L().Error("RobotAtResp", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	fmt.Println("内容为:", resp.Text)
+	str := resp.Text["content"].(string)
+	if strings.Contains(str, "打字码") {
+		robot := dingding.DingRobot{}
+		code, err := robot.GetInviteCode()
+		if err != nil {
+			zap.L().Error("获取邀请码失败", zap.Error(err))
+		}
+
+		b := []byte{}
+		msg := map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": "邀请码: " + code,
+			},
+		}
+		b, err = json.Marshal(msg)
+		if err != nil {
+			zap.L().Error("转换失败", zap.Error(err))
+		}
+		http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
+		c.JSON(http.StatusOK, "成功")
+	}
 }

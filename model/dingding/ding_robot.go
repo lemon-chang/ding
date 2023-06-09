@@ -112,7 +112,7 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
-//钉钉机器人单聊
+// 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
 	var request *http.Request
@@ -576,59 +576,20 @@ func (t *DingRobot) getURLV2() string {
 func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	var msg map[string]interface{}
 	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	robot := &DingRobot{}
 	if strings.Contains(p.Text.Content, "打字邀请码") {
-		//去redis中取一下打字邀请码
-		var TypingInviationCode string
-		var expire1 int64
-		fmt.Println(expire1)
-		expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
+		code, err := robot.GetInviteCode()
 		if err != nil {
-			zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return err
 		}
-		//如果redis里面没有的话
-		if expire == -2 {
-			//申请新的TypingInviationCode并已经存入redis
-			TypingInviationCode, err = utils.TypingInviation()
-			if err != nil || TypingInviationCode == "" {
-				zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-				msg = map[string]interface{}{
-					"msgtype": "text",
-					"text": map[string]string{
-						"content": utils.TypingInviationFail,
-					},
-				}
-				msg["at"] = map[string][]string{
-					"atUserIds": []string{p.SenderStaffId},
-				}
-			}
-
-		} else {
-			//从redis从取到邀请码
-			TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
-			if len(TypingInviationCode) != 5 {
-				zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-				msg = map[string]interface{}{
-					"msgtype": "text",
-					"text": map[string]string{
-						"content": utils.TypingInviationFail,
-					},
-				}
-				msg["at"] = map[string][]string{
-					"atUserIds": []string{p.SenderStaffId},
-				}
-			} else {
-				msg = map[string]interface{}{
-					"msgtype": "text",
-					"text": map[string]string{
-						"content": utils.TypingInviationSucc + ":" + TypingInviationCode,
-					},
-				}
-				msg["at"] = map[string][]string{
-					"atUserIds": []string{p.SenderStaffId},
-				}
-			}
-
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": utils.TypingInviationSucc + ": " + code,
+			},
 		}
+
 	} else if strings.Contains(p.Text.Content, "加密机器人ID") {
 		msg = map[string]interface{}{
 			"msgtype": "text",
@@ -656,6 +617,36 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 		return err
 	}
 	return nil
+}
+func (*DingRobot) GetInviteCode() (code string, err error) {
+	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	//去redis中取一下打字邀请码
+	var TypingInviationCode string
+	var expire1 int64
+	fmt.Println(expire1)
+	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
+	if err != nil {
+		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
+	}
+	//如果redis里面没有的话
+	if expire == -2 {
+		//申请新的TypingInviationCode并已经存入redis
+		TypingInviationCode, err = utils.TypingInviation()
+		if err != nil || TypingInviationCode == "" {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return TypingInviationCode, err
+		}
+
+	} else {
+		//从redis从取到邀请码
+		TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
+		if len(TypingInviationCode) != 5 {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return TypingInviationCode, errors.New("申请新的TypingInviationCode失败")
+		}
+	}
+	return TypingInviationCode, nil
+
 }
 func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""

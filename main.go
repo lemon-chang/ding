@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"ding/dao/mysql"
 	"ding/dao/redis"
 	"ding/initialize"
@@ -9,6 +10,11 @@ import (
 	"ding/settings"
 	"fmt"
 	"go.uber.org/zap"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -39,11 +45,6 @@ func main() {
 		return
 	}
 
-	//err = initialize.RegisterTables(global.GLOAB_DB)
-	//if err != nil {
-	//	return
-	//}
-
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {
 		fmt.Printf("init redis failed ,err:%v\n", err)
@@ -58,7 +59,6 @@ func main() {
 	//}
 	//go utils.Timing(&utils.localTime)
 	//初始化路由
-
 	err = initialize.Reboot()
 	if err != nil {
 		fmt.Printf("重启定时任务失败,err:%v\n", err)
@@ -79,7 +79,33 @@ func main() {
 	//	return
 	//}
 	r := routers.Setup(settings.Conf.Mode)
-	s := fmt.Sprintf(":%d", settings.Conf.App.Port)
-	r.Run(s)
 
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", settings.Conf.App.Port),
+		Handler: r,
+	}
+
+	// 初始化kafka
+	if err = initialize.KafkaInit(); err != nil {
+		zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
+		return
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("lister: %s\n", err)
+			return
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	zap.L().Info("Shutdown Server ...")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		zap.L().Error("Server Shutdown", zap.Error(err))
+	}
+	zap.L().Info("Server exiting")
 }

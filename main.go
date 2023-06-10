@@ -45,6 +45,10 @@ func main() {
 		return
 	}
 
+	if err != nil {
+		return
+	}
+
 	//初始化连接redis
 	if err := redis.Init(settings.Conf.RedisConfig); err != nil {
 		fmt.Printf("init redis failed ,err:%v\n", err)

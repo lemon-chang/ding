@@ -11,11 +11,12 @@ import (
 )
 
 func Init(cfg *settings.MySQLConfig) (err error) {
-	DSN := fmt.Sprintf("%s:%s@tcp(%s:%d)/ding_v3_marchsoft?charset=utf8&parseTime=True&loc=Local",
+	DSN := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
 		cfg.User,
 		cfg.Password,
 		cfg.Host,
 		cfg.Port,
+		cfg.DBName,
 	)
 	db, err := gorm.Open(mysql.New(mysql.Config{
 		//DSN: "root:123456@tcp(121.43.119.224:3306)/gorm_class?charset=utf8mb4&parseTime=True&loc=Local",

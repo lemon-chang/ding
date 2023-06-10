@@ -18,6 +18,10 @@ type DingLeave struct {
 	UserName     string `json:"user_name"`
 	DingToken
 }
+type xxx struct {
+	UsedId1 string
+	UserId2 string
+}
 
 func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, UseridList string) (leaveStatus []DingLeave, hasMore bool, err error) {
 	var client *http.Client

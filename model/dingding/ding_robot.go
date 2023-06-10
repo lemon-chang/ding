@@ -203,8 +203,10 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 	if err != nil {
 		zap.L().Error("通过机器人的robot_id获取机器人失败，是一个没有注册的机器人", zap.Error(err))
 	}
+	//a := "纪检部通知[广播][广播]:  \n断水断电不断简书，为谋其事必为总结[爱意]  \n[钉子]各期负责人于下周一晚上20：00前在钉钉简书小程序中标记优秀简书\n  \n[钉子]检查为机器人检查，大家要及时发表文章\n [灵感][灵感]注意：    \n  \n[对勾]简书严禁抄袭，坚持原创，我们会根据相关字段进行严格检查的哦[爱意]\n[对勾]纪检部同时也会对简书进行抽查[猫咪]\n[对勾]简书字数不能低于400字\n[钉子][钉子]重点！！！到周日20：00后财务部人员会在大群里面对简书未完成人员发起群收款[惊愕][惊愕]\n大家要注意了哦！！\n[灵感][灵感]提醒:   \n  \n [对勾]简书以及博客的时间为本周内，否则会被标记为未登记！\n  \n[爱意]希望大家多多参与简书投稿及评论互动[捧脸]并在此相互学习和借鉴哟[猫咪][猫咪]@所有人 "
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		r = &DingRobot{RobotId: robotId}
+		err = nil
 	}
 
 	//到了这里就说明这个用户有这个小机器人
@@ -214,6 +216,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 		p.MsgText.Msgtype = "text"
 		p.RepeatTime = "立即发送"
 	}
+
 	if p.MsgText.Msgtype == "text" {
 		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
 			zap.L().Info("进入即时发送消息模式")
@@ -241,9 +244,9 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			if err != nil {
 				zap.L().Error("定时任务启动失败", zap.Error(err))
 				err = ErrorSpecInvalid
-
 				return err, Task{}
 			}
+			nextTime := global.GLOAB_CORN.Entry(TaskID).Next
 			//把定时任务添加到数据库中
 			task = Task{
 				TaskID:            tid,
@@ -258,8 +261,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
 				FrontDetailTime:   p.DetailTime,
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				//MsgLink:           p.MsgLink,
-				//MsgMarkDown:       p.MsgMarkDown,
+				NextTime:          nextTime,
 			}
 			err = (&task).InsertTask()
 			if err != nil {
@@ -307,6 +309,8 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 				}
 			}
 			TaskID, err := global.GLOAB_CORN.AddFunc(spec, tasker)
+			nextTime := global.GLOAB_CORN.Entry(TaskID).Next
+
 			tid = strconv.Itoa(int(TaskID))
 			if err != nil {
 				err = ErrorSpecInvalid
@@ -328,6 +332,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
 				//MsgLink:           p.MsgLink,
 				//MsgMarkDown:       p.MsgMarkDown,
+				NextTime: nextTime,
 			}
 			err = (&task).InsertTask()
 			if err != nil {
@@ -337,7 +342,6 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
 		}
 	} else if p.MsgMarkDown.Msgtype == "markdown" {
-
 		if err != nil {
 			zap.L().Error("通过人名查询电话号码失败", zap.Error(err))
 			return
@@ -880,6 +884,7 @@ func (t *DingRobot) StopTask(taskId string) (err error) {
 		zap.L().Error("删除定时任务失败", zap.Error(err))
 		return err
 	}
+	//global.GLOAB_CORN.
 	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
 	return err
 }

@@ -31,6 +31,7 @@ require (
 )
 
 require (
+	github.com/Shopify/sarama v1.38.1
 	golang.org/x/sync v0.2.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )

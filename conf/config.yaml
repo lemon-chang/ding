@@ -28,3 +28,5 @@
     max_backups: 7
   auth:
     jwt_expire: 8760
+  kafka:
+    address: "121.43.119.224:9092"

@@ -20,8 +20,8 @@ func Init(cfg *settings.MySQLConfig) (err error) {
 	)
 	db, err := gorm.Open(mysql.New(mysql.Config{
 		//DSN: "root:123456@tcp(121.43.119.224:3306)/gorm_class?charset=utf8mb4&parseTime=True&loc=Local",
-		DSN: DSN,
-	}), &gorm.Config{
+		DSN: DSN, // 1. 连接信息
+	}), &gorm.Config{ // 2. 选项
 		SkipDefaultTransaction:                   true,
 		DisableForeignKeyConstraintWhenMigrating: true, //不用物理外键，使用逻辑外键
 	})

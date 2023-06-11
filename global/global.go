@@ -18,9 +18,10 @@ var (
 )
 
 // KafMsg 封装kaf消息
-func KafMsg(topic, con string) *sarama.ProducerMessage {
+func KafMsg(topic, con string, partition int32) *sarama.ProducerMessage {
 	return &sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.StringEncoder(con),
+		Topic:     topic,
+		Value:     sarama.StringEncoder(con),
+		Partition: partition,
 	}
 }

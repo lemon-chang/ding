@@ -113,3 +113,7 @@ func main() {
 	}
 	zap.L().Info("Server exiting")
 }
+
+/*
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjYxOTY1Mzk2OTQzODk2NTcwOCIsInVzZXJfbmFtZSI6IuWnmuWkqeiIqiIsImV4cCI6MTcxODAwNTU1MiwiaXNzIjoieWpwIn0.bZU7X1Qfun7dovaKtBFnvdAYd3DIwQo5i-gcipvOBhA
+*/

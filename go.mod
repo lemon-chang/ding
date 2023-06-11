@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
+	github.com/Shopify/sarama v1.38.1
 	github.com/alibabacloud-go/darabonba-openapi v0.1.18
 	github.com/alibabacloud-go/dingtalk v1.4.29
 	github.com/alibabacloud-go/tea v1.1.19

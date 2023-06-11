@@ -2,10 +2,12 @@ package dingding
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
 	"ding/global"
+	"ding/utils"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -110,7 +112,7 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
-//钉钉机器人单聊
+// 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
 	var request *http.Request
@@ -422,6 +424,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 }
 
 // SendMessage Function to send message
+//
 //goland:noinspection GoUnhandledErrorResult
 func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 	b := []byte{}
@@ -558,182 +561,92 @@ func (t *DingRobot) getURLV2() string {
 	return url
 }
 
-//func (t *DingRobot) StopTask(id string) (err error) {
-//	task := Task{
-//		TaskID: id,
-//	}
-//	taskID, err := mysql.StopTask(task)
+//	func (t *DingRobot) StopTask(id string) (err error) {
+//		task := Task{
+//			TaskID: id,
+//		}
+//		taskID, err := mysql.StopTask(task)
 //
-//	if errors.Is(err, mysql.ErrorNotHasTask) {
-//		return mysql.ErrorNotHasTask
+//		if errors.Is(err, mysql.ErrorNotHasTask) {
+//			return mysql.ErrorNotHasTask
+//		}
+//		global.GLOAB_CORN.Remove(cron.EntryID(taskID))
+//		return err
 //	}
-//	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
-//	return err
-//}
-func SendSessionWebHook(p *ParamReveiver) (err error) {
-	//currentTime := time.Now().Format("15:04:05")         //15:04:05固定写法，可以获取到当前时间的时分秒
-	//formatTime, _ := time.Parse("15:04:05", currentTime) //把时间字符串转化成时间格式，时间格式可以直接比较
-	//var msg map[string]interface{}
-	////获取redis中的考勤记录的键
-	//attendanceKey := redis.GetAttendanceKey(p.SenderStaffId, p.ConversationId)
-	////判断键的情况
-	//ttlAttendanceKey, err := redis.TTLAttendanceKey(attendanceKey)
-	////如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
-	//if ttlAttendanceKey == -2 && strings.Contains(p.Text.Content, "考勤") && (strings.Contains(p.Text.Content, "三期") || strings.Contains(p.Text.Content, "四期")) &&
-	//	((utils.MorningStartTime.Before(formatTime) && utils.MorningEndTime.After(formatTime)) ||
-	//		(utils.AfternoonStartTime.Before(formatTime) && utils.AfternoonEndtTime.Before(formatTime)) ||
-	//		(utils.EveningStartTime.Before(formatTime) && utils.EveningEndTime.After(formatTime))) {
-	//	attend := Attendance{
-	//		Content:           p.Text.Content,
-	//		ChatbotUserId:     p.ChatbotUserId,
-	//		SenderNick:        p.SenderNick,
-	//		ConversationName: p.ConversationName,
-	//		SenderStaffId:     p.SenderStaffId,
-	//		ChatBotUserId:     p.ChatbotUserId, //加密的机器人id也存入到数据库中
-	//	}
-	//	err := global.GLOAB_DB.Create(&attend).Error
-	//	if err != nil {
-	//		zap.L().Error("考勤记录插入失败", zap.Error(err))
-	//		msg = map[string]interface{}{
-	//			"msgtype": "text",
-	//			"text": map[string]string{
-	//				"content": utils.AttendanceFail,
-	//			},
-	//		}
-	//		msg["at"] = map[string][]string{
-	//			"atUserIds": []string{p.SenderStaffId},
-	//		}
-	//	} else {
-	//		msg = map[string]interface{}{
-	//			"msgtype": "text",
-	//			"text": map[string]string{
-	//				"content": utils.AttendanceSucc,
-	//			},
-	//		}
-	//		msg["at"] = map[string][]string{
-	//			"atUserIds": []string{p.SenderStaffId},
-	//		}
-	//		//在redis里面创建一个键，用来记录考勤是第一次记录还是更新
-	//		err = redis.SetAttendanceState(p.SenderStaffId, p.ConversationId)
-	//		if err != nil {
-	//			zap.L().Error("在redis中存储考勤状态失败", zap.Error(err))
-	//		}
-	//	}
-	//} else if ttlAttendanceKey != -2 && strings.Contains(p.Text.Content, "考勤") && (strings.Contains(p.Text.Content, "三期") || strings.Contains(p.Text.Content, "四期")) &&
-	//	((utils.MorningStartTime.Before(formatTime) && utils.MorningEndTime.After(formatTime)) ||
-	//		(utils.AfternoonStartTime.Before(formatTime) && utils.AfternoonEndtTime.Before(formatTime)) ||
-	//		(utils.EveningStartTime.Before(formatTime) && utils.EveningEndTime.After(formatTime))) {
-	//	attend := model.Attendance{
-	//		Content:           p.Text.Content,
-	//		ChatbotUserId:     p.ChatbotUserId,
-	//		SenderNick:        p.SenderNick,
-	//		ConversationName: p.ConversationName,
-	//		SenderStaffId:     p.SenderStaffId,
-	//		ChatBotUserId:     p.ChatbotUserId, //加密的机器人id也存入到数据库中
-	//	}
-	//	err := global.GLOAB_DB.Create(&attend).Error
-	//	if err != nil {
-	//		zap.L().Error("考勤记录插入失败", zap.Error(err))
-	//		msg = map[string]interface{}{
-	//			"msgtype": "text",
-	//			"text": map[string]string{
-	//				"content": utils.AttendanceFail,
-	//			},
-	//		}
-	//		msg["at"] = map[string][]string{
-	//			"atUserIds": []string{p.SenderStaffId},
-	//		}
-	//	} else {
-	//		msg = map[string]interface{}{
-	//			"msgtype": "text",
-	//			"text": map[string]string{
-	//				"content": utils.AttendanceUpdateSucc,
-	//			},
-	//		}
-	//		msg["at"] = map[string][]string{
-	//			"atUserIds": []string{p.SenderStaffId},
-	//		}
-	//	}
-	//} else if strings.Contains(p.Text.Content, "打字邀请码") {
-	//	//去redis中取一下打字邀请码
-	//	var TypingInviationCode string
-	//	var expire1 int64
-	//	fmt.Println(expire1)
-	//	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
-	//	if err != nil {
-	//		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
-	//	}
-	//	//如果redis里面没有的话
-	//	if expire == -2 {
-	//		//申请新的TypingInviationCode并已经存入redis
-	//		TypingInviationCode, err = utils.TypingInviation()
-	//		if err != nil || TypingInviationCode == "" {
-	//			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-	//			msg = map[string]interface{}{
-	//				"msgtype": "text",
-	//				"text": map[string]string{
-	//					"content": utils.TypingInviationFail,
-	//				},
-	//			}
-	//			msg["at"] = map[string][]string{
-	//				"atUserIds": []string{p.SenderStaffId},
-	//			}
-	//		}
-	//
-	//	} else {
-	//		//从redis从取到邀请码
-	//		TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
-	//		if len(TypingInviationCode) != 5 {
-	//			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-	//			msg = map[string]interface{}{
-	//				"msgtype": "text",
-	//				"text": map[string]string{
-	//					"content": utils.TypingInviationFail,
-	//				},
-	//			}
-	//			msg["at"] = map[string][]string{
-	//				"atUserIds": []string{p.SenderStaffId},
-	//			}
-	//		} else {
-	//			msg = map[string]interface{}{
-	//				"msgtype": "text",
-	//				"text": map[string]string{
-	//					"content": utils.TypingInviationSucc + ":" + TypingInviationCode,
-	//				},
-	//			}
-	//			msg["at"] = map[string][]string{
-	//				"atUserIds": []string{p.SenderStaffId},
-	//			}
-	//		}
-	//
-	//	}
-	//} else if strings.Contains(p.Text.Content, "加密机器人ID") {
-	//	msg = map[string]interface{}{
-	//		"msgtype": "text",
-	//		"text": map[string]string{
-	//			"content": "获取成功：" + p.ChatbotUserId + "\n" + "登录机器人后台，更新机器人填写此字段后即可查看该机器人考勤记录",
-	//		},
-	//	}
-	//	msg["at"] = map[string][]string{
-	//		"atUserIds": []string{p.SenderStaffId},
-	//	}
-	//}
-	//
-	//b, err := json.Marshal(msg)
-	//if err != nil {
-	//	return err
-	//}
-	//var resp *http.Response
-	//
-	//resp, err = http.Post(p.SessionWebhook, "application/json", bytes.NewBuffer(b))
-	//
-	//defer resp.Body.Close()
-	//date, err := ioutil.ReadAll(resp.Body)
-	//fmt.Println(date)
-	//if err != nil {
-	//	return err
-	//}
+func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
+	var msg map[string]interface{}
+	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	robot := &DingRobot{}
+	if strings.Contains(p.Text.Content, "打字邀请码") {
+		code, err := robot.GetInviteCode()
+		if err != nil {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return err
+		}
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": utils.TypingInviationSucc + ": " + code,
+			},
+		}
+
+	} else if strings.Contains(p.Text.Content, "加密机器人ID") {
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": "获取成功：" + p.ChatbotUserId + "\n" + "登录机器人后台，更新机器人填写此字段后即可查看该机器人考勤记录",
+			},
+		}
+		msg["at"] = map[string][]string{
+			"atUserIds": []string{p.SenderStaffId},
+		}
+	}
+
+	b, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	var resp *http.Response
+
+	resp, err = http.Post(p.SessionWebhook, "application/json", bytes.NewBuffer(b))
+
+	defer resp.Body.Close()
+	date, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(date)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+func (*DingRobot) GetInviteCode() (code string, err error) {
+	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	//去redis中取一下打字邀请码
+	var TypingInviationCode string
+	var expire1 int64
+	fmt.Println(expire1)
+	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
+	if err != nil {
+		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
+	}
+	//如果redis里面没有的话
+	if expire == -2 {
+		//申请新的TypingInviationCode并已经存入redis
+		TypingInviationCode, err = utils.TypingInviation()
+		if err != nil || TypingInviationCode == "" {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return TypingInviationCode, err
+		}
+
+	} else {
+		//从redis从取到邀请码
+		TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
+		if len(TypingInviationCode) != 5 {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return TypingInviationCode, errors.New("申请新的TypingInviationCode失败")
+		}
+	}
+	return TypingInviationCode, nil
+
 }
 func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""
@@ -802,7 +715,7 @@ func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	return spec, detailTimeForUser, nil
 }
 
-//获取机器人所在的群聊的userIdList ，前提是获取到OpenConversationId，获取到OpenConverstaionId的前提是获取到二维码
+// 获取机器人所在的群聊的userIdList ，前提是获取到OpenConversationId，获取到OpenConverstaionId的前提是获取到二维码
 func (r *DingRobot) GetGroupUserIds() (userIds []string, _err error) {
 	//所需参数access_token, OpenConversationId string
 	olduserIds := []*string{}

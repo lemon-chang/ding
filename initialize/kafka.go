@@ -46,10 +46,3 @@ func KafkaInit() (err error) {
 	// defer func() { _ = consumer.Close() }()
 	return nil
 }
-
-func KafMsg(topic, con string) *sarama.ProducerMessage {
-	return &sarama.ProducerMessage{
-		Topic: topic,
-		Value: sarama.StringEncoder(con),
-	}
-}

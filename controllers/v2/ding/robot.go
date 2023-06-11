@@ -204,10 +204,10 @@ func RemoveRobot(c *gin.Context) {
 		return
 	}
 
-	global.GLOBAL_Kafka_Cons.ConsumePartition("theDeleteRobotIds", int32(0), sarama.OffsetNewest)
 	go func() {
-		consumerMsgs, err := global.GLOBAL_Kafka_Cons.ConsumePartition("theDeleteRobotIds", int32(0), sarama.OffsetNewest)
+		consumerMsgs, err := global.GLOBAL_Kafka_Cons.ConsumePartition("delete-topic", 1, sarama.OffsetNewest)
 		if err != nil {
+			fmt.Println(err)
 			zap.L().Error("kafka consumer msg failed ...")
 			return
 		}
@@ -226,7 +226,7 @@ func RemoveRobot(c *gin.Context) {
 	}()
 
 	for i := 0; i < len(p.RobotIds); i++ {
-		if _, _, err := global.GLOBAL_Kafka_Prod.SendMessage(global.KafMsg("theDeleteRobotIds", p.RobotIds[i])); err != nil {
+		if _, _, err := global.GLOBAL_Kafka_Prod.SendMessage(global.KafMsg("delete-topic", p.RobotIds[i], 1)); err != nil {
 			zap.L().Error("kafka produce msg failed ... ")
 			return
 		}

@@ -9,6 +9,7 @@ import (
 	"ding/response"
 	"encoding/json"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -39,7 +40,6 @@ func OutGoing(c *gin.Context) {
 		return
 	}
 	response.ResponseSuccess(c, "回调成功")
-
 }
 
 // addRobot 添加机器人
@@ -194,8 +194,9 @@ func GetRobotBaseList(c *gin.Context) {
 }
 func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
-	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("remove Robot invaild param", zap.Error(err))
+	var err error
+	if err = c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("remove Robot invalid param", zap.Error(err))
 		errs, ok := err.(validator.ValidationErrors)
 		if !ok {
 			response.ResponseError(c, response.CodeInvalidParam)
@@ -204,12 +205,41 @@ func RemoveRobot(c *gin.Context) {
 		response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
 		return
 	}
-	err := (&dingding.DingRobot{RobotId: p.RobotId}).RemoveRobot()
+
+	global.GLOBAL_Kafka_Cons.ConsumePartition("theDeleteRobotIds", int32(0), sarama.OffsetNewest)
+	go func() {
+		consumerMsgs, err := global.GLOBAL_Kafka_Cons.ConsumePartition("theDeleteRobotIds", int32(0), sarama.OffsetNewest)
+		if err != nil {
+			zap.L().Error("kafka consumer msg failed ...")
+			return
+		}
+		for msg := range consumerMsgs.Messages() {
+			id := msg.Value
+			err = (&dingding.DingRobot{RobotId: string(id)}).RemoveRobot()
+			if err != nil {
+				break
+			}
+		}
+		if err != nil {
+			response.FailWithMessage("移除机器人失败 kafka消息消费失败", c)
+		} else {
+			response.OkWithMessage("移除机器人成功 kafka消息消费失败", c)
+		}
+	}()
+
+	for i := 0; i < len(p.RobotIds); i++ {
+		if _, _, err := global.GLOBAL_Kafka_Prod.SendMessage(global.KafMsg("theDeleteRobotIds", p.RobotIds[i])); err != nil {
+			zap.L().Error("kafka produce msg failed ... ")
+			return
+		}
+	}
+
 	if err != nil {
 		response.FailWithMessage("移除机器人失败", c)
 	} else {
 		response.OkWithMessage("移除机器人成功", c)
 	}
+
 }
 
 // GetRobots 获得用户自身的所有机器人

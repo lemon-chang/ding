@@ -9,50 +9,14 @@ import (
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
 	util "github.com/alibabacloud-go/tea-utils/service"
 	"github.com/alibabacloud-go/tea/tea"
-	"go.uber.org/zap"
+	"github.com/tealeg/xlsx"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/tealeg/xlsx"
 	"strings"
 	"time"
 )
 
 func main() {
-	var a int = 50
-	a = 60
-	fmt.Println(a)
-	//https://open-dev.dingtalk.com/apiExplorer?spm=ding_open_doc.document.0.0.afb839b7W85NCP#/jsapi?api=biz.chat.chooseConversationByCorpId
-	accessToken := "e2cdeaeeb4b13b8aaf9d1c08601b05d2"
-	//openConversationId := "cidbGeQn/i+hZRXKpwdfb1nug==" //乐职院大群
-	openConversationId := "cidXyY/L7HoOFKEbkFGabB4fg==" //乐知四期
-	//coolAppCode := "COOLAPP-1-101DFE55065B213EF05B000F" //三月软件
-	coolAppCode := "COOLAPP-1-102001DE38062133DFC5000V" //乐职院
-	userIds, err := GetUserIds(accessToken, openConversationId, coolAppCode)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	var finalResults []FinalResult
-	for _, userId := range userIds {
-		result, err := PostGetUserDetail(accessToken, userId)
-		if err != nil {
-			zap.L().Error(fmt.Sprintf("通过UserId查询用户详细信息失败，userId = %s", userId), zap.Error(err))
-		}
-		var departmentNameList []string
-		for i := 0; i < len(result.Result.DeptIdList); i++ {
-			result1, _ := GetDepartmentName(accessToken, result.Result.DeptIdList[i])
-			departmentNameList = append(departmentNameList, result1.Result.Name)
-		}
-		result.Result.DepartmentNameList = departmentNameList
-		var finalResult FinalResult
-		finalResult.Mobile = result.Result.Mobile
-		finalResult.DepartmentNameList = result.Result.DepartmentNameList
-		finalResult.Name = result.Result.Name
-		fmt.Println(finalResult)
-		finalResults = append(finalResults, finalResult)
-	}
-	Export(finalResults)
 
 }
 

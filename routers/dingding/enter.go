@@ -47,6 +47,7 @@ func SetupDing(System *gin.RouterGroup) {
 
 	Robot := System.Group("robot")
 	{
+
 		Robot.POST("/pingRobot", ding.PingRobot)
 		Robot.POST("/addRobot", ding.AddRobot)
 		Robot.DELETE("/removeRobot", ding.RemoveRobot)

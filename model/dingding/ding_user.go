@@ -670,7 +670,7 @@ func GetChromeCtx(focus bool) context.Context {
 
 		if checkChromePort() {
 			// 不知道为何，不能直接使用 NewExecAllocator ，因此增加 使用 ws://127.0.0.1:9222/ 来调用
-			c, _ := chromedp.NewRemoteAllocator(context.Background(), "ws://172.17.0.8:9222/")
+			c, _ := chromedp.NewRemoteAllocator(context.Background(), "ws://172.17.0.7:9222/")
 			ChromeCtx, _ = chromedp.NewContext(c)
 		} else {
 			c, _ := chromedp.NewExecAllocator(context.Background(), allocOpts...)

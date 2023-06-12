@@ -88,6 +88,11 @@ func (d *DingUser) GetUserByUserId() (user DingUser, err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).First(&user).Error
 	return
 }
+func (d *DingUser) GetUserInfo() (err error) {
+	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Preload("Authority").Preload("Authorities").First(&d).Error
+	return
+}
+
 func (m *DingUser) UserAuthorityDefaultRouter(user *DingUser) {
 	var menuIds []string
 	err := global.GLOAB_DB.Model(&system.SysAuthorityMenu{}).Where("sys_authority_authority_id = ?", user.AuthorityId).Pluck("sys_base_menu_id", &menuIds).Error

@@ -46,6 +46,17 @@ func SelectAllUsers(c *gin.Context) {
 	}
 	response.OkWithDetailed(us, "查询所有用户成功", c)
 }
+func GetUserInfo(c *gin.Context) {
+	user_id, _ := c.Get(global.CtxUserIDKey)
+	DingUser := dingding2.DingUser{}
+	DingUser.UserId = user_id.(string)
+	err := DingUser.GetUserInfo()
+	if err != nil {
+		response.FailWithMessage("查询用户失败", c)
+		return
+	}
+	response.OkWithDetailed(DingUser, "查询所有用户成功", c)
+}
 
 // UpdateDingUserAddr 更新用户博客&简书地址
 func UpdateDingUserAddr(c *gin.Context) {

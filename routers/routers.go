@@ -40,6 +40,7 @@ func Setup(mode string) *gin.Engine {
 	V3.POST("/outgoing", ding.OutGoing) //outgoing接口是让官方
 	V3.POST("/robotAt", ding.RobotAt)
 	System := r.Group("/api/system")
+	System.Use(middlewares.JWTAuthMiddleware())
 	system.SetupSystem(System)
 
 	Ding := r.Group("/api/ding")
@@ -52,7 +53,6 @@ func Setup(mode string) *gin.Engine {
 
 	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)
-
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)
 		c.File(fmt.Sprintf("Screenshot_%s.png", username))

@@ -2,6 +2,7 @@ package system
 
 import (
 	system2 "ding/controllers/system"
+	"ding/model/system"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +25,7 @@ func SetupSystem(System *gin.RouterGroup) {
 	}
 	Menu := System.Group("Menu")
 	{
-		Menu.POST("getMenu")
+		Menu.GET("getMenu", (&system.SysAuthorityMenu{}).GetMenu)
 	}
 
 }

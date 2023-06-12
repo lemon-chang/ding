@@ -17,7 +17,6 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
 			response.ResponseError(c, response.CodeNeedLogin)
-
 			c.Abort()
 			return
 		}
@@ -29,16 +28,16 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 			return
 		}
 		// parts[1]是获取到的tokenString，我们使用之前定义好的解析JWT的函数来解析它
-		mc, err := jwt.ParseToken(parts[1])
+		mc, err := (&jwt.MyClaims{}).ParseToken(parts[1])
 		if err != nil {
 			response.ResponseError(c, response.CodeInvalidToken)
 			c.Abort()
 			return
 		}
-
 		// 将当前请求的user的ID信息保存到请求的上下文c上
 		c.Set(global.CtxUserIDKey, mc.UserId)
 		c.Set(global.CtxUserNameKey, mc.Username)
+		c.Set(global.CtxUserAuthorityIDKey, mc.AuthorityID)
 		c.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
 	}
 }

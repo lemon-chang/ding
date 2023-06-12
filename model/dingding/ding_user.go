@@ -5,8 +5,8 @@ import (
 	"crypto/md5"
 	"crypto/tls"
 	"ding/global"
-	"ding/initialize/jwt"
 	"ding/model/params/ding"
+	"ding/model/system"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -49,15 +49,18 @@ type DingUser struct {
 	UserId              string ` gorm:"primaryKey;foreignKey:UserId" json:"userid"`
 	DingRobots          []DingRobot
 	Deleted             gorm.DeletedAt
-	Name                string     `json:"name"`
-	Mobile              string     `json:"mobile"`
-	Password            string     `json:"password"`
-	DeptIdList          []int      `json:"dept_id_list" gorm:"-"` //所属部门
-	DeptList            []DingDept `json:"dept_list" gorm:"many2many:user_dept"`
-	Title               string     `json:"title"` //职位
-	JianShuAddr         string     `json:"jianshu_addr"`
-	BlogAddr            string     `json:"blog_addr"`
-	AuthToken           string     `json:"auth_token" gorm:"-"`
+	Name                string                `json:"name"`
+	Mobile              string                `json:"mobile"`
+	Password            string                `json:"password"`
+	DeptIdList          []int                 `json:"dept_id_list" gorm:"-"` //所属部门
+	DeptList            []DingDept            `json:"dept_list" gorm:"many2many:user_dept"`
+	AuthorityId         uint                  `json:"authorityId" gorm:"default:888;comment:用户角色ID"`
+	Authority           system.SysAuthority   `json:"authority" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
+	Authorities         []system.SysAuthority `json:"authorities" gorm:"many2many:sys_user_authority;"`
+	Title               string                `json:"title"` //职位
+	JianShuAddr         string                `json:"jianshu_addr"`
+	BlogAddr            string                `json:"blog_addr"`
+	AuthToken           string                `json:"auth_token" gorm:"-"`
 	DingToken           `json:"ding_token" gorm:"-"`
 	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
 	BlogArticleURL      Strs `gorm:"type:longtext" json:"blog_article_url"`
@@ -85,50 +88,48 @@ func (d *DingUser) GetUserByUserId() (user DingUser, err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).First(&user).Error
 	return
 }
-
+func (m *DingUser) UserAuthorityDefaultRouter(user *DingUser) {
+	var menuIds []string
+	err := global.GLOAB_DB.Model(&system.SysAuthorityMenu{}).Where("sys_authority_authority_id = ?", user.AuthorityId).Pluck("sys_base_menu_id", &menuIds).Error
+	if err != nil {
+		return
+	}
+	var am system.SysBaseMenu
+	err = global.GLOAB_DB.First(&am, "name = ? and id in (?)", user.Authority.DefaultRouter, menuIds).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		user.Authority.DefaultRouter = "404"
+	}
+}
 func (d *DingUser) Login() (user *DingUser, err error) {
 	user = &DingUser{
 		Mobile:   d.Mobile,
 		Password: d.Password,
 	}
 	//此处的Login函数传递的是一个指针类型的数据
-	if err := Login(user); err != nil {
-		return nil, err
-	}
-	// 生成JWT
-	token, err := jwt.GenToken(user.UserId, user.Name)
-	if err != nil {
-		zap.L().Debug("JWT生成错误")
-		return
-	}
-	user.AuthToken = token
-	return user, err
-}
-func encryptPassword(oPassword string) string {
-	h := md5.New()
-	h.Write([]byte(secret))
-	return hex.EncodeToString(h.Sum([]byte(oPassword)))
-}
-func Login(user *DingUser) (err error) {
 	opassword := user.Password //此处是用户输入的密码，不一定是对的
-	result := global.GLOAB_DB.Where(&DingUser{Mobile: user.Mobile}).First(user)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return ErrorUserNotExist
-	}
-	if result.Error != nil {
-		return result.Error
+	err = global.GLOAB_DB.Where(&DingUser{Mobile: user.Mobile}).Preload("Authorities").Preload("Authority").First(user).Error
+	if err != nil {
+		zap.L().Error("登录时查询数据库失败", zap.Error(err))
+		return
 	}
 	//如果到了这里还没有结束的话，那就说明该用户至少是存在的，于是我们解析一下密码
 	//password := encryptPassword(opassword)
 	password := opassword
 	//拿到解析后的密码，我们看看是否正确
 	if password != user.Password {
-		return ErrorInvalidPassword
+		return nil, errors.New("密码错误")
 	}
+	d.UserAuthorityDefaultRouter(user)
 	//如果能到这里的话，那就登录成功了
-	return nil
+	return
 
 }
+func encryptPassword(oPassword string) string {
+	h := md5.New()
+	h.Write([]byte(secret))
+	return hex.EncodeToString(h.Sum([]byte(oPassword)))
+}
+
 func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 	var client *http.Client
 	var request *http.Request

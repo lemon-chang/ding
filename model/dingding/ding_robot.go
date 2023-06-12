@@ -99,10 +99,14 @@ func (r *DingRobot) AddDingRobot() (err error) {
 	return
 }
 func (r *DingRobot) RemoveRobot() (err error) {
+
 	err = global.GLOAB_DB.Delete(r).Error
 	return
 }
-
+func (r *DingRobot) RemoveRobots(Robots []DingRobot) (err error) {
+	err = global.GLOAB_DB.Delete(Robots).Error
+	return
+}
 func (r *DingRobot) CreateOrUpdateRobot() (err error) {
 	err = global.GLOAB_DB.Clauses(clause.OnConflict{
 		UpdateAll: true,
@@ -183,7 +187,6 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 
 	return nil
 }
-
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
 	spec, detailTimeForUser, err := HandleSpec(p)

@@ -45,6 +45,7 @@ func main() {
 		return
 	}
 
+	//err = initialize.RegisterTables(global.GLOAB_DB)
 	if err != nil {
 		return
 	}

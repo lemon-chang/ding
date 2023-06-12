@@ -5,6 +5,7 @@ import (
 	"ding/controllers"
 	"ding/dao/redis"
 	"ding/global"
+	"ding/initialize/jwt"
 	dingding2 "ding/model/dingding"
 	"ding/model/params"
 	"ding/model/params/ding"
@@ -90,6 +91,13 @@ func LoginHandler(c *gin.Context) {
 	//2.业务逻辑处理
 	//3.返回响应
 	user, err := (&dingding2.DingUser{Mobile: p.Mobile, Password: p.Password}).Login()
+	// 生成JWT
+	token, err := jwt.GenToken(c, user)
+	if err != nil {
+		zap.L().Debug("JWT生成错误")
+		return
+	}
+	user.AuthToken = token
 	if err != nil {
 		response.FailWithMessage("用户登录失败", c)
 	} else {

@@ -26,6 +26,8 @@ func RegisterTables(db *gorm.DB) (err error) {
 	err = db.AutoMigrate(&system.Config{})
 	err = db.AutoMigrate(&system.SysDataDictionary{})
 	err = db.AutoMigrate(&system.SysDataDictionaryDetail{})
+	err = db.AutoMigrate(&system.SysBaseMenu{})
+	err = db.AutoMigrate(&system.SysAuthority{})
 
 	//err = db.AutoMigrate(
 	//	dingding2.DingUser{},

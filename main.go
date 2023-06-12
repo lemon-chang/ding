@@ -4,6 +4,7 @@ import (
 	"context"
 	"ding/dao/mysql"
 	"ding/dao/redis"
+	"ding/global"
 	"ding/initialize"
 	"ding/initialize/logger"
 	"ding/routers"
@@ -45,6 +46,7 @@ func main() {
 		return
 	}
 
+	err = initialize.RegisterTables(global.GLOAB_DB)
 	if err != nil {
 		return
 	}

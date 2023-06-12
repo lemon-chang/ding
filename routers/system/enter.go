@@ -22,5 +22,9 @@ func SetupSystem(System *gin.RouterGroup) {
 		sysDataDictionaryDetail.GET("findSysDataDictionaryDetail", system2.FindSysDataDictionaryDetail)        // 新建SysDataDictionaryDetail
 		sysDataDictionaryDetail.GET("getSysDataDictionaryDetailList", system2.GetSysDataDictionaryDetailList)  // 新建SysDataDictionaryDetail
 	}
+	Menu := System.Group("Menu")
+	{
+		Menu.POST("getMenu")
+	}
 
 }

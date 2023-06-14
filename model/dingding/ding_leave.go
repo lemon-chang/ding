@@ -19,6 +19,10 @@ type DingLeave struct {
 	UserName     string `json:"user_name"`
 	DingToken
 }
+type SubscriptionRelationship struct {
+	Subscriber string //订阅人
+	Subscribee string //被订阅人
+}
 
 func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, UseridList string) (leaveStatus []DingLeave, hasMore bool, err error) {
 	var client *http.Client
@@ -89,16 +93,29 @@ func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, U
 	return r.Result.DingLeave, hasMore, err
 }
 
-type SubscriptionRelationship struct {
-	Subscriber string //订阅人
-	Subscribee string //被订阅人
-}
-
 func (a *SubscriptionRelationship) SubscribeSomeone() (err error) {
+	//获取请假人姓名
+	user := DingUser{}
+	err = global.GLOAB_DB.Where("user_id = ?", a.Subscriber).First(&user).Error
+	err = global.GLOAB_DB.Where("user_id = ?", a.Subscribee).First(&user).Error
+	if err != nil {
+		return
+	}
 	err = global.GLOAB_DB.Create(a).Error
+
 	return
 }
 func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
-	err = global.GLOAB_DB.Delete(a).Error
+	sr := SubscriptionRelationship{}
+	err = global.GLOAB_DB.Where("subscriber = ?", a.Subscriber).First(&sr).Error
+	err = global.GLOAB_DB.Where("subscribee = ?", a.Subscribee).First(&sr).Error
+	if err != nil {
+		return
+	}
+	err = global.GLOAB_DB.Where("subscriber = ? And subscribee = ?", a.Subscriber, a.Subscribee).Delete(a).Error
 	return
+}
+
+func (a *SubscriptionRelationship) xxx() {
+
 }

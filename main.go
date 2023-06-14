@@ -78,6 +78,7 @@ func main() {
 		zap.L().Error("AttendanceByRobot init fail...")
 		return
 	}
+	initialize.A()
 	zap.L().Debug("AttendanceByRobot init success...")
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
@@ -94,7 +95,7 @@ func main() {
 	// 初始化kafka
 	if err = initialize.KafkaInit(); err != nil {
 		zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
-		return
+
 	}
 
 	go func() {

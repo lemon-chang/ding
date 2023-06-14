@@ -32,6 +32,7 @@ func main() {
 		zap.L().Error(fmt.Sprintf("init logger failed ,err:%v\n", err))
 		return
 	}
+
 	defer zap.L().Sync()
 	zap.L().Debug("zap init success...")
 	//初始化连接飞书
@@ -44,7 +45,7 @@ func main() {
 		zap.L().Error(fmt.Sprintf("init mysql failed ,err:%v\n", err))
 		return
 	}
-
+	//自动建表
 	//err = initialize.RegisterTables(global.GLOAB_DB)
 	if err != nil {
 		return
@@ -89,6 +90,8 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", settings.Conf.App.Port),
 		Handler: r,
 	}
+<<<<<<< HEAD
+=======
 
 	// 初始化kafka
 	if err = initialize.KafkaInit(); err != nil {
@@ -96,13 +99,17 @@ func main() {
 		return
 	}
 
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("lister: %s\n", err)
 			return
 		}
 	}()
+<<<<<<< HEAD
+=======
 
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -110,7 +117,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
+<<<<<<< HEAD
+		zap.L().Info("Server Shutdown", zap.Error(err))
+=======
 		zap.L().Error("Server Shutdown", zap.Error(err))
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	}
 	zap.L().Info("Server exiting")
 }

@@ -2,6 +2,7 @@ package dingding
 
 import (
 	"crypto/tls"
+	"ding/global"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -18,17 +19,13 @@ type DingLeave struct {
 	UserName     string `json:"user_name"`
 	DingToken
 }
-type xxx struct {
-	UsedId1 string
-	UserId2 string
-}
 
 func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, UseridList string) (leaveStatus []DingLeave, hasMore bool, err error) {
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
 	var body []byte
-	URL := "https://oapi.dingtalk.com/topapi/attendance/getleavestatus?access_token=" + a.DingToken.Token
+	URL := "https://oapi.dingtalk.com/topapi/attendance/getleavestatus?access_token=" + a.Token
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
@@ -90,4 +87,18 @@ func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, U
 	// 此处举行具体的逻辑判断，然后返回即可
 
 	return r.Result.DingLeave, hasMore, err
+}
+
+type SubscriptionRelationship struct {
+	Subscriber string //订阅人
+	Subscribee string //被订阅人
+}
+
+func (a *SubscriptionRelationship) SubscribeSomeone() (err error) {
+	err = global.GLOAB_DB.Create(a).Error
+	return
+}
+func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
+	err = global.GLOAB_DB.Delete(a).Error
+	return
 }

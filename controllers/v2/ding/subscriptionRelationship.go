@@ -12,9 +12,9 @@ func SubscribeToSomeone(c *gin.Context) {
 	relationship.Subscribee = c.Query("subscribee")
 	err := relationship.SubscribeSomeone()
 	if err != nil {
-		response.FailWithMessage("", c)
+		response.FailWithMessage("订阅失败", c)
 	} else {
-		response.OkWithMessage("", c)
+		response.OkWithMessage("订阅成功", c)
 	}
 }
 

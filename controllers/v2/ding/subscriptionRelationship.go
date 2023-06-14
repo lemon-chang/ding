@@ -24,8 +24,8 @@ func Unsubscribe(c *gin.Context) {
 	relationship.Subscribee = c.Query("subscribee")
 	err := relationship.UnsubscribeSomeone()
 	if err != nil {
-		response.FailWithMessage("", c)
+		response.FailWithMessage("取消订阅失败", c)
 	} else {
-		response.OkWithMessage("", c)
+		response.OkWithMessage("取消订阅成功", c)
 	}
 }

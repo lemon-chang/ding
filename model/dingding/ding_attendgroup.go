@@ -457,6 +457,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		hour += s[0] + ","
 		min += s[1] + ","
 	}
+
 	hour = hour[:len(hour)-1]
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
@@ -930,6 +931,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
 				continue
 			}
+
 			// 向各部门根据请假次数排序的集合中 设置key
 			// 获取此次考勤该部门的请假次数
 			zap.L().Info(fmt.Sprintf("部门：%v开始统计请假迟到信息到redis中", DeptDetail.Name))
@@ -975,6 +977,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			pipeline.Close()
 			//发送部门排行榜请假情况
 			DeptDetail.SendFrequencyLeave(startWeek)
+
 			// 以下是对迟到Zset的操作
 			pipeline = global.GLOBAL_REDIS.TxPipeline()
 			lateCount := len(result["Late"])

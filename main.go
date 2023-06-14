@@ -78,6 +78,7 @@ func main() {
 		zap.L().Error("AttendanceByRobot init fail...")
 		return
 	}
+	initialize.A()
 	zap.L().Debug("AttendanceByRobot init success...")
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {

@@ -81,38 +81,23 @@ func (s *DingSubscribe) Leave(result map[string]interface{}) {
 	//获取请假时间
 	//useridlist := []string{userid}
 	//now := time.Now()
-	now1, _ := result["createTime"].(float64)
-	now := (int64(now1))
-	//qian, _ := time.ParseDuration("-100s")
-	//hou, _ := time.ParseDuration("100s")
-	startTime := now - 10000
-	endTime := now + 10000
-	//todo 暂停
-	//msg := LeaveQueryRules{
-	//	Userid_list: useridlist,
-	//	Start_time:  startTime,
-	//	End_time:    endTime,
-	//	Offset:      0,
-	//	Size:        10,
-	//}
-	//marshal, _ := json.Marshal(&msg)
-	//token, _ := (&DingToken{}).GetAccessToken()
-	//URL := fmt.Sprintf("https://oapi.dingtalk.com/topapi/attendance/getleavestatus?access_token=%v", token)
-	//request, _ := http.NewRequest(http.MethodPost, URL, bytes.NewReader(marshal))
-	//response, _ := client.Do(request)
-	//leaveresult, _ := ioutil.ReadAll(response.Body)
+	//now1, _ := result["createTime"].(int64)
+	qian, _ := time.ParseDuration("-24h")
+	hou, _ := time.ParseDuration("24h")
+	now := time.Now()
+	startTime := now.Add(qian)
+	endTime := now.Add(hou)
 	token, _ := (&DingToken{}).GetAccessToken()
-	nowTime := time.Unix(0, now).Format("2006-01-02 15:04:05")
-	start := time.Unix(0, startTime).Format("2006-01-02 15:04:05")
-	end := time.Unix(0, endTime).Format("2006-01-02 15:04:05")
+	nowTime := now.Format("2006-01-02 15:04:05")
+	start := startTime.Format("2006-01-02 15:04:05")
+	end := endTime.Format("2006-01-02 15:04:05")
 	zap.L().Info(fmt.Sprintf("监测到了%v 请假，时间为:%v ,监测区间开始时间：%v,监测区间结束时间 :%v", user.Name, nowTime, start, end))
-	status, _, err := (&DingLeave{DingToken: DingToken{Token: token}}).GetLeaveStatus(startTime, endTime, 0, 10, userid)
+	status, _, err := (&DingLeave{DingToken: DingToken{Token: token}}).GetLeaveStatus(startTime.UnixNano()/1e6, endTime.UnixNano()/1e6, 0, 10, userid)
 	if err != nil || len(status) == 0 {
 		zap.L().Error("获取请假数据失败", zap.Error(err))
 		return
 	}
 	zap.L().Info(fmt.Sprintf("获取请假数据成功：%v", status))
-
 	//var lr LeaveResp
 	//json.Unmarshal(leaveresult, &lr)
 	//去数据库里面查一下哪些人订阅了他
@@ -122,7 +107,7 @@ func (s *DingSubscribe) Leave(result map[string]interface{}) {
 	var p ParamChat
 	p.UserIds = userids
 	p.MsgKey = "sampleText"
-	p.MsgParam = fmt.Sprintf("姓名：%v 请假时间 %v —— %v \n ", user.Name, time.Unix(0, status[0].StartTime).Format("2006-01-02 15:04:05"), time.Unix(0, status[0].EndTime).Format("2006-01-02 15:04:05"))
+	p.MsgParam = fmt.Sprintf("请假人姓名：%v \n开始时间: %v\n结束时间: %v", user.Name, time.Unix(status[len(status)-1].StartTime/1e3, 0).Format("2006-01-02 15:04:05"), time.Unix(status[len(status)-1].EndTime/1e3, 0).Format("2006-01-02 15:04:05"))
 	//pj := ""
 	//for _, value := range status {
 	//	st := time.Unix(value.StartTime, 0)

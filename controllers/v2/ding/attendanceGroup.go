@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-//使用官方接口导入考勤组数据到数据库中
+// 使用官方接口导入考勤组数据到数据库中
 func ImportAttendanceGroupData(c *gin.Context) {
 	var AG dingding2.DingAttendGroup
 	t := dingding2.DingToken{}

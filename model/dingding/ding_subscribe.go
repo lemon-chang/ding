@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha1"
+	"ding/global"
 	"ding/model/common"
 	"encoding/base64"
 	"encoding/binary"
@@ -19,9 +20,32 @@ import (
 	"time"
 )
 
-//结构体，消息订阅
+// 结构体，消息订阅
 type DingSubscribe struct {
 	EventJson map[string]interface{}
+	DingToken
+}
+type LeaveQueryRules struct {
+	Userid_list []string `json:"userid_list"`
+	Start_time  int64    `json:"start_time"`
+	End_time    int64    `json:"end_time"`
+	Offset      int      `json:"offset"`
+	Size        int      `json:"size"`
+}
+type LeaveStatu struct {
+	Duration_percent int    `json:"duration_percent"`
+	Duration_unit    string `json:"duration_unit"`
+	End_time         int64  `json:"end_time"`
+	Start_time       int64  `json:"start_time"`
+	Userid           string `json:"userid"`
+}
+type LeaveResult struct {
+	Has_more     bool         `json:"has_more"`
+	Leave_status []LeaveStatu `json:"leave_status"`
+}
+type LeaveResp struct {
+	Errcode int         `json:"errcode"`
+	Result  LeaveResult `json:"result"`
 }
 
 func NewDingSubscribe(EventJson map[string]interface{}) *DingSubscribe {
@@ -44,27 +68,69 @@ func (s *DingSubscribe) CheckIn(c *gin.Context) {
 		RepeatTime: "立即发送",
 		TaskName:   "事件订阅",
 	}
-
 	(&DingRobot{RobotId: "2e36bf946609cd77206a01825273b2f3f33aed05eebe39c9cc9b6f84e3f30675"}).CronSend(c, &p)
 }
 
-//订阅请假事件
-func (s *DingSubscribe) Leave(c *gin.Context) {
-	//userid := c.Query("user_id")
-	//c.Query("startTime")
-	//c.Query("endTime")
-	//user, err := (&DingUser{UserId: userid}).GetUserByUserId()
-	////去数据库里面查一下谁订阅了他
-	//
-	//var userids []int
-	//
-	////调用机器人进行推送
-	//var p ParamChat
-	//p.UserIds = userids
-	//p.MsgKey = "sampleText"
-	//p.MsgParam = fmt.Sprintf("姓名：%s,请假开始时间:%s，请假结束时间：%s", user.Name)
-	//(&DingRobot{}).ChatSendMessage(p)
+// 订阅请假事件
+func (s *DingSubscribe) Leave(result map[string]interface{}) {
+	//var client *http.Client
+	//c.Get(global.CtxUserIDKey)
+	userid, _ := result["staffId"].(string)
+	//获取请假人姓名
+	user, _ := (&DingUser{UserId: userid}).GetUserByUserId()
+	//获取请假时间
+	//useridlist := []string{userid}
+	//now := time.Now()
+	now1, _ := result["createTime"].(float64)
+	now := (int64(now1))
+	//qian, _ := time.ParseDuration("-100s")
+	//hou, _ := time.ParseDuration("100s")
+	startTime := now - 10000
+	endTime := now + 10000
+	//todo 暂停
+	//msg := LeaveQueryRules{
+	//	Userid_list: useridlist,
+	//	Start_time:  startTime,
+	//	End_time:    endTime,
+	//	Offset:      0,
+	//	Size:        10,
+	//}
+	//marshal, _ := json.Marshal(&msg)
+	//token, _ := (&DingToken{}).GetAccessToken()
+	//URL := fmt.Sprintf("https://oapi.dingtalk.com/topapi/attendance/getleavestatus?access_token=%v", token)
+	//request, _ := http.NewRequest(http.MethodPost, URL, bytes.NewReader(marshal))
+	//response, _ := client.Do(request)
+	//leaveresult, _ := ioutil.ReadAll(response.Body)
+	token, _ := (&DingToken{}).GetAccessToken()
+	nowTime := time.Unix(0, now).Format("2006-01-02 15:04:05")
+	start := time.Unix(0, startTime).Format("2006-01-02 15:04:05")
+	end := time.Unix(0, endTime).Format("2006-01-02 15:04:05")
+	zap.L().Info(fmt.Sprintf("监测到了%v 请假，时间为:%v ,监测区间开始时间：%v,监测区间结束时间 :%v", user.Name, nowTime, start, end))
+	status, _, err := (&DingLeave{DingToken: DingToken{Token: token}}).GetLeaveStatus(startTime, endTime, 0, 10, userid)
+	if err != nil || len(status) == 0 {
+		zap.L().Error("获取请假数据失败", zap.Error(err))
+		return
+	}
+	zap.L().Info(fmt.Sprintf("获取请假数据成功：%v", status))
 
+	//var lr LeaveResp
+	//json.Unmarshal(leaveresult, &lr)
+	//去数据库里面查一下哪些人订阅了他
+	var userids []string
+	global.GLOAB_DB.Model(SubscriptionRelationship{}).Select("subscriber").Where("Subscribee = ?", userid).Find(&userids)
+	//调用机器人进行推送
+	var p ParamChat
+	p.UserIds = userids
+	p.MsgKey = "sampleText"
+	p.MsgParam = fmt.Sprintf("姓名：%v 请假时间 %v —— %v \n ", user.Name, time.Unix(0, status[0].StartTime).Format("2006-01-02 15:04:05"), time.Unix(0, status[0].EndTime).Format("2006-01-02 15:04:05"))
+	//pj := ""
+	//for _, value := range status {
+	//	st := time.Unix(value.StartTime, 0)
+	//	et := time.Unix(value.EndTime, 0)
+	//	pj = fmt.Sprintf("\n请假开始时间：%v,请假结束时间%v", st.Format("2006-01-02 15:04:05"), et.Format("2006-01-02 15:04:05"))
+	//	p.MsgParam = p.MsgParam + pj
+	//}
+	_ = (&DingRobot{DingToken: DingToken{token}}).ChatSendMessage(&p)
 }
 
 // UserAddOrg 用户加入组织
@@ -90,7 +156,6 @@ func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
 		zap.L().Error("dingUser.GetUserByUserId() failed,err: ", zap.Error(err))
 	}
 	fmt.Printf("detailDingUser: %v\n", detailDingUser)
-
 }
 
 // UserLeaveOrg 用户退出组织

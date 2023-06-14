@@ -12,6 +12,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
+	"strings"
 )
 
 func OutGoing(c *gin.Context) {
@@ -114,6 +115,7 @@ func AddRobot(c *gin.Context) {
 		}
 	} else if p.Type == "2" {
 		//直接更新即可
+
 	}
 	// 2.逻辑处理
 	err = dingRobot.CreateOrUpdateRobot()
@@ -194,13 +196,7 @@ func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("remove Robot invaild param", zap.Error(err))
-		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			response.ResponseError(c, response.CodeInvalidParam)
-			return
-		}
-		response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
-		return
+		response.FailWithMessage("参数错误", c)
 	}
 	err := (&dingding.DingRobot{RobotId: p.RobotId}).RemoveRobot()
 	if err != nil {
@@ -436,7 +432,7 @@ func GetTaskDetail(c *gin.Context) {
 	}
 }
 
-//进行单聊
+// 进行单聊
 func SingleChat(c *gin.Context) {
 	var p dingding.ParamChat
 	err := c.ShouldBindJSON(&p)
@@ -449,6 +445,7 @@ func SubscribeTo(c *gin.Context) {
 	// 1. 参数获取
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
+
 	nonce := c.Query("nonce")
 	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce))
 	var m map[string]interface{}
@@ -460,12 +457,15 @@ func SubscribeTo(c *gin.Context) {
 
 	// 2. 参数解密
 	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	//解密后的数据是一个json字符串
 	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
 	// 3. 反序列化回调事件json数据
-	eventJson := make(map[string]interface{})
-	json.Unmarshal([]byte(decryptMsg), &eventJson)
-	eventType := eventJson["EventType"].(string)
-	subscription := dingding.NewDingSubscribe(eventJson)
+	//把取值不方便的json字符串反序列化带map中
+	result := make(map[string]interface{})
+	json.Unmarshal([]byte(decryptMsg), &result)
+	//事件类型
+	eventType := result["EventType"].(string)
+	subscription := dingding.NewDingSubscribe(result)
 
 	// 4.根据EventType分类处理
 	if eventType == "check_url" {
@@ -482,8 +482,16 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "check_in" {
 		// 用户签到事件
 		subscription.CheckIn(c)
-	} else if eventType == "leave" {
-		subscription.Leave(c)
+	} else if eventType == "bpms_instance_change" {
+		title := result["title"].(string)
+		if strings.Contains(title, "请假") {
+			fmt.Println("123456")
+			//c.Get(global.CtxUserIDKey) 是通过用户登录后生成的token 中取到 user_id
+			//c.Query("user_id")  是取前端通过 发来的params参数中的 user_id字段
+			subscription.Leave(result)
+		} else {
+
+		}
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")

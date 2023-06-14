@@ -110,7 +110,7 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
-//钉钉机器人单聊
+// 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
 	var request *http.Request
@@ -130,7 +130,7 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		UserIds   []string `json:"userIds"`
 	}{MsgParam: fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
 		MsgKey:    p.MsgKey,
-		RobotCode: r.RobotId,
+		RobotCode: "dingepndjqy7etanalhi",
 		UserIds:   p.UserIds,
 	}
 	//然后把结构体对象序列化一下
@@ -168,7 +168,7 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
 	}{}
 	//把请求到的结构反序列化到专门接受返回值的对象上面
-	err = json.Unmarshal(body, &r)
+	err = json.Unmarshal(body, &h)
 	if err != nil {
 		return nil
 	}
@@ -422,6 +422,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 }
 
 // SendMessage Function to send message
+//
 //goland:noinspection GoUnhandledErrorResult
 func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 	b := []byte{}
@@ -558,18 +559,18 @@ func (t *DingRobot) getURLV2() string {
 	return url
 }
 
-//func (t *DingRobot) StopTask(id string) (err error) {
-//	task := Task{
-//		TaskID: id,
-//	}
-//	taskID, err := mysql.StopTask(task)
+//	func (t *DingRobot) StopTask(id string) (err error) {
+//		task := Task{
+//			TaskID: id,
+//		}
+//		taskID, err := mysql.StopTask(task)
 //
-//	if errors.Is(err, mysql.ErrorNotHasTask) {
-//		return mysql.ErrorNotHasTask
+//		if errors.Is(err, mysql.ErrorNotHasTask) {
+//			return mysql.ErrorNotHasTask
+//		}
+//		global.GLOAB_CORN.Remove(cron.EntryID(taskID))
+//		return err
 //	}
-//	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
-//	return err
-//}
 func SendSessionWebHook(p *ParamReveiver) (err error) {
 	//currentTime := time.Now().Format("15:04:05")         //15:04:05固定写法，可以获取到当前时间的时分秒
 	//formatTime, _ := time.Parse("15:04:05", currentTime) //把时间字符串转化成时间格式，时间格式可以直接比较
@@ -802,7 +803,7 @@ func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	return spec, detailTimeForUser, nil
 }
 
-//获取机器人所在的群聊的userIdList ，前提是获取到OpenConversationId，获取到OpenConverstaionId的前提是获取到二维码
+// 获取机器人所在的群聊的userIdList ，前提是获取到OpenConversationId，获取到OpenConverstaionId的前提是获取到二维码
 func (r *DingRobot) GetGroupUserIds() (userIds []string, _err error) {
 	//所需参数access_token, OpenConversationId string
 	olduserIds := []*string{}

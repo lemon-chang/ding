@@ -195,11 +195,11 @@ func GetRobotBaseList(c *gin.Context) {
 }
 func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
-
+	var err error
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("remove Robot invaild param", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
-
+		return
 	}
 
 	go func() {
@@ -222,14 +222,20 @@ func RemoveRobot(c *gin.Context) {
 			response.OkWithMessage("移除机器人成功 kafka消息消费失败", c)
 		}
 	}()
+
 	for i := 0; i < len(p.RobotIds); i++ {
 		if _, _, err := global.GLOBAL_Kafka_Prod.SendMessage(global.KafMsg("delete-topic", p.RobotIds[i], 1)); err != nil {
 			zap.L().Error("kafka produce msg failed ... ")
-			response.FailWithMessage("移除机器人失败", c)
 			return
 		}
 	}
-	response.OkWithMessage("移除机器人成功", c)
+
+	if err != nil {
+		response.FailWithMessage("移除机器人失败", c)
+	} else {
+		response.OkWithMessage("移除机器人成功", c)
+	}
+
 }
 
 // GetRobots 获得用户自身的所有机器人

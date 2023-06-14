@@ -65,7 +65,6 @@ func main() {
 	//}
 	//go utils.Timing(&utils.localTime)
 	//初始化路由
-
 	err = initialize.Reboot()
 	if err != nil {
 		fmt.Printf("重启定时任务失败,err:%v\n", err)
@@ -91,12 +90,26 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", settings.Conf.App.Port),
 		Handler: r,
 	}
+<<<<<<< HEAD
+=======
+
+	// 初始化kafka
+	if err = initialize.KafkaInit(); err != nil {
+		zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
+		return
+	}
+
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("lister: %s\n", err)
 			return
 		}
 	}()
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -104,7 +117,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
+<<<<<<< HEAD
 		zap.L().Info("Server Shutdown", zap.Error(err))
+=======
+		zap.L().Error("Server Shutdown", zap.Error(err))
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	}
 	zap.L().Info("Server exiting")
 }
+
+/*
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjYxOTY1Mzk2OTQzODk2NTcwOCIsInVzZXJfbmFtZSI6IuWnmuWkqeiIqiIsImV4cCI6MTcxODAwNTU1MiwiaXNzIjoieWpwIn0.bZU7X1Qfun7dovaKtBFnvdAYd3DIwQo5i-gcipvOBhA
+*/

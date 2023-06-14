@@ -21,7 +21,7 @@ func createClient() (_result *dingtalkim_1_0.Client, _err error) {
 	return _result, _err
 }
 
-func GetOpenConverstaionId(access_token,chatId string) (openConverstaionId string,_err error) {
+func GetOpenConverstaionId(access_token, chatId string) (openConverstaionId string, _err error) {
 	client, _err := createClient()
 	if _err != nil {
 		return

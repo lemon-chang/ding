@@ -20,7 +20,7 @@ type ParamGetRobotListBase struct {
 	UserId string `json:"user_id" form:"user_id"` //机器人的token //这个后面的json标签可以改变我们返回此结构体数据的字段,同时此字段也需要和前端保持一致
 }
 type ParamRemoveRobot struct {
-	RobotId string `json:"robot_id" binding:"required"`
+	RobotIds []string `json:"robot_id" binding:"required"`
 }
 type ParamPingRobot struct {
 	Version string

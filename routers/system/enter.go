@@ -2,6 +2,7 @@ package system
 
 import (
 	system2 "ding/controllers/system"
+	"ding/model/system"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,6 +22,10 @@ func SetupSystem(System *gin.RouterGroup) {
 		sysDataDictionaryDetail.PUT("updateSysDataDictionaryDetail", system2.UpdateSysDataDictionaryDetail)    // 新建SysDataDictionaryDetail
 		sysDataDictionaryDetail.GET("findSysDataDictionaryDetail", system2.FindSysDataDictionaryDetail)        // 新建SysDataDictionaryDetail
 		sysDataDictionaryDetail.GET("getSysDataDictionaryDetailList", system2.GetSysDataDictionaryDetailList)  // 新建SysDataDictionaryDetail
+	}
+	Menu := System.Group("Menu")
+	{
+		Menu.GET("getMenu", (&system.SysAuthorityMenu{}).GetMenu)
 	}
 
 }

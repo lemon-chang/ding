@@ -2,18 +2,22 @@ package dingding
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
 	"ding/global"
+	"ding/utils"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
 	util "github.com/alibabacloud-go/tea-utils/service"
 	"github.com/alibabacloud-go/tea/tea"
+	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -95,10 +99,14 @@ func (r *DingRobot) AddDingRobot() (err error) {
 	return
 }
 func (r *DingRobot) RemoveRobot() (err error) {
+
 	err = global.GLOAB_DB.Delete(r).Error
 	return
 }
-
+func (r *DingRobot) RemoveRobots(Robots []DingRobot) (err error) {
+	err = global.GLOAB_DB.Delete(Robots).Error
+	return
+}
 func (r *DingRobot) CreateOrUpdateRobot() (err error) {
 	err = global.GLOAB_DB.Clauses(clause.OnConflict{
 		UpdateAll: true,
@@ -179,7 +187,6 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 
 	return nil
 }
-
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
 	spec, detailTimeForUser, err := HandleSpec(p)
@@ -571,6 +578,7 @@ func (t *DingRobot) getURLV2() string {
 //		global.GLOAB_CORN.Remove(cron.EntryID(taskID))
 //		return err
 //	}
+<<<<<<< HEAD
 func SendSessionWebHook(p *ParamReveiver) (err error) {
 	//currentTime := time.Now().Format("15:04:05")         //15:04:05固定写法，可以获取到当前时间的时分秒
 	//formatTime, _ := time.Parse("15:04:05", currentTime) //把时间字符串转化成时间格式，时间格式可以直接比较
@@ -734,7 +742,188 @@ func SendSessionWebHook(p *ParamReveiver) (err error) {
 	//if err != nil {
 	//	return err
 	//}
+=======
+func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
+	var msg map[string]interface{}
+	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	robot := &DingRobot{}
+	if strings.Contains(p.Text.Content, "打字邀请码") {
+		code, err := robot.GetInviteCode()
+		if err != nil {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return err
+		}
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": utils.TypingInviationSucc + ": " + code,
+			},
+		}
+
+	} else if strings.Contains(p.Text.Content, "加密机器人ID") {
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": "获取成功：" + p.ChatbotUserId + "\n" + "登录机器人后台，更新机器人填写此字段后即可查看该机器人考勤记录",
+			},
+		}
+		msg["at"] = map[string][]string{
+			"atUserIds": []string{p.SenderStaffId},
+		}
+	}
+
+	b, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	var resp *http.Response
+
+	resp, err = http.Post(p.SessionWebhook, "application/json", bytes.NewBuffer(b))
+
+	defer resp.Body.Close()
+	date, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(date)
+	if err != nil {
+		return err
+	}
+>>>>>>> 4929a600966cb3f2efe732106518a5d21a9b02c5
 	return nil
+}
+func TypingInviation() (TypingInvitationCode string, err error) {
+	zap.L().Info("进入到了chromedp")
+	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
+	defer cancel()
+	//opts := append(
+	//	chromedp.DefaultExecAllocatorOptions[:],
+	//	chromedp.NoDefaultBrowserCheck,                        //不检查默认浏览器
+	//	chromedp.Flag("headless", false),                      // 禁用chrome headless（禁用无窗口模式，那就是开启窗口模式）
+	//	chromedp.Flag("blink-settings", "imagesEnabled=true"), //开启图像界面,重点是开启这个
+	//	chromedp.Flag("ignore-certificate-errors", true),      //忽略错误
+	//	chromedp.Flag("disable-web-security", true),           //禁用网络安全标志
+	//	chromedp.Flag("disable-extensions", true),             //开启插件支持
+	//	chromedp.Flag("disable-default-apps", true),
+	//	chromedp.NoFirstRun, //设置网站不是首次运行
+	//	chromedp.WindowSize(1921, 1024),
+	//	chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
+	//)
+
+	//allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	//defer cancel()
+	//print(cancel)
+
+	//// 创建上下文实例
+	//ctx, cancel := chromedp.NewContext(
+	//	allocCtx,
+	//	chromedp.WithLogf(log.Printf),
+	//)
+	//defer cancel()
+
+	// 创建超时上下文
+	var html string
+	//ctx, cancel = context.WithTimeout(ctx, 1*time.Minute)
+
+	err = chromedp.Run(timeCtx,
+		chromedp.Navigate("https://dazi.kukuw.com/"),
+		//点击“我的打字“按钮
+		chromedp.Click(`document.getElementById("globallink").getElementsByTagName("a")[5]`, chromedp.ByJSPath),
+		// 锁定用户名框并填写内容
+		chromedp.WaitVisible(`document.querySelector("#name")`, chromedp.ByJSPath),
+		chromedp.SetValue(`document.querySelector("#name")`, "闫佳鹏", chromedp.ByJSPath),
+		//锁定密码框并填写内容
+		chromedp.WaitVisible(`document.querySelector("#pass")`, chromedp.ByJSPath),
+		chromedp.SetValue(`document.querySelector("#pass")`, "123456", chromedp.ByJSPath),
+		//点击登录按钮
+		chromedp.WaitVisible(`document.querySelector(".button").firstElementChild`, chromedp.ByJSPath),
+		chromedp.Click(`document.querySelector(".button").firstElementChild`, chromedp.ByJSPath),
+		//点击发布竞赛
+		chromedp.WaitVisible(`document.querySelector("a.groupnew")`, chromedp.ByJSPath),
+		chromedp.Click(`document.querySelector("a.groupnew")`, chromedp.ByJSPath),
+		chromedp.Sleep(time.Second),
+		////点击所要打字的文章
+		chromedp.WaitVisible(`document.querySelector("a#select_b.select_b")`, chromedp.ByJSPath),
+		chromedp.Click(`document.querySelector("a#select_b.select_b")`, chromedp.ByJSPath),
+		chromedp.WaitVisible(`document.querySelector("a.sys.on")`, chromedp.ByJSPath),
+		chromedp.Click(`document.querySelector("a.sys.on")`, chromedp.ByJSPath),
+		//选择有效期
+		chromedp.Evaluate("document.querySelector(\"select#youxiaoqi\").value = document.querySelector(\"select#youxiaoqi\").children[5].value", nil),
+		//设置成为不公开
+		chromedp.Click(`document.querySelectorAll("input#gongkai")[1]`, chromedp.ByJSPath),
+		//点击发布按钮
+		chromedp.Click(`document.querySelectorAll(".artnew table tr td input")[7]`, chromedp.ByJSPath),
+		chromedp.WaitVisible(`document.querySelectorAll("#my_main .art_table td")[9].childNodes[0]`, chromedp.ByJSPath),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			fmt.Println("打字吗出现了")
+			return nil
+		}),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			fmt.Println("爬取前:", TypingInvitationCode)
+			a := chromedp.OuterHTML(`document.querySelector("body")`, &html, chromedp.ByJSPath)
+			err := a.Do(ctx)
+			if err != nil {
+				zap.L().Error("chromedp获取页面全部数据失败", zap.Error(err))
+				return err
+			}
+			dom, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+			if err != nil {
+				zap.L().Error("chromedp获取页面全部数据后，转化成dom失败", zap.Error(err))
+				return err
+			}
+			//dom.Find(`#my_main > .art_table > tbody > tr:nth-child(2) > td:nth-child(4) > span`).Each(func(i int, selection *goquery.Selection) {
+			//	TypingInvitationCode = TypingInvitationCode + selection.Text()
+			//	fmt.Println("爬取后:",TypingInvitationCode)
+			//	selection.Next()
+			//})
+			TypingInvitationCode = dom.Find(`#my_main > .art_table > tbody > tr:nth-child(2) > td:nth-child(4) > span`).First().Text()
+			if TypingInvitationCode == "" {
+				zap.L().Error("爬取打字邀请码失败")
+				return err
+			}
+			_, err = global.GLOBAL_REDIS.Set(context.Background(), utils.ConstTypingInvitationCode, TypingInvitationCode, time.Second*60*60*11).Result() //11小时过期时间
+			if err != nil {
+				zap.L().Error("爬取打字邀请码后存入redis失败", zap.Error(err))
+			}
+			return err
+		}),
+	)
+
+	if err != nil {
+		zap.L().Error("chromedp.Run有误", zap.Error(err))
+		return "", err
+	} else {
+		zap.L().Info("chromedp.Run无误", zap.Error(err))
+		return TypingInvitationCode, err
+	}
+
+}
+func (*DingRobot) GetInviteCode() (code string, err error) {
+	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	//去redis中取一下打字邀请码
+	var TypingInviationCode string
+	var expire1 int64
+	fmt.Println(expire1)
+	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
+	if err != nil {
+		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
+	}
+	//如果redis里面没有的话
+	if expire == -2 {
+		//申请新的TypingInviationCode并已经存入redis
+		TypingInviationCode, err = TypingInviation()
+		if err != nil || TypingInviationCode == "" {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return TypingInviationCode, err
+		}
+
+	} else {
+		//从redis从取到邀请码
+		TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
+		if len(TypingInviationCode) != 5 {
+			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
+			return TypingInviationCode, errors.New("申请新的TypingInviationCode失败")
+		}
+	}
+	return TypingInviationCode, nil
+
 }
 func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""

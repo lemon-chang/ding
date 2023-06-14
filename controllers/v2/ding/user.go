@@ -5,6 +5,7 @@ import (
 	"ding/controllers"
 	"ding/dao/redis"
 	"ding/global"
+	"ding/initialize/jwt"
 	dingding2 "ding/model/dingding"
 	"ding/model/params"
 	"ding/model/params/ding"
@@ -44,6 +45,17 @@ func SelectAllUsers(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(us, "查询所有用户成功", c)
+}
+func GetUserInfo(c *gin.Context) {
+	user_id, _ := c.Get(global.CtxUserIDKey)
+	DingUser := dingding2.DingUser{}
+	DingUser.UserId = user_id.(string)
+	err := DingUser.GetUserInfo()
+	if err != nil {
+		response.FailWithMessage("查询用户失败", c)
+		return
+	}
+	response.OkWithDetailed(DingUser, "查询所有用户成功", c)
 }
 
 // UpdateDingUserAddr 更新用户博客&简书地址
@@ -90,6 +102,13 @@ func LoginHandler(c *gin.Context) {
 	//2.业务逻辑处理
 	//3.返回响应
 	user, err := (&dingding2.DingUser{Mobile: p.Mobile, Password: p.Password}).Login()
+	// 生成JWT
+	token, err := jwt.GenToken(c, user)
+	if err != nil {
+		zap.L().Debug("JWT生成错误")
+		return
+	}
+	user.AuthToken = token
 	if err != nil {
 		response.FailWithMessage("用户登录失败", c)
 	} else {

@@ -85,6 +85,7 @@ func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, U
 	}
 	hasMore = r.Result.HasMore
 	// 此处举行具体的逻辑判断，然后返回即可
+
 	return r.Result.DingLeave, hasMore, err
 }
 
@@ -93,9 +94,11 @@ type SubscriptionRelationship struct {
 	Subscribee string //被订阅人
 }
 
-func (a *SubscriptionRelationship) SubscribeSomeone() {
-	global.GLOAB_DB.Create(a)
+func (a *SubscriptionRelationship) SubscribeSomeone() (err error) {
+	err = global.GLOAB_DB.Create(a).Error
+	return
 }
-func (a *SubscriptionRelationship) UnsubscribeSomeone() {
-	global.GLOAB_DB.Delete(a)
+func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
+	err = global.GLOAB_DB.Delete(a).Error
+	return
 }

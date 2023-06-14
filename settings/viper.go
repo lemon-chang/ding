@@ -16,6 +16,7 @@ type AppConfig struct {
 	*RedisConfig `mapstructure:"redis"`
 	*LogConfig   `mapstructure:"log"`
 	*Auth        `mapstructure:"auth"`
+	*KafkaConfig `mapstructure:"kafka"`
 }
 type Auth struct {
 	Jwt_Expire int `mapstructure:"jwt_expire"`
@@ -32,7 +33,7 @@ type MySQLConfig struct {
 	Host         string `mapstructure:"host"`
 	User         string `mapstructure:"user"`
 	Password     string `mapstructure:"password"`
-	DB           string `mapstructure:"dbname"`
+	DBName       string `mapstructure:"dbname"`
 	Port         int    `mapstructure:"port"`
 	MaxOpenConns int    `mapstructure:"max_open_conns"`
 	MaxIdleConns int    `mapstructure:"max_idle_conns"`
@@ -48,6 +49,10 @@ type LogConfig struct {
 	MaxSize    int    `mapstructure:"max_size"`
 	MaxAge     int    `mapstructure:"max_age"`
 	MaxBackups int    `mapstructure:"max_backups"`
+}
+
+type KafkaConfig struct {
+	Address string `mapstructure:"address"`
 }
 
 func Init() (err error) {

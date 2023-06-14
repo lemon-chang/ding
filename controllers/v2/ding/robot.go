@@ -1,6 +1,7 @@
 package ding
 
 import (
+	"bytes"
 	"ding/controllers"
 	"ding/global"
 	"ding/model/common"
@@ -8,6 +9,7 @@ import (
 	"ding/response"
 	"encoding/json"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -31,14 +33,13 @@ func OutGoing(c *gin.Context) {
 		}
 	}
 
-	err = dingding.SendSessionWebHook(&p)
+	err = (&dingding.DingRobot{}).SendSessionWebHook(&p)
 	if err != nil {
 		zap.L().Error("钉钉机器人回调出错", zap.Error(err))
 		response.ResponseErrorWithMsg(c, response.CodeServerBusy, "钉钉机器人回调出错")
 		return
 	}
 	response.ResponseSuccess(c, "回调成功")
-
 }
 
 // addRobot 添加机器人
@@ -194,16 +195,47 @@ func GetRobotBaseList(c *gin.Context) {
 }
 func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
+
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("remove Robot invaild param", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
+
 	}
-	err := (&dingding.DingRobot{RobotId: p.RobotId}).RemoveRobot()
+
+	go func() {
+		consumerMsgs, err := global.GLOBAL_Kafka_Cons.ConsumePartition("delete-topic", 1, sarama.OffsetNewest)
+		if err != nil {
+			fmt.Println(err)
+			zap.L().Error("kafka consumer msg failed ...")
+			return
+		}
+		for msg := range consumerMsgs.Messages() {
+			id := msg.Value
+			err = (&dingding.DingRobot{RobotId: string(id)}).RemoveRobot()
+			if err != nil {
+				break
+			}
+		}
+		if err != nil {
+			response.FailWithMessage("移除机器人失败 kafka消息消费失败", c)
+		} else {
+			response.OkWithMessage("移除机器人成功 kafka消息消费失败", c)
+		}
+	}()
+
+	for i := 0; i < len(p.RobotIds); i++ {
+		if _, _, err := global.GLOBAL_Kafka_Prod.SendMessage(global.KafMsg("delete-topic", p.RobotIds[i], 1)); err != nil {
+			zap.L().Error("kafka produce msg failed ... ")
+			return
+		}
+	}
+
 	if err != nil {
 		response.FailWithMessage("移除机器人失败", c)
 	} else {
 		response.OkWithMessage("移除机器人成功", c)
 	}
+
 }
 
 // GetRobots 获得用户自身的所有机器人
@@ -445,7 +477,6 @@ func SubscribeTo(c *gin.Context) {
 	// 1. 参数获取
 	signature := c.Query("signature")
 	timestamp := c.Query("timestamp")
-
 	nonce := c.Query("nonce")
 	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce))
 	var m map[string]interface{}
@@ -500,4 +531,34 @@ func SubscribeTo(c *gin.Context) {
 	// 5. 返回success的加密数据
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
+}
+func RobotAt(c *gin.Context) {
+	var resp *dingding.RobotAtResp
+	if err := c.ShouldBindJSON(&resp); err != nil {
+		zap.L().Error("RobotAtResp", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	fmt.Println("内容为:", resp.Text)
+	str := resp.Text["content"].(string)
+	if strings.Contains(str, "打字码") {
+		robot := dingding.DingRobot{}
+		code, err := robot.GetInviteCode()
+		if err != nil {
+			zap.L().Error("获取邀请码失败", zap.Error(err))
+		}
+
+		b := []byte{}
+		msg := map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": "邀请码: " + code,
+			},
+		}
+		b, err = json.Marshal(msg)
+		if err != nil {
+			zap.L().Error("转换失败", zap.Error(err))
+		}
+		http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
+		c.JSON(http.StatusOK, "成功")
+	}
 }

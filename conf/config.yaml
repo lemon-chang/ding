@@ -2,7 +2,7 @@
   app:
     name: "dingding"
     mode: "dev"
-    port: 81
+    port: 8889
     version: "v0.0.1"
     start_time: "2020-07-01"
     machine_id: 1
@@ -12,7 +12,7 @@
     port: "3306"
     user: "root"
     password: "18737480171..Yy"
-    dbname: "dingding"
+    dbname: "ding_v3_marchsoft"
     max_open_conns: 200
     max_idle_conns: 50
   redis:
@@ -28,3 +28,8 @@
     max_backups: 7
   auth:
     jwt_expire: 8760
+  kafka:
+    address: "121.43.119.224:9092"
+
+
+

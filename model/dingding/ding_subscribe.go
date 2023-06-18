@@ -98,8 +98,6 @@ func (s *DingSubscribe) Leave(result map[string]interface{}) {
 		return
 	}
 	zap.L().Info(fmt.Sprintf("获取请假数据成功：%v", status))
-	//var lr LeaveResp
-	//json.Unmarshal(leaveresult, &lr)
 	//去数据库里面查一下哪些人订阅了他
 	var userids []string
 	global.GLOAB_DB.Model(SubscriptionRelationship{}).Select("subscriber").Where("Subscribee = ?", userid).Find(&userids)
@@ -108,13 +106,6 @@ func (s *DingSubscribe) Leave(result map[string]interface{}) {
 	p.UserIds = userids
 	p.MsgKey = "sampleText"
 	p.MsgParam = fmt.Sprintf("请假人姓名：%v \n开始时间: %v\n结束时间: %v", user.Name, time.Unix(status[len(status)-1].StartTime/1e3, 0).Format("2006-01-02 15:04:05"), time.Unix(status[len(status)-1].EndTime/1e3, 0).Format("2006-01-02 15:04:05"))
-	//pj := ""
-	//for _, value := range status {
-	//	st := time.Unix(value.StartTime, 0)
-	//	et := time.Unix(value.EndTime, 0)
-	//	pj = fmt.Sprintf("\n请假开始时间：%v,请假结束时间%v", st.Format("2006-01-02 15:04:05"), et.Format("2006-01-02 15:04:05"))
-	//	p.MsgParam = p.MsgParam + pj
-	//}
 	_ = (&DingRobot{DingToken: DingToken{token}}).ChatSendMessage(&p)
 }
 

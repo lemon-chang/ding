@@ -389,11 +389,11 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 			}
 			AttendGroup.RobotAttendTaskID = int(taskID)
 			AttendGroup.IsRobotAttendance = true
-			err = tx.Model(&AttendGroup).Update("robot_attend_task_id", int(taskID)).Error
+			err = tx.Model(&AttendGroup).Updates(AttendGroup).Error
 			if err != nil {
 				zap.L().Error("mysql更新考勤组定时任务task_id失败")
 			}
-			zap.L().Info(fmt.Sprintf("开启考勤组考勤定时任务成功！定时任务id为%s", taskID))
+			zap.L().Info(fmt.Sprintf("开启考勤组考勤定时任务成功！定时任务id为%d", taskID))
 			return err
 		} else if old.IsRobotAttendance == true && AttendGroup.IsRobotAttendance == false {
 			zap.L().Error("更新考勤组关闭定时任务")

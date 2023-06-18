@@ -2,7 +2,7 @@
   app:
     name: "dingding"
     mode: "dev"
-    port: 8889
+    port: 81
     version: "v0.0.1"
     start_time: "2020-07-01"
     machine_id: 1

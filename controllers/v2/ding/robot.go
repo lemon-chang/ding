@@ -468,7 +468,6 @@ func SingleChat(c *gin.Context) {
 	var p dingding.ParamChat
 	err := c.ShouldBindJSON(&p)
 	if err != nil {
-
 	}
 	err = (&dingding.DingRobot{}).ChatSendMessage(&p)
 }

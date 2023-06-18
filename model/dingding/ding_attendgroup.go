@@ -370,7 +370,6 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 		if err != nil {
 			return err
 		}
-
 		AttendGroup := &DingAttendGroup{GroupId: p.GroupId, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, IsReady: p.IsReady, ReadyTime: p.ReadyTime}
 		//err = tx.Updates(AttendGroup).Error
 		//if err != nil {
@@ -389,11 +388,11 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 			}
 			AttendGroup.RobotAttendTaskID = int(taskID)
 			AttendGroup.IsRobotAttendance = true
-			err = tx.Model(&AttendGroup).Update("robot_attend_task_id", int(taskID)).Error
+			err = tx.Model(&AttendGroup).Updates(AttendGroup).Error
 			if err != nil {
 				zap.L().Error("mysql更新考勤组定时任务task_id失败")
 			}
-			zap.L().Info(fmt.Sprintf("开启考勤组考勤定时任务成功！定时任务id为%s", taskID))
+			zap.L().Info(fmt.Sprintf("开启考勤组考勤定时任务成功！定时任务id为%d", taskID))
 			return err
 		} else if old.IsRobotAttendance == true && AttendGroup.IsRobotAttendance == false {
 			zap.L().Error("更新考勤组关闭定时任务")
@@ -404,13 +403,12 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 				zap.L().Error("更新考勤组定时任务id为-1失败", zap.Error(err))
 			}
 			//updates不会更新零值，所以我们使用update单独更新一下
-			err = tx.Model(&AttendGroup).Update("is_robot_attendance", 0).Error
+			err = tx.Model(&AttendGroup).Update("is_robot_attendance", false).Error
 			if err != nil {
 				return err
 			}
 			zap.L().Info(fmt.Sprintf("关闭cron定时任务，定时任务id为：%v", old.RobotAttendTaskID))
 			global.GLOAB_CORN.Remove(cron.EntryID(old.RobotAttendTaskID))
-
 			zap.L().Info("关闭考勤组考勤定时任务成功！")
 		}
 		return err

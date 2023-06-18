@@ -20,8 +20,9 @@ type DingLeave struct {
 	DingToken
 }
 type SubscriptionRelationship struct {
-	Subscriber string //订阅人
-	Subscribee string //被订阅人
+	Subscriber   string //订阅人
+	Subscribee   string //被订阅人
+	IsCurriculum bool   //是否订阅课表
 }
 
 func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, UseridList string) (leaveStatus []DingLeave, hasMore bool, err error) {
@@ -102,7 +103,6 @@ func (a *SubscriptionRelationship) SubscribeSomeone() (err error) {
 		return
 	}
 	err = global.GLOAB_DB.Create(a).Error
-
 	return
 }
 func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
@@ -116,6 +116,10 @@ func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
 	return
 }
 
-func (a *SubscriptionRelationship) xxx() {
-
+func (a *SubscriptionRelationship) QuerySubscribed() (sr []SubscriptionRelationship, err error) {
+	err = global.GLOAB_DB.Where("is_curriculum = ?", true).Find(&sr).Error
+	if err != nil {
+		return
+	}
+	return
 }

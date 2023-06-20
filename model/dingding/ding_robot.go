@@ -100,10 +100,14 @@ func (r *DingRobot) AddDingRobot() (err error) {
 	return
 }
 func (r *DingRobot) RemoveRobot() (err error) {
+
 	err = global.GLOAB_DB.Delete(r).Error
 	return
 }
-
+func (r *DingRobot) RemoveRobots(Robots []DingRobot) (err error) {
+	err = global.GLOAB_DB.Delete(Robots).Error
+	return
+}
 func (r *DingRobot) CreateOrUpdateRobot() (err error) {
 	err = global.GLOAB_DB.Clauses(clause.OnConflict{
 		UpdateAll: true,
@@ -135,7 +139,7 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		UserIds   []string `json:"userIds"`
 	}{MsgParam: fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
 		MsgKey:    p.MsgKey,
-		RobotCode: r.RobotId,
+		RobotCode: "dingepndjqy7etanalhi",
 		UserIds:   p.UserIds,
 	}
 	//然后把结构体对象序列化一下
@@ -173,7 +177,7 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
 	}{}
 	//把请求到的结构反序列化到专门接受返回值的对象上面
-	err = json.Unmarshal(body, &r)
+	err = json.Unmarshal(body, &h)
 	if err != nil {
 		return nil
 	}
@@ -184,7 +188,6 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 
 	return nil
 }
-
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
 	spec, detailTimeForUser, err := HandleSpec(p)

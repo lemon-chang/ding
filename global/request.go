@@ -12,6 +12,8 @@ var ErrorCornTabNotGet = errors.New("定时任务获取失败")
 const CtxUserIDKey = "user_id"
 const CtxIDKey = "id"
 const CtxUserNameKey = "userName"
+const CtxUserAuthorityIDKey = "authority_id"
+
 const CtxRobotIDKey = "robotID"
 const CtxCornTab = "task"
 

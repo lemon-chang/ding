@@ -16,7 +16,6 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.GET("getSubDepartmentListById2", ding.GetSubDepartmentListByID2) // 从数据库中一层一层的取出部门
 		Dept.GET("getDeptListFromMysql", ding.GetDeptListFromMysql)
 		Dept.PUT("updateDept", ding.UpdateDept) // 更新部门信息，用来设置机器人token，各种开关
-
 	}
 
 	AttendanceGroup := System.Group("attendanceGroup")
@@ -24,14 +23,15 @@ func SetupDing(System *gin.RouterGroup) {
 		AttendanceGroup.GET("ImportAttendanceGroupData", ding.ImportAttendanceGroupData)    //将考勤组信息导入到数据库中
 		AttendanceGroup.PUT("updateAttendanceGroup", ding.UpdateAttendanceGroup)            //更新部门信息，用来设置机器人token，各种开关
 		AttendanceGroup.GET("GetAttendanceGroupList", ding.GetAttendanceGroupListFromMysql) //批量获取考勤组
-
 	}
 	LeaveGroup := System.Group("leave")
 	{
-		LeaveGroup.POST("curd")
+		LeaveGroup.POST("SubscribeToSomeone", ding.SubscribeToSomeone) //订阅某人考勤情况
+		LeaveGroup.DELETE("Unsubscribe", ding.Unsubscribe)             //取消订阅
 	}
 	User := System.Group("user")
 	{
+		User.GET("getUserInfo", ding.GetUserInfo)
 		//User.POST("ImportDingUserData", ding.ImportDingUserData) //将钉钉用户导入到数据库中
 		User.POST("UpdateDingUserAddr", ding.UpdateDingUserAddr) // 更新用户的博客和简书地址
 		User.GET("GetAllUsers", ding.SelectAllUsers)             // 查询所有用户信息

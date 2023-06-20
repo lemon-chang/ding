@@ -32,6 +32,7 @@ func main() {
 		zap.L().Error(fmt.Sprintf("init logger failed ,err:%v\n", err))
 		return
 	}
+
 	defer zap.L().Sync()
 	zap.L().Debug("zap init success...")
 	//初始化连接飞书
@@ -44,7 +45,8 @@ func main() {
 		zap.L().Error(fmt.Sprintf("init mysql failed ,err:%v\n", err))
 		return
 	}
-
+	//自动建表
+	//err = initialize.RegisterTables(global.GLOAB_DB)
 	if err != nil {
 		return
 	}
@@ -76,6 +78,7 @@ func main() {
 		zap.L().Error("AttendanceByRobot init fail...")
 		return
 	}
+	initialize.RegularlySendCourses()
 	zap.L().Debug("AttendanceByRobot init success...")
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
@@ -92,7 +95,7 @@ func main() {
 	// 初始化kafka
 	if err = initialize.KafkaInit(); err != nil {
 		zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
-		return
+
 	}
 
 	go func() {
@@ -113,3 +116,7 @@ func main() {
 	}
 	zap.L().Info("Server exiting")
 }
+
+/*
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjYxOTY1Mzk2OTQzODk2NTcwOCIsInVzZXJfbmFtZSI6IuWnmuWkqeiIqiIsImV4cCI6MTcxODAwNTU1MiwiaXNzIjoieWpwIn0.bZU7X1Qfun7dovaKtBFnvdAYd3DIwQo5i-gcipvOBhA
+*/

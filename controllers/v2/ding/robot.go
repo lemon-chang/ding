@@ -541,18 +541,30 @@ func RobotAt(c *gin.Context) {
 	str := resp.Text["content"].(string)
 	if strings.Contains(str, "打字码") {
 		robot := dingding.DingRobot{}
-		code, err := robot.GetInviteCode()
+		code, expire, err := robot.GetInviteCode()
 		if err != nil {
 			zap.L().Error("获取邀请码失败", zap.Error(err))
 		}
-
 		b := []byte{}
-		msg := map[string]interface{}{
-			"msgtype": "text",
-			"text": map[string]string{
-				"content": "邀请码: " + code,
-			},
+		var msg map[string]interface{}
+		if err != nil {
+			msg = map[string]interface{}{
+				"msgtype": "text",
+				"text": map[string]string{
+					"content": "获取失败！",
+				},
+			}
+		} else {
+			msg = map[string]interface{}{
+				"msgtype": "text",
+				"text": map[string]string{
+					"content": fmt.Sprintf(
+						"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+						code, expire),
+				},
+			}
 		}
+
 		b, err = json.Marshal(msg)
 		if err != nil {
 			zap.L().Error("转换失败", zap.Error(err))

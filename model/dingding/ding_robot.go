@@ -24,7 +24,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -584,7 +583,7 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
 	robot := &DingRobot{}
 	if strings.Contains(p.Text.Content, "打字邀请码") {
-		code, err := robot.GetInviteCode()
+		code, _, err := robot.GetInviteCode()
 		if err != nil {
 			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
 			return err
@@ -624,36 +623,34 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	}
 	return nil
 }
-func TypingInviation() (TypingInvitationCode string, err error) {
-	zap.L().Info("进入到了chromedp")
-	//timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
+func TypingInviation() (TypingInvitationCode string, expire time.Duration, err error) {
+	zap.L().Info("进入到了chromedp，开始申请")
+	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
+	defer cancel()
+
+	//opts := append(
+	//	chromedp.DefaultExecAllocatorOptions[:],
+	//	chromedp.NoDefaultBrowserCheck,                        //不检查默认浏览器
+	//	chromedp.Flag("headless", false),                      // 禁用chrome headless（禁用无窗口模式，那就是开启窗口模式）
+	//	chromedp.Flag("blink-settings", "imagesEnabled=true"), //开启图像界面,重点是开启这个
+	//	chromedp.Flag("ignore-certificate-errors", true),      //忽略错误
+	//	chromedp.Flag("disable-web-security", true),           //禁用网络安全标志
+	//	chromedp.Flag("disable-extensions", true),             //开启插件支持
+	//	chromedp.Flag("disable-default-apps", true),
+	//	chromedp.NoFirstRun, //设置网站不是首次运行
+	//	chromedp.WindowSize(1921, 1024),
+	//	chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
+	//)
+	//
+	//allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	//defer cancel()
-
-	opts := append(
-		chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.NoDefaultBrowserCheck,                        //不检查默认浏览器
-		chromedp.Flag("headless", false),                      // 禁用chrome headless（禁用无窗口模式，那就是开启窗口模式）
-		chromedp.Flag("blink-settings", "imagesEnabled=true"), //开启图像界面,重点是开启这个
-		chromedp.Flag("ignore-certificate-errors", true),      //忽略错误
-		chromedp.Flag("disable-web-security", true),           //禁用网络安全标志
-		chromedp.Flag("disable-extensions", true),             //开启插件支持
-		chromedp.Flag("disable-default-apps", true),
-		chromedp.NoFirstRun, //设置网站不是首次运行
-		chromedp.WindowSize(1921, 1024),
-		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
-	)
-
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-	print(cancel)
-
-	// 创建上下文实例
-	timeCtx, cancel := chromedp.NewContext(
-		allocCtx,
-		chromedp.WithLogf(log.Printf),
-	)
-	defer cancel()
-
+	//
+	//// 创建上下文实例
+	//timeCtx, cancel := chromedp.NewContext(
+	//	allocCtx,
+	//	chromedp.WithLogf(log.Printf),
+	//)
+	//defer cancel()
 	// 创建超时上下文
 	var html string
 	//ctx, cancel = context.WithTimeout(ctx, 1*time.Minute)
@@ -680,6 +677,8 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 		chromedp.Click(`document.querySelector("a#select_b.select_b")`, chromedp.ByJSPath),
 		chromedp.WaitVisible(`document.querySelector("a.sys.on")`, chromedp.ByJSPath),
 		chromedp.Click(`document.querySelector("a.sys.on")`, chromedp.ByJSPath),
+		//设置比赛时间2分钟
+		chromedp.Evaluate(`document.querySelector("#set_time").value=10`, nil),
 		//选择有效期
 		chromedp.Evaluate("document.querySelector(\"select#youxiaoqi\").value = document.querySelector(\"select#youxiaoqi\").children[5].value", nil),
 		//设置成为不公开
@@ -714,7 +713,7 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 				zap.L().Error("爬取打字邀请码失败")
 				return err
 			}
-			_, err = global.GLOBAL_REDIS.Set(context.Background(), utils.ConstTypingInvitationCode, TypingInvitationCode, time.Second*60*60*11).Result() //11小时过期时间
+			_, err = global.GLOBAL_REDIS.Set(context.Background(), utils.ConstTypingInvitationCode, TypingInvitationCode, time.Second*60*60*5).Result() //5小时过期时间
 			if err != nil {
 				zap.L().Error("爬取打字邀请码后存入redis失败", zap.Error(err))
 			}
@@ -724,30 +723,31 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 
 	if err != nil {
 		zap.L().Error("chromedp.Run有误", zap.Error(err))
-		return "", err
+		return "", time.Second * 0, err
 	} else {
-		zap.L().Info("chromedp.Run无误", zap.Error(err))
-		return TypingInvitationCode, err
+		zap.L().Info(fmt.Sprintf("chromedp.Run无误，成功获取打字邀请码:%v", TypingInvitationCode), zap.Error(err))
+		return TypingInvitationCode, time.Second * 60 * 60 * 5, err
 	}
 
 }
-func (*DingRobot) GetInviteCode() (code string, err error) {
+func (d *DingRobot) GetInviteCode() (code string, expire time.Duration, err error) {
 	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
 	//去redis中取一下打字邀请码
 	var TypingInviationCode string
 	var expire1 int64
 	fmt.Println(expire1)
-	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
+	expire, err = global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
 	if err != nil {
 		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
 	}
 	//如果redis里面没有的话
 	if expire == -2 {
+		zap.L().Error("redis中无打字码，去申请", zap.Error(err))
 		//申请新的TypingInviationCode并已经存入redis
-		TypingInviationCode, err = TypingInviation()
+		TypingInviationCode, expire, err = TypingInviation()
 		if err != nil || TypingInviationCode == "" {
 			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-			return TypingInviationCode, err
+			return TypingInviationCode, time.Second * 0, err
 		}
 
 	} else {
@@ -755,10 +755,10 @@ func (*DingRobot) GetInviteCode() (code string, err error) {
 		TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
 		if len(TypingInviationCode) != 5 {
 			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-			return TypingInviationCode, errors.New("申请新的TypingInviationCode失败")
+			return TypingInviationCode, expire, errors.New("申请新的TypingInviationCode失败")
 		}
 	}
-	return TypingInviationCode, nil
+	return TypingInviationCode, expire, nil
 
 }
 func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {

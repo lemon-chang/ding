@@ -2,7 +2,7 @@ package dingding
 
 import (
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
-	util "github.com/alibabacloud-go/tea-utils/service"
+	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
 )
 

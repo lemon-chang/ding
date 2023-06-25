@@ -13,8 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"log"
-
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
 	util "github.com/alibabacloud-go/tea-utils/v2/service"
@@ -639,31 +637,31 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 }
 func TypingInviation() (TypingInvitationCode string, expire time.Duration, err error) {
 	zap.L().Info("进入到了chromedp，开始申请")
-	//timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
+	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
+	defer cancel()
+	//opts := append(
+	//	chromedp.DefaultExecAllocatorOptions[:],
+	//	chromedp.NoDefaultBrowserCheck,                        //不检查默认浏览器
+	//	chromedp.Flag("headless", false),                      // 禁用chrome headless（禁用无窗口模式，那就是开启窗口模式）
+	//	chromedp.Flag("blink-settings", "imagesEnabled=true"), //开启图像界面,重点是开启这个
+	//	chromedp.Flag("ignore-certificate-errors", true),      //忽略错误
+	//	chromedp.Flag("disable-web-security", true),           //禁用网络安全标志
+	//	chromedp.Flag("disable-extensions", true),             //开启插件支持
+	//	chromedp.Flag("disable-default-apps", true),
+	//	chromedp.NoFirstRun, //设置网站不是首次运行
+	//	chromedp.WindowSize(1921, 1024),
+	//	chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
+	//)
+	//
+	//allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	//defer cancel()
-	opts := append(
-		chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.NoDefaultBrowserCheck,                        //不检查默认浏览器
-		chromedp.Flag("headless", false),                      // 禁用chrome headless（禁用无窗口模式，那就是开启窗口模式）
-		chromedp.Flag("blink-settings", "imagesEnabled=true"), //开启图像界面,重点是开启这个
-		chromedp.Flag("ignore-certificate-errors", true),      //忽略错误
-		chromedp.Flag("disable-web-security", true),           //禁用网络安全标志
-		chromedp.Flag("disable-extensions", true),             //开启插件支持
-		chromedp.Flag("disable-default-apps", true),
-		chromedp.NoFirstRun, //设置网站不是首次运行
-		chromedp.WindowSize(1921, 1024),
-		chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
-	)
-
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	//创建上下文实例
-	timeCtx, cancel := chromedp.NewContext(
-		allocCtx,
-		chromedp.WithLogf(log.Printf),
-	)
-	defer cancel()
+	//
+	////创建上下文实例
+	//timeCtx, cancel := chromedp.NewContext(
+	//	allocCtx,
+	//	chromedp.WithLogf(log.Printf),
+	//)
+	//defer cancel()
 	// 创建超时上下文
 	var html string
 	//ctx, cancel = context.WithTimeout(ctx, 1*time.Minute)

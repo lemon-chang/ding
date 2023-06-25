@@ -13,9 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
+	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
-	util "github.com/alibabacloud-go/tea-utils/service"
+	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
@@ -118,6 +118,13 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
+type MySendParam struct {
+	MsgParam  string   `json:"msgParam"`
+	MsgKey    string   `json:"msgKey"`
+	RobotCode string   `json:"robotCode"`
+	UserIds   []string `json:"userIds"`
+}
+
 // 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
@@ -131,16 +138,21 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		},
 	}, Timeout: time.Duration(time.Second * 5)}
 	//此处是post请求的请求题，我们先初始化一个对象
-	b := struct {
-		MsgParam  string   `json:"msgParam"`
-		MsgKey    string   `json:"msgKey"`
-		RobotCode string   `json:"robotCode"`
-		UserIds   []string `json:"userIds"`
-	}{MsgParam: fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
-		MsgKey:    p.MsgKey,
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   p.UserIds,
+	var b MySendParam
+	b.RobotCode = "dingepndjqy7etanalhi"
+	if p.MsgKey == "sampleText" {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = "dingepndjqy7etanalhi"
+		b.UserIds = p.UserIds
+		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
+
+	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = "dingepndjqy7etanalhi"
+		b.UserIds = p.UserIds
+		b.MsgParam = p.MsgParam
 	}
+
 	//然后把结构体对象序列化一下
 	bodymarshal, err := json.Marshal(&b)
 	if err != nil {
@@ -627,7 +639,6 @@ func TypingInviation() (TypingInvitationCode string, expire time.Duration, err e
 	zap.L().Info("进入到了chromedp，开始申请")
 	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
 	defer cancel()
-
 	//opts := append(
 	//	chromedp.DefaultExecAllocatorOptions[:],
 	//	chromedp.NoDefaultBrowserCheck,                        //不检查默认浏览器
@@ -645,7 +656,7 @@ func TypingInviation() (TypingInvitationCode string, expire time.Duration, err e
 	//allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	//defer cancel()
 	//
-	//// 创建上下文实例
+	////创建上下文实例
 	//timeCtx, cancel := chromedp.NewContext(
 	//	allocCtx,
 	//	chromedp.WithLogf(log.Printf),
@@ -680,7 +691,7 @@ func TypingInviation() (TypingInvitationCode string, expire time.Duration, err e
 		//设置比赛时间2分钟
 		chromedp.Evaluate(`document.querySelector("#set_time").value=10`, nil),
 		//选择有效期
-		chromedp.Evaluate("document.querySelector(\"select#youxiaoqi\").value = document.querySelector(\"select#youxiaoqi\").children[5].value", nil),
+		chromedp.Evaluate("document.querySelector(\"select#youxiaoqi\").value = document.querySelector(\"#youxiaoqi > option:nth-child(5)\").value", nil),
 		//设置成为不公开
 		chromedp.Click(`document.querySelectorAll("input#gongkai")[1]`, chromedp.ByJSPath),
 		//点击发布按钮
@@ -882,7 +893,6 @@ func createClient() (_result *dingtalkim_1_0.Client, _err error) {
 	config := &openapi.Config{}
 	config.Protocol = tea.String("https")
 	config.RegionId = tea.String("central")
-	_result = &dingtalkim_1_0.Client{}
 	_result, _err = dingtalkim_1_0.NewClient(config)
 	return _result, _err
 }

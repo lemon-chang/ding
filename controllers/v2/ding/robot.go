@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"net/url"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -304,7 +306,6 @@ func ChatHandler(c *gin.Context) {
 		return
 	}
 	err = (&dingding.DingRobot{RobotId: "dingepndjqy7etanalhi"}).ChatSendMessage(p)
-
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
 		response.FailWithDetailed(err, "发送定时任务失败", c)
@@ -538,38 +539,92 @@ func RobotAt(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 	}
 	fmt.Println("内容为:", resp.Text)
-	str := resp.Text["content"].(string)
-	if strings.Contains(str, "打字码") {
-		robot := dingding.DingRobot{}
-		code, expire, err := robot.GetInviteCode()
-		if err != nil {
-			zap.L().Error("获取邀请码失败", zap.Error(err))
-		}
-		b := []byte{}
-		var msg map[string]interface{}
-		if err != nil {
-			msg = map[string]interface{}{
-				"msgtype": "text",
-				"text": map[string]string{
-					"content": "获取失败！",
-				},
-			}
-		} else {
-			msg = map[string]interface{}{
-				"msgtype": "text",
-				"text": map[string]string{
-					"content": fmt.Sprintf(
-						"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
-						code, expire),
-				},
-			}
-		}
+	userId := resp.SenderStaffId
 
-		b, err = json.Marshal(msg)
-		if err != nil {
-			zap.L().Error("转换失败", zap.Error(err))
+	conversationType := resp.ConversationType
+	str := resp.Text["content"].(string)
+	dingRobot := &dingding.DingRobot{}
+	//单聊
+	if conversationType == "1" {
+		if strings.Contains(str, "帮助") {
+			param := &dingding.ParamChat{
+				MsgKey: "sampleActionCard2",
+				MsgParam: "{\n" +
+					"        \"title\": \"帮助\",\n" +
+					"        \"text\": \"目前已经开放的功能如下\",\n" +
+					"        \"actionTitle1\": \"送水电话号码\",\n" +
+					fmt.Sprintf("'actionURL1':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("送水电话号码")) +
+					"        \"actionTitle2\": \"打字邀请码\",\n" +
+					fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
+					"    }",
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   []string{userId},
+			}
+			err := dingRobot.ChatSendMessage(param)
+			if err != nil {
+				zap.L().Error("发送chatSendMessage错误" + err.Error())
+			}
+		} else if str == "送水电话号码" {
+			param := &dingding.ParamChat{
+				MsgKey:    "sampleText",
+				MsgParam:  "送水师傅电话: 15236463964",
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   []string{userId},
+			}
+			err := dingRobot.ChatSendMessage(param)
+			if err != nil {
+				zap.L().Error("发送送水师傅电话失败" + err.Error())
+			}
+		} else if str == "打字邀请码" {
+			code, expire, err := dingRobot.GetInviteCode()
+			if err != nil {
+				zap.L().Error("获取邀请码失败", zap.Error(err))
+			}
+			content := fmt.Sprintf(
+				"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+				code, expire)
+			if err != nil {
+				content = "获取失败！"
+			}
+			param := &dingding.ParamChat{
+				MsgKey:    "sampleText",
+				MsgParam:  content,
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   []string{userId},
+			}
+			err = dingRobot.ChatSendMessage(param)
+			if err != nil {
+				zap.L().Error("单聊中发送打字邀请码错误" + err.Error())
+			}
 		}
-		http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
-		c.JSON(http.StatusOK, "成功")
+		//群聊
+	} else if conversationType == "2" {
+		if strings.Contains(str, "打字码") {
+			code, expire, err := dingRobot.GetInviteCode()
+
+			if err != nil {
+				zap.L().Error("获取邀请码失败", zap.Error(err))
+			}
+			content := fmt.Sprintf(
+				"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+				code, expire)
+			if err != nil {
+				content = "获取失败！"
+			}
+			msg := map[string]interface{}{
+				"msgtype": "text",
+				"text": map[string]string{
+					"content": content,
+				},
+			}
+
+			b, err := json.Marshal(msg)
+			if err != nil {
+				zap.L().Error("转换失败", zap.Error(err))
+			}
+			http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
+		}
 	}
+	response.ResponseSuccess(c, "成功")
+
 }

@@ -44,3 +44,7 @@ func AttendanceByRobot() (err error) {
 	}
 	return err
 }
+
+func xxx() {
+
+}

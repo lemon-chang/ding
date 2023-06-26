@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
-	util "github.com/alibabacloud-go/tea-utils/service"
+	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
@@ -675,7 +675,7 @@ func GetChromeCtx(focus bool) context.Context {
 		)
 
 		if checkChromePort() {
-			// 不知道为何，不能直接使用 NewExecAllocator ，因此增加 使用 ws://127.0.0.1:9222/ 来调用
+			// 不知道为何，不能直接使用 NewExecAllocator ，因此增加 使用 ws://172.17.0.7:9222/ 来调用
 			c, _ := chromedp.NewRemoteAllocator(context.Background(), "ws://172.17.0.7:9222/")
 			ChromeCtx, _ = chromedp.NewContext(c)
 		} else {

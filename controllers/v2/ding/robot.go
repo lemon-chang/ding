@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"net/url"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -116,6 +118,7 @@ func AddRobot(c *gin.Context) {
 		}
 	} else if p.Type == "2" {
 		//直接更新即可
+
 	}
 	// 2.逻辑处理
 	err = dingRobot.CreateOrUpdateRobot()
@@ -195,14 +198,9 @@ func GetRobotBaseList(c *gin.Context) {
 func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
 	var err error
-	if err = c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("remove Robot invalid param", zap.Error(err))
-		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			response.ResponseError(c, response.CodeInvalidParam)
-			return
-		}
-		response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("remove Robot invaild param", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
 		return
 	}
 
@@ -308,7 +306,6 @@ func ChatHandler(c *gin.Context) {
 		return
 	}
 	err = (&dingding.DingRobot{RobotId: "dingepndjqy7etanalhi"}).ChatSendMessage(p)
-
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
 		response.FailWithDetailed(err, "发送定时任务失败", c)
@@ -451,7 +448,6 @@ func ReStartTask(c *gin.Context) {
 	} else {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
-
 }
 func GetTaskDetail(c *gin.Context) {
 	var p *dingding.ParamGetTaskDeatil
@@ -473,7 +469,6 @@ func SingleChat(c *gin.Context) {
 	var p dingding.ParamChat
 	err := c.ShouldBindJSON(&p)
 	if err != nil {
-
 	}
 	err = (&dingding.DingRobot{}).ChatSendMessage(&p)
 }
@@ -492,12 +487,15 @@ func SubscribeTo(c *gin.Context) {
 
 	// 2. 参数解密
 	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	//解密后的数据是一个json字符串
 	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
 	// 3. 反序列化回调事件json数据
-	eventJson := make(map[string]interface{})
-	json.Unmarshal([]byte(decryptMsg), &eventJson)
-	eventType := eventJson["EventType"].(string)
-	subscription := dingding.NewDingSubscribe(eventJson)
+	//把取值不方便的json字符串反序列化带map中
+	result := make(map[string]interface{})
+	json.Unmarshal([]byte(decryptMsg), &result)
+	//事件类型
+	eventType := result["EventType"].(string)
+	subscription := dingding.NewDingSubscribe(result)
 
 	// 4.根据EventType分类处理
 	if eventType == "check_url" {
@@ -514,8 +512,17 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "check_in" {
 		// 用户签到事件
 		subscription.CheckIn(c)
-	} else if eventType == "leave" {
-		subscription.Leave(c)
+	} else if eventType == "bpms_instance_change" {
+		title := result["title"].(string)
+		s := result["type"].(string)
+		if strings.Contains(title, "请假") && s == "finish" {
+			fmt.Println("123456")
+			//c.Get(global.CtxUserIDKey) 是通过用户登录后生成的token 中取到 user_id
+			//c.Query("user_id")  是取前端通过 发来的params参数中的 user_id字段
+			subscription.Leave(result)
+		} else {
+
+		}
 	} else {
 		// 添加其他已注册的
 		zap.L().Info("发生了：" + eventType + "事件")
@@ -532,26 +539,92 @@ func RobotAt(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 	}
 	fmt.Println("内容为:", resp.Text)
-	str := resp.Text["content"].(string)
-	if strings.Contains(str, "打字码") {
-		robot := dingding.DingRobot{}
-		code, err := robot.GetInviteCode()
-		if err != nil {
-			zap.L().Error("获取邀请码失败", zap.Error(err))
-		}
+	userId := resp.SenderStaffId
 
-		b := []byte{}
-		msg := map[string]interface{}{
-			"msgtype": "text",
-			"text": map[string]string{
-				"content": "邀请码: " + code,
-			},
+	conversationType := resp.ConversationType
+	str := resp.Text["content"].(string)
+	dingRobot := &dingding.DingRobot{}
+	//单聊
+	if conversationType == "1" {
+		if strings.Contains(str, "帮助") {
+			param := &dingding.ParamChat{
+				MsgKey: "sampleActionCard2",
+				MsgParam: "{\n" +
+					"        \"title\": \"帮助\",\n" +
+					"        \"text\": \"目前已经开放的功能如下\",\n" +
+					"        \"actionTitle1\": \"送水电话号码\",\n" +
+					fmt.Sprintf("'actionURL1':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("送水电话号码")) +
+					"        \"actionTitle2\": \"打字邀请码\",\n" +
+					fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
+					"    }",
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   []string{userId},
+			}
+			err := dingRobot.ChatSendMessage(param)
+			if err != nil {
+				zap.L().Error("发送chatSendMessage错误" + err.Error())
+			}
+		} else if str == "送水电话号码" {
+			param := &dingding.ParamChat{
+				MsgKey:    "sampleText",
+				MsgParam:  "送水师傅电话: 15236463964",
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   []string{userId},
+			}
+			err := dingRobot.ChatSendMessage(param)
+			if err != nil {
+				zap.L().Error("发送送水师傅电话失败" + err.Error())
+			}
+		} else if str == "打字邀请码" {
+			code, expire, err := dingRobot.GetInviteCode()
+			if err != nil {
+				zap.L().Error("获取邀请码失败", zap.Error(err))
+			}
+			content := fmt.Sprintf(
+				"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+				code, expire)
+			if err != nil {
+				content = "获取失败！"
+			}
+			param := &dingding.ParamChat{
+				MsgKey:    "sampleText",
+				MsgParam:  content,
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   []string{userId},
+			}
+			err = dingRobot.ChatSendMessage(param)
+			if err != nil {
+				zap.L().Error("单聊中发送打字邀请码错误" + err.Error())
+			}
 		}
-		b, err = json.Marshal(msg)
-		if err != nil {
-			zap.L().Error("转换失败", zap.Error(err))
+		//群聊
+	} else if conversationType == "2" {
+		if strings.Contains(str, "打字码") {
+			code, expire, err := dingRobot.GetInviteCode()
+
+			if err != nil {
+				zap.L().Error("获取邀请码失败", zap.Error(err))
+			}
+			content := fmt.Sprintf(
+				"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+				code, expire)
+			if err != nil {
+				content = "获取失败！"
+			}
+			msg := map[string]interface{}{
+				"msgtype": "text",
+				"text": map[string]string{
+					"content": content,
+				},
+			}
+
+			b, err := json.Marshal(msg)
+			if err != nil {
+				zap.L().Error("转换失败", zap.Error(err))
+			}
+			http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
 		}
-		http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
-		c.JSON(http.StatusOK, "成功")
 	}
+	response.ResponseSuccess(c, "成功")
+
 }

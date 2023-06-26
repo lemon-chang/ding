@@ -2,6 +2,7 @@ package dingding
 
 import (
 	"crypto/tls"
+	"ding/global"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -18,9 +19,10 @@ type DingLeave struct {
 	UserName     string `json:"user_name"`
 	DingToken
 }
-type xxx struct {
-	UsedId1 string
-	UserId2 string
+type SubscriptionRelationship struct {
+	Subscriber   string //订阅人
+	Subscribee   string //被订阅人
+	IsCurriculum bool   //是否订阅课表
 }
 
 func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, UseridList string) (leaveStatus []DingLeave, hasMore bool, err error) {
@@ -28,7 +30,7 @@ func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, U
 	var request *http.Request
 	var resp *http.Response
 	var body []byte
-	URL := "https://oapi.dingtalk.com/topapi/attendance/getleavestatus?access_token=" + a.DingToken.Token
+	URL := "https://oapi.dingtalk.com/topapi/attendance/getleavestatus?access_token=" + a.Token
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
@@ -90,4 +92,34 @@ func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, U
 	// 此处举行具体的逻辑判断，然后返回即可
 
 	return r.Result.DingLeave, hasMore, err
+}
+
+func (a *SubscriptionRelationship) SubscribeSomeone() (err error) {
+	//获取请假人姓名
+	user := DingUser{}
+	err = global.GLOAB_DB.Where("user_id = ?", a.Subscriber).First(&user).Error
+	err = global.GLOAB_DB.Where("user_id = ?", a.Subscribee).First(&user).Error
+	if err != nil {
+		return
+	}
+	err = global.GLOAB_DB.Create(a).Error
+	return
+}
+func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
+	sr := SubscriptionRelationship{}
+	err = global.GLOAB_DB.Where("subscriber = ?", a.Subscriber).First(&sr).Error
+	err = global.GLOAB_DB.Where("subscribee = ?", a.Subscribee).First(&sr).Error
+	if err != nil {
+		return
+	}
+	err = global.GLOAB_DB.Where("subscriber = ? And subscribee = ?", a.Subscriber, a.Subscribee).Delete(a).Error
+	return
+}
+
+func (a *SubscriptionRelationship) QuerySubscribed() (sr []SubscriptionRelationship, err error) {
+	err = global.GLOAB_DB.Where("is_curriculum = ?", true).Find(&sr).Error
+	if err != nil {
+		return
+	}
+	return
 }

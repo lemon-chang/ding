@@ -512,7 +512,7 @@ func SubscribeTo(c *gin.Context) {
 	} else if eventType == "bpms_instance_change" {
 		title := result["title"].(string)
 		s := result["type"].(string)
-		if strings.Contains(title, "请假") && s == "finish" {
+		if strings.Contains(title, "请假") && s == "start" {
 			fmt.Println("123456")
 			//c.Get(global.CtxUserIDKey) 是通过用户登录后生成的token 中取到 user_id
 			//c.Query("user_id")  是取前端通过 发来的params参数中的 user_id字段

@@ -6,7 +6,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/Shopify/sarama v1.38.1
 	github.com/alibabacloud-go/darabonba-openapi v0.1.18
-	github.com/alibabacloud-go/dingtalk v1.4.29
+	github.com/alibabacloud-go/dingtalk v1.5.76
 	github.com/alibabacloud-go/tea v1.1.19
 	github.com/alibabacloud-go/tea-utils v1.4.5
 	github.com/bwmarrin/snowflake v0.3.0
@@ -31,7 +31,9 @@ require (
 )
 
 require (
-	github.com/Shopify/sarama v1.38.1
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.2
+	github.com/alibabacloud-go/tea-utils/v2 v2.0.1
+	github.com/clbanning/mxj/v2 v2.5.6 // indirect
 	golang.org/x/sync v0.2.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )

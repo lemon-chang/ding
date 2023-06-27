@@ -35,8 +35,8 @@ func Setup(mode string) *gin.Engine {
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 	V3 := r.Group("/api/v3")
 	V3.POST("/jk", v1.Jk)
-	V3.POST("zjq", v1.Zjq)
-	V3.POST("lxy", v1.Lxy)
+	V3.POST("/zjq", v1.Zjq)
+	V3.POST("/lxy", v1.Lxy)
 	V3.POST("/outgoing", ding.OutGoing) //outgoing接口是让官方
 	V3.POST("/robotAt", ding.RobotAt)
 	System := r.Group("/api/system")

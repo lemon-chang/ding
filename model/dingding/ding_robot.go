@@ -13,9 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
+	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
-	util "github.com/alibabacloud-go/tea-utils/service"
+	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
@@ -25,6 +25,7 @@ import (
 	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -118,6 +119,13 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
+type MySendParam struct {
+	MsgParam  string   `json:"msgParam"`
+	MsgKey    string   `json:"msgKey"`
+	RobotCode string   `json:"robotCode"`
+	UserIds   []string `json:"userIds"`
+}
+
 // 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
@@ -131,16 +139,21 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 		},
 	}, Timeout: time.Duration(time.Second * 5)}
 	//此处是post请求的请求题，我们先初始化一个对象
-	b := struct {
-		MsgParam  string   `json:"msgParam"`
-		MsgKey    string   `json:"msgKey"`
-		RobotCode string   `json:"robotCode"`
-		UserIds   []string `json:"userIds"`
-	}{MsgParam: fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
-		MsgKey:    p.MsgKey,
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   p.UserIds,
+	var b MySendParam
+	b.RobotCode = "dingepndjqy7etanalhi"
+	if p.MsgKey == "sampleText" {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = "dingepndjqy7etanalhi"
+		b.UserIds = p.UserIds
+		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
+
+	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = "dingepndjqy7etanalhi"
+		b.UserIds = p.UserIds
+		b.MsgParam = p.MsgParam
 	}
+
 	//然后把结构体对象序列化一下
 	bodymarshal, err := json.Marshal(&b)
 	if err != nil {
@@ -186,6 +199,85 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	// 此处举行具体的逻辑判断，然后返回即可
 
 	return nil
+}
+
+type MySendGroupParam struct {
+	MsgParam           string `json:"msgParam"`
+	MsgKey             string `json:"msgKey"`
+	RobotCode          string `json:"robotCode"`
+	OpenConversationId string `json:"openConversationId"`
+	CoolAppCode        string `json:"coolAppCode"`
+}
+
+func (r *DingRobot) ChatSendGroupMessage(p *ParamChat) (map[string]interface{}, error) {
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	var res map[string]interface{}
+	URL := "https://api.dingtalk.com/v1.0/robot/groupMessages/send"
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+	//此处是post请求的请求题，我们先初始化一个对象
+	var b MySendGroupParam
+	b.RobotCode = "dingepndjqy7etanalhi"
+	b.CoolAppCode = "COOLAPP-1-102118DC0ABA212C89C7000H"
+	//b.OpenConversationId = "cidNOZESlAdvOGV/s3CVZxdlQ=="
+	b.OpenConversationId = p.OpenConversationId
+	if p.MsgKey == "sampleText" {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = "dingepndjqy7etanalhi"
+		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
+	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = "dingepndjqy7etanalhi"
+		b.MsgParam = p.MsgParam
+	}
+
+	//然后把结构体对象序列化一下
+	bodymarshal, err := json.Marshal(&b)
+	if err != nil {
+		return res, nil
+	}
+	//再处理一下
+	reqBody := strings.NewReader(string(bodymarshal))
+	//然后就可以放入具体的request中的
+	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
+	if err != nil {
+		return res, nil
+	}
+	token, err := r.DingToken.GetAccessToken()
+	if err != nil {
+		return res, err
+	}
+	request.Header.Set("x-acs-dingtalk-access-token", token)
+	request.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(request)
+	if err != nil {
+		return res, nil
+	}
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return res, nil
+	}
+
+	//h := struct {
+	//	Code                      string   `json:"code"`
+	//	Message                   string   `json:"message"`
+	//	ProcessQueryKey           string   `json:"processQueryKey"`
+	//	InvalidStaffIdList        []string `json:"invalidStaffIdList"`
+	//	FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
+	//}{}
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return res, nil
+	}
+	return res, nil
 }
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
@@ -583,7 +675,7 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
 	robot := &DingRobot{}
 	if strings.Contains(p.Text.Content, "打字邀请码") {
-		code, err := robot.GetInviteCode()
+		code, _, err := robot.GetInviteCode()
 		if err != nil {
 			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
 			return err
@@ -623,8 +715,8 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	}
 	return nil
 }
-func TypingInviation() (TypingInvitationCode string, err error) {
-	zap.L().Info("进入到了chromedp")
+func TypingInviation() (TypingInvitationCode string, expire time.Duration, err error) {
+	zap.L().Info("进入到了chromedp，开始申请")
 	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
 	defer cancel()
 	//opts := append(
@@ -640,18 +732,16 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 	//	chromedp.WindowSize(1921, 1024),
 	//	chromedp.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36"), //设置UserAgent
 	//)
-
+	//
 	//allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	//defer cancel()
-	//print(cancel)
-
-	//// 创建上下文实例
-	//ctx, cancel := chromedp.NewContext(
+	//
+	////创建上下文实例
+	//timeCtx, cancel := chromedp.NewContext(
 	//	allocCtx,
 	//	chromedp.WithLogf(log.Printf),
 	//)
 	//defer cancel()
-
 	// 创建超时上下文
 	var html string
 	//ctx, cancel = context.WithTimeout(ctx, 1*time.Minute)
@@ -678,8 +768,10 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 		chromedp.Click(`document.querySelector("a#select_b.select_b")`, chromedp.ByJSPath),
 		chromedp.WaitVisible(`document.querySelector("a.sys.on")`, chromedp.ByJSPath),
 		chromedp.Click(`document.querySelector("a.sys.on")`, chromedp.ByJSPath),
+		//设置比赛时间2分钟
+		chromedp.Evaluate(`document.querySelector("#set_time").value=10`, nil),
 		//选择有效期
-		chromedp.Evaluate("document.querySelector(\"select#youxiaoqi\").value = document.querySelector(\"select#youxiaoqi\").children[5].value", nil),
+		chromedp.Evaluate("document.querySelector(\"select#youxiaoqi\").value = document.querySelector(\"#youxiaoqi > option:nth-child(5)\").value", nil),
 		//设置成为不公开
 		chromedp.Click(`document.querySelectorAll("input#gongkai")[1]`, chromedp.ByJSPath),
 		//点击发布按钮
@@ -712,7 +804,7 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 				zap.L().Error("爬取打字邀请码失败")
 				return err
 			}
-			_, err = global.GLOBAL_REDIS.Set(context.Background(), utils.ConstTypingInvitationCode, TypingInvitationCode, time.Second*60*60*11).Result() //11小时过期时间
+			_, err = global.GLOBAL_REDIS.Set(context.Background(), utils.ConstTypingInvitationCode, TypingInvitationCode, time.Second*60*60*5).Result() //5小时过期时间
 			if err != nil {
 				zap.L().Error("爬取打字邀请码后存入redis失败", zap.Error(err))
 			}
@@ -722,30 +814,31 @@ func TypingInviation() (TypingInvitationCode string, err error) {
 
 	if err != nil {
 		zap.L().Error("chromedp.Run有误", zap.Error(err))
-		return "", err
+		return "", time.Second * 0, err
 	} else {
-		zap.L().Info("chromedp.Run无误", zap.Error(err))
-		return TypingInvitationCode, err
+		zap.L().Info(fmt.Sprintf("chromedp.Run无误，成功获取打字邀请码:%v", TypingInvitationCode), zap.Error(err))
+		return TypingInvitationCode, time.Second * 60 * 60 * 5, err
 	}
 
 }
-func (*DingRobot) GetInviteCode() (code string, err error) {
+func (d *DingRobot) GetInviteCode() (code string, expire time.Duration, err error) {
 	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
 	//去redis中取一下打字邀请码
 	var TypingInviationCode string
 	var expire1 int64
 	fmt.Println(expire1)
-	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
+	expire, err = global.GLOBAL_REDIS.TTL(context.Background(), utils.ConstTypingInvitationCode).Result()
 	if err != nil {
 		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
 	}
 	//如果redis里面没有的话
 	if expire == -2 {
+		zap.L().Error("redis中无打字码，去申请", zap.Error(err))
 		//申请新的TypingInviationCode并已经存入redis
-		TypingInviationCode, err = TypingInviation()
+		TypingInviationCode, expire, err = TypingInviation()
 		if err != nil || TypingInviationCode == "" {
 			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-			return TypingInviationCode, err
+			return TypingInviationCode, time.Second * 0, err
 		}
 
 	} else {
@@ -753,10 +846,10 @@ func (*DingRobot) GetInviteCode() (code string, err error) {
 		TypingInviationCode = global.GLOBAL_REDIS.Get(context.Background(), utils.ConstTypingInvitationCode).Val()
 		if len(TypingInviationCode) != 5 {
 			zap.L().Error("申请新的TypingInviationCode失败", zap.Error(err))
-			return TypingInviationCode, errors.New("申请新的TypingInviationCode失败")
+			return TypingInviationCode, expire, errors.New("申请新的TypingInviationCode失败")
 		}
 	}
-	return TypingInviationCode, nil
+	return TypingInviationCode, expire, nil
 
 }
 func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
@@ -880,7 +973,6 @@ func createClient() (_result *dingtalkim_1_0.Client, _err error) {
 	config := &openapi.Config{}
 	config.Protocol = tea.String("https")
 	config.RegionId = tea.String("central")
-	_result = &dingtalkim_1_0.Client{}
 	_result, _err = dingtalkim_1_0.NewClient(config)
 	return _result, _err
 }
@@ -1000,4 +1092,212 @@ type result struct {
 }
 type data struct {
 	Result result `json:"result"`
+}
+
+func (t *DingRobot) RobotSendInviteCode(resp *RobotAtResp) error {
+	code, expire, err := t.GetInviteCode()
+	if err != nil {
+		zap.L().Error("获取邀请码失败", zap.Error(err))
+	}
+	content := fmt.Sprintf(
+		"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+		code, expire)
+	if err != nil {
+		content = "获取失败！"
+	}
+	param := &ParamChat{
+		MsgKey:    "sampleText",
+		MsgParam:  content,
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err = t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("单聊中发送打字邀请码错误" + err.Error())
+		return err
+	}
+	return nil
+}
+func (t *DingRobot) RobotSendWater(resp *RobotAtResp) error {
+	param := &ParamChat{
+		MsgKey:    "sampleText",
+		MsgParam:  "送水师傅电话: 15236463964",
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err := t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送送水师傅电话失败" + err.Error())
+		return err
+	}
+	return nil
+}
+func (t *DingRobot) RobotSendPrivateMessage(resp *RobotAtResp) (err error) {
+	val, err := global.GLOBAL_REDIS.Get(context.Background(), "userPrivate:"+resp.SenderStaffId).Result()
+	if len(val) == 0 {
+		val = fmt.Sprintf("未检测到存储的信息,请先存储\n存储格式为:\n保存个人信息：xxx")
+		param := &ParamChat{
+			MsgKey:    "sampleText",
+			MsgParam:  val,
+			RobotCode: "dingepndjqy7etanalhi",
+			UserIds:   []string{resp.SenderStaffId},
+		}
+		err = t.ChatSendMessage(param)
+		if err != nil {
+			zap.L().Error("发送存储信息失败" + err.Error())
+			return err
+		}
+		return nil
+	}
+	param := &ParamChat{
+		MsgKey:    "sampleText",
+		MsgParam:  fmt.Sprintf("您的个人信息为：%s\n如需更改请发送更改个人信息：xxx 进行更改", val),
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err = t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送存储信息失败" + err.Error())
+		return err
+	}
+	return nil
+}
+func (t *DingRobot) RobotSavePrivateMessage(resp *RobotAtResp) (err error) {
+	val := strings.Split(strings.TrimSpace(resp.Text["content"].(string)), "：")[1]
+	err = global.GLOBAL_REDIS.Set(context.Background(), "userPrivate:"+resp.SenderStaffId, val, 0).Err()
+	content := "存储成功，可通过查看命令进行查看"
+	if err != nil {
+		content = "存储失败"
+	}
+	param := &ParamChat{
+		MsgKey:    "sampleText",
+		MsgParam:  content,
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err = t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送存储成功失败" + err.Error())
+		return err
+	}
+	return nil
+}
+func (t *DingRobot) RobotPutPrivateMessage(resp *RobotAtResp) (err error) {
+	val, err := global.GLOBAL_REDIS.Get(context.Background(), "userPrivate:"+resp.SenderStaffId).Result()
+	if len(val) == 0 {
+		val = fmt.Sprintf("请先保存个人信息\n保存格式为:\n保存个人信息:xxx")
+		param := &ParamChat{
+			MsgKey:    "sampleText",
+			MsgParam:  val,
+			RobotCode: "dingepndjqy7etanalhi",
+			UserIds:   []string{resp.SenderStaffId},
+		}
+		err = t.ChatSendMessage(param)
+		if err != nil {
+			zap.L().Error("发送存储成功失败" + err.Error())
+			return err
+		}
+		return nil
+
+	}
+	val = strings.Split(strings.TrimSpace(resp.Text["content"].(string)), "：")[1]
+	err = global.GLOBAL_REDIS.Set(context.Background(), "userPrivate:"+resp.SenderStaffId, val, 0).Err()
+	content := "更改个人信息成功，可通过查看命令进行查看"
+	if err != nil {
+		content = "更改个人信息失败"
+	}
+	param := &ParamChat{
+		MsgKey:    "sampleText",
+		MsgParam:  content,
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err = t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送存储成功失败" + err.Error())
+		return err
+	}
+	return nil
+}
+func (t *DingRobot) RobotSendHelpCard(resp *RobotAtResp) error {
+	param := &ParamChat{
+		MsgKey: "sampleActionCard3",
+		MsgParam: "{\n" +
+			"        \"title\": \"帮助\",\n" +
+			"        \"text\": \"请问你是否在查找以下功能\",\n" +
+			"        \"actionTitle1\": \"送水电话号码\",\n" +
+			fmt.Sprintf("'actionURL1':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("送水电话号码")) +
+			"        \"actionTitle2\": \"打字邀请码\",\n" +
+			fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
+			"        \"actionTitle3\": \"获取个人信息\",\n" +
+			fmt.Sprintf("'actionURL3':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("获取个人信息")) +
+			"    }",
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err := t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送chatSendMessage错误" + err.Error())
+		return err
+	}
+	return nil
+}
+func (t *DingRobot) RobotSendGroupInviteCode(resp *RobotAtResp) (res map[string]interface{}, err error) {
+	code, expire, err := t.GetInviteCode()
+	if err != nil {
+		zap.L().Error("获取邀请码失败", zap.Error(err))
+	}
+	content := fmt.Sprintf(
+		"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
+		code, expire)
+	if err != nil {
+		content = "获取失败！"
+	}
+	param := &ParamChat{
+		MsgKey:             "sampleText",
+		MsgParam:           content,
+		RobotCode:          "dingepndjqy7etanalhi",
+		UserIds:            []string{resp.SenderStaffId},
+		OpenConversationId: resp.ConversationId,
+	}
+	res, err = t.ChatSendGroupMessage(param)
+	if err != nil {
+		zap.L().Error("单聊中发送打字邀请码错误" + err.Error())
+	}
+	return res, nil
+}
+func (t *DingRobot) RobotSendGroupWater(resp *RobotAtResp) (res map[string]interface{}, err error) {
+	param := &ParamChat{
+		MsgKey:             "sampleText",
+		MsgParam:           "送水师傅电话: 15236463964",
+		RobotCode:          "dingepndjqy7etanalhi",
+		UserIds:            []string{resp.SenderStaffId},
+		OpenConversationId: resp.ConversationId,
+	}
+	res, err = t.ChatSendGroupMessage(param)
+	if err != nil {
+		zap.L().Error("发送送水师傅电话失败" + err.Error())
+	}
+	return res, nil
+}
+func (t *DingRobot) RobotSendGroupCard(resp *RobotAtResp) (res map[string]interface{}, err error) {
+	param := &ParamChat{
+		MsgKey: "sampleActionCard2",
+		MsgParam: "{\n" +
+			"        \"title\": \"帮助\",\n" +
+			"        \"text\": \"请问你是否在查找以下功能\",\n" +
+			"        \"actionTitle1\": \"送水电话号码\",\n" +
+			fmt.Sprintf("'actionURL1':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("送水电话号码")) +
+			"        \"actionTitle2\": \"打字邀请码\",\n" +
+			fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
+			"    }",
+		RobotCode:          "dingepndjqy7etanalhi",
+		UserIds:            []string{resp.SenderStaffId},
+		OpenConversationId: resp.ConversationId,
+	}
+	res, err = t.ChatSendGroupMessage(param)
+	if err != nil {
+		zap.L().Error("发送chatSendMessage错误" + err.Error())
+	}
+	return res, nil
 }

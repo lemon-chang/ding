@@ -1,7 +1,6 @@
 package ding
 
 import (
-	"bytes"
 	"ding/controllers"
 	"ding/global"
 	"ding/model/common"
@@ -304,7 +303,6 @@ func ChatHandler(c *gin.Context) {
 		return
 	}
 	err = (&dingding.DingRobot{RobotId: "dingepndjqy7etanalhi"}).ChatSendMessage(p)
-
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
 		response.FailWithDetailed(err, "发送定时任务失败", c)
@@ -538,26 +536,64 @@ func RobotAt(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 	}
 	fmt.Println("内容为:", resp.Text)
-	str := resp.Text["content"].(string)
-	if strings.Contains(str, "打字码") {
-		robot := dingding.DingRobot{}
-		code, err := robot.GetInviteCode()
-		if err != nil {
-			zap.L().Error("获取邀请码失败", zap.Error(err))
+	//userId := resp.SenderStaffId
+	conversationType := resp.ConversationType               //群聊id
+	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
+	dingRobot := &dingding.DingRobot{}
+	//单聊
+	if conversationType == "1" {
+		if str == "打字邀请码" {
+			err := dingRobot.RobotSendInviteCode(resp)
+			if err != nil {
+				return
+			}
+		} else if str == "送水电话号码" {
+			err := dingRobot.RobotSendWater(resp)
+			if err != nil {
+				return
+			}
+		} else if str == "获取个人信息" {
+			err := dingRobot.RobotSendPrivateMessage(resp)
+			if err != nil {
+				return
+			}
+		} else if strings.Contains(str, "保存个人信息") {
+			err := dingRobot.RobotSavePrivateMessage(resp)
+			if err != nil {
+				return
+			}
+		} else if strings.Contains(str, "更改个人信息") {
+			err := dingRobot.RobotPutPrivateMessage(resp)
+			if err != nil {
+				return
+			}
+		} else {
+			err := dingRobot.RobotSendHelpCard(resp)
+			if err != nil {
+				return
+			}
 		}
-
-		b := []byte{}
-		msg := map[string]interface{}{
-			"msgtype": "text",
-			"text": map[string]string{
-				"content": "邀请码: " + code,
-			},
+		//群聊
+	} else if conversationType == "2" {
+		if str == "打字邀请码" {
+			//_ 代表res["processQueryKey"]可以查看已读状态
+			_, err := dingRobot.RobotSendGroupInviteCode(resp)
+			if err != nil {
+				return
+			}
+		} else if str == "送水电话号码" {
+			//_ 代表res["processQueryKey"]可以查看已读状态
+			_, err := dingRobot.RobotSendGroupWater(resp)
+			if err != nil {
+				return
+			}
+		} else if str == "帮助" {
+			//_ 代表res["processQueryKey"]可以查看已读状态
+			_, err := dingRobot.RobotSendGroupCard(resp)
+			if err != nil {
+				return
+			}
 		}
-		b, err = json.Marshal(msg)
-		if err != nil {
-			zap.L().Error("转换失败", zap.Error(err))
-		}
-		http.Post(resp.SessionWebhook, "application/json", bytes.NewBuffer(b))
-		c.JSON(http.StatusOK, "成功")
 	}
+	response.ResponseSuccess(c, "成功")
 }

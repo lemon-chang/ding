@@ -5,9 +5,10 @@ import (
 	"ding/global"
 	"ding/utils"
 	"fmt"
-	openapi "github.com/alibabacloud-go/darabonba-openapi/client"
+
+	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	dingtalkoauth2_1_0 "github.com/alibabacloud-go/dingtalk/oauth2_1_0"
-	util "github.com/alibabacloud-go/tea-utils/service"
+	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
 	"go.uber.org/zap"
 	"time"
@@ -22,7 +23,7 @@ func (t *DingToken) IsLegal() bool {
 	return len(t.Token) == utils.TokenLength
 }
 
-//redis层下拿到access_token，先从redis中取出来，如果取不到的话，再重新申请一遍
+// redis层下拿到access_token，先从redis中取出来，如果取不到的话，再重新申请一遍
 func (t *DingToken) GetAccessToken() (access_token string, err error) {
 	//var accessToken string
 	var expire1 int64
@@ -111,7 +112,6 @@ func CreateClient() (_result *dingtalkoauth2_1_0.Client, _err error) {
 	config := &openapi.Config{}
 	config.Protocol = tea.String("https")
 	config.RegionId = tea.String("central")
-	_result = &dingtalkoauth2_1_0.Client{}
 	_result, _err = dingtalkoauth2_1_0.NewClient(config)
 	return _result, _err
 }

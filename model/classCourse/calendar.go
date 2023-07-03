@@ -15,14 +15,15 @@ type Calendar struct {
 	WeekNumber int
 }
 
-//获取现在是第几周
+// 获取现在是第几周
 func (*Calendar) GetWeek() (week int, err error) {
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
 	var body []byte
 	curTime, _ := (&localTime.MySelfTime{}).GetCurTime(nil)
-	URL := "http://schedule.lzyjykj.com/sys/getWeek?nowday=" + curTime.Format[:10]
+	//URL := "http://schedule.lzyjykj.com/sys/getWeek?nowday=" + curTime.Format[:10]
+	URL := "http://localhost:20080/sys/getWeek?nowday=" + curTime.Format[:10]
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

@@ -42,10 +42,11 @@ type ParamGetTaskList struct {
 	RobotId string `json:"robot_id"`
 }
 type ParamChat struct {
-	RobotCode string   `json:"robotCode"`
-	UserIds   []string `json:"userIds"`
-	MsgKey    string   `json:"msgKey"`   //SampleText
-	MsgParam  string   `json:"msgParam"` //具体内容
+	RobotCode          string   `json:"robotCode"`
+	UserIds            []string `json:"userIds"`
+	MsgKey             string   `json:"msgKey"`             //SampleText
+	MsgParam           string   `json:"msgParam"`           //具体内容
+	OpenConversationId string   `json:"openConversationId"` //群发时会用
 }
 type ParamCronTask struct {
 	MsgText     *common.MsgText     `json:"msg_text"`

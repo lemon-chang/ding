@@ -42,7 +42,6 @@ func Setup(mode string) *gin.Engine {
 	System := r.Group("/api/system")
 	System.Use(middlewares.JWTAuthMiddleware())
 	system.SetupSystem(System)
-
 	Ding := r.Group("/api/ding")
 	{
 		Ding.POST("login", ding.LoginHandler)

@@ -23,6 +23,7 @@ func SetupDing(System *gin.RouterGroup) {
 		AttendanceGroup.GET("ImportAttendanceGroupData", ding.ImportAttendanceGroupData)    //将考勤组信息导入到数据库中
 		AttendanceGroup.PUT("updateAttendanceGroup", ding.UpdateAttendanceGroup)            //更新部门信息，用来设置机器人token，各种开关
 		AttendanceGroup.GET("GetAttendanceGroupList", ding.GetAttendanceGroupListFromMysql) //批量获取考勤组
+
 	}
 	LeaveGroup := System.Group("leave")
 	{
@@ -36,13 +37,16 @@ func SetupDing(System *gin.RouterGroup) {
 		User.POST("UpdateDingUserAddr", ding.UpdateDingUserAddr) // 更新用户的博客和简书地址
 		User.GET("GetAllUsers", ding.SelectAllUsers)             // 查询所有用户信息
 		User.GET("GetAllJinAndBlog", ding.FindAllJinAndBlog)
-
 		User.GET("showQRCode", func(c *gin.Context) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
 		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
-		User.GET("/getActiveTask", ding.GetAllActiveTask) //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
+		User.GET("/getActiveTask", ding.GetAllActiveTask)                      //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
+		User.POST("/MakeupSign", ding.MakeupSign)                              //为用户补签到并返回用户联系签到次数
+		User.GET("/getWeekConsecutiveSignNum", ding.GetWeekConsecutiveSignNum) //获取用户当周连续签到次数
+		User.GET("/getWeekSignNum", ding.GetWeekSignNum)                       //根据第几星期获取用户签到次数（使用redis的bitCount函数）
+		User.GET("/getWeekSignDetail", ding.GetWeekSignDetail)                 //获取用户某个星期签到情况，默认是当前所处的星期，构建成为一个有序的HashMap
 	}
 
 	Robot := System.Group("robot")

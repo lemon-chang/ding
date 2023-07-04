@@ -34,6 +34,11 @@ type DingDept struct {
 	RobotToken        string `json:"robot_token"`
 	IsRobotAttendance int    `json:"is_robot_attendance"` //是否
 	IsJianShuOrBlog   int    `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+	IsLeetCode        int    `json:"is_leet_code"`
+}
+
+func (d *DingDept) SendLeetCode(startWeek int) (err error) {
+	return
 }
 
 func (d *DingDept) SendFrequencyLeave(startWeek int) error {

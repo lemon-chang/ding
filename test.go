@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func main() {
+func mai() {
 
 }
 

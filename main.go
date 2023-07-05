@@ -76,10 +76,17 @@ func main() {
 	err = initialize.AttendanceByRobot()
 	if err != nil {
 		zap.L().Error("AttendanceByRobot init fail...")
-		return
+		//return
 	}
-	initialize.RegularlySendCourses()
 	zap.L().Debug("AttendanceByRobot init success...")
+
+	initialize.RegularlySendCourses()
+
+	//发送爬取力扣的题目数
+	err = initialize.SendLeetCode()
+	if err != nil {
+		zap.L().Error("SendLeetCode init fail...")
+	}
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
 	//	zap.L().Error("启动爬虫爬取定时任务失败", zap.Error(err))
@@ -95,7 +102,6 @@ func main() {
 	// 初始化kafka
 	if err = initialize.KafkaInit(); err != nil {
 		zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
-
 	}
 
 	go func() {

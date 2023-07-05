@@ -46,7 +46,6 @@ func SetupDing(System *gin.RouterGroup) {
 		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
 		User.GET("/getActiveTask", ding.GetAllActiveTask) //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
 	}
-
 	Robot := System.Group("robot")
 	{
 
@@ -66,6 +65,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.PUT("editTaskContent", ding.EditTaskContent)      //编辑定时任务的内容
 		Robot.GET("/getTaskDetail", ding.GetTaskDetail)         //获取定时任务详情
 		Robot.GET("/getAllPublicRobot", ding.GetAllPublicRobot) //获取所有的公共机器人
+
 		Robot.POST("singleChat", ding.SingleChat)
 	}
 }

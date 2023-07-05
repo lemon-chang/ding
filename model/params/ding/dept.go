@@ -13,3 +13,7 @@ type ParamSendFrequencyLeaveDept struct {
 type ParamSendFrequencyLeaveUser struct {
 	UserID int `json:"user_id"`
 }
+type ParameIsInSchool struct {
+	GroupId    int  `json:"group_id"`
+	IsInSchool bool `json:"is_in_school"` //是否在学校，如果在学校，开启判断是否有课
+}

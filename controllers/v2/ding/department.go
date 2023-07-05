@@ -171,3 +171,25 @@ func UpdateDept(c *gin.Context) {
 	}
 	response.OkWithMessage("更新部门信息成功！", c)
 }
+
+//更新部门是否在校信息
+func UpdateSchool(c *gin.Context) {
+	var s ding.ParameIsInSchool
+	if err := c.ShouldBindJSON(&s); err != nil {
+		zap.L().Error("UpdateSchool invaild param", zap.Error(err))
+		response.ResponseError(c, response.CodeInvalidParam)
+		return
+	}
+	if s.GroupId == 0 {
+		response.FailWithMessage("部门名称或者部门id不能为空", c)
+		return
+	}
+	d := dingding2.DingAttendGroup{}
+	err := d.UpdateSchool(&s)
+	if err != nil {
+		zap.L().Error("更新数据库问题", zap.Error(err))
+		response.ResponseError(c, response.CodeInvalidParam)
+		return
+	}
+	response.ResponseSuccess(c, response.CodeSuccess)
+}

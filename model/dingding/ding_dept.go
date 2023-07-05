@@ -532,3 +532,7 @@ func (d *DingDept) UpdateDept(p *ding.ParamUpdateDeptToCron) (err error) {
 	err = global.GLOAB_DB.Updates(dept).Error
 	return err
 }
+func (d *DingAttendGroup) UpdateSchool(s *ding.ParameIsInSchool) (err error) {
+	err = global.GLOAB_DB.Model(&DingAttendGroup{}).Where("group_id", s.GroupId).Update("is_in_school", s.IsInSchool).Error
+	return
+}

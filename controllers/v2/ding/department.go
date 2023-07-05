@@ -2,6 +2,7 @@ package ding
 
 import (
 	"ding/controllers"
+	"ding/global"
 	dingding2 "ding/model/dingding"
 	"ding/model/params"
 	"ding/model/params/ding"
@@ -163,8 +164,15 @@ func UpdateDept(c *gin.Context) {
 		response.FailWithMessage("部门名称或者部门id不能为空", c)
 		return
 	}
+	//判断要操作的部门是否存在
+	var count int64
+	err := global.GLOAB_DB.Table("ding_depts").Where("dept_id", p.DeptID).Count(&count).Error
+	if count == 0 {
+		response.FailWithMessage("部门不存在", c)
+		return
+	}
 	d := dingding2.DingDept{}
-	err := d.UpdateDept(&p)
+	err = d.UpdateDept(&p)
 	if err != nil {
 		response.FailWithMessage("更新部门信息失败！", c)
 		return

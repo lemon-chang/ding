@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	Perfix = "ding:"
+	Perfix     = "ding:"
 	ActiveTask = "activeTask:" //活跃任务部分
-	Attendance  = "attendance:"//考勤状态部分
+	Attendance = "attendance:" //考勤状态部分
+	LeetCode   = "leetCode:"
 )
 
 func Init(redisCfg *settings.RedisConfig) (err error) {
@@ -34,4 +35,3 @@ func Init(redisCfg *settings.RedisConfig) (err error) {
 	global.GLOBAL_REDIS.Set(context.Background(), "name", "yjp", 0)
 	return
 }
-

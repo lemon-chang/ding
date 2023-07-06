@@ -4,7 +4,6 @@ import "gorm.io/gorm"
 
 type MsgText struct {
 	gorm.Model
-
 	At      At     `json:"at"`   //存储的是@的成员
 	Text    Text   `json:"text"` //存储的是用户所发送的信息
 	Msgtype string `json:"msgtype"`

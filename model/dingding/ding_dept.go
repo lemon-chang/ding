@@ -37,10 +37,6 @@ type DingDept struct {
 	IsLeetCode        int    `json:"is_leet_code"`
 }
 
-func (d *DingDept) SendLeetCode(startWeek int) (err error) {
-	return
-}
-
 func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 	//从redis中取数据，封装，调用钉钉接口，发送即可
 	key := redis.KeyDeptAveLeave + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"

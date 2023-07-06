@@ -38,8 +38,10 @@ func ImportDingUserData(c *gin.Context) {
 
 // SelectAllUsers 查询所有用户
 func SelectAllUsers(c *gin.Context) {
+	name := c.Query("name")
+	mobile := c.Query("mobile")
 	var DingUser dingding2.DingUser
-	us, err := DingUser.FindDingUsers()
+	us, err := DingUser.FindDingUsers(name, mobile)
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return

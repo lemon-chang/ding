@@ -608,7 +608,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			result["HasCourse"] = make([]DingAttendance, 0)
 
 			//todo 判断一下此部门是否开启推送考勤
-			if DeptDetail.IsRobotAttendance == 0 || DeptDetail.RobotToken == "" {
+			if DeptDetail.IsRobotAttendance == false || DeptDetail.RobotToken == "" {
 				zap.L().Error(fmt.Sprintf("该部门:%s为开启考勤或者机器人robotToken:%s是空，跳过", DeptDetail.Name, DeptDetail.RobotToken))
 				continue
 			}

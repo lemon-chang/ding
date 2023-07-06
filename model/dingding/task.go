@@ -27,6 +27,12 @@ type Task struct {
 	NextTime          time.Time           `json:"next_time"`
 }
 
+//编辑定时任务内容
+type EditTaskContentParam struct {
+	TaskID  string `json:"task_id"`
+	Content string `json:"content"`
+}
+
 func (t *Task) InsertTask() (err error) {
 	//我先找一下数据库中与该任务相同的id号码，如果相同的话，说明数据库中有死掉的任务，需要加上软删除
 	Dtask := []Task{}

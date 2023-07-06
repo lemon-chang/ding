@@ -230,10 +230,10 @@ func (d *DingUser) ImportUserToMysql() error {
 func (d *DingUser) FindDingUsers(name, mobile string) (us []DingUser, err error) {
 	db := global.GLOAB_DB.Model(&DingUser{})
 	if name != "" {
-		db = db.Where("name like ?", name)
+		db = db.Where("name LIKE ?", "%"+name+"%")
 	}
 	if mobile != "" {
-		db = db.Where("mobile like ?", mobile)
+		db = db.Where("mobile like ?", "%"+mobile+"%")
 	}
 	err = db.Select("user_id", "name", "mobile").Find(&us).Error
 	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()

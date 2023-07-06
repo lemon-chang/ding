@@ -227,9 +227,16 @@ func (d *DingUser) ImportUserToMysql() error {
 
 }
 
-func (d *DingUser) FindDingUsers() (us []DingUser, err error) {
+func (d *DingUser) FindDingUsers(name, mobile string) (us []DingUser, err error) {
+	db := global.GLOAB_DB.Model(&DingUser{})
+	if name != "" {
+		db = db.Where("name like ?", name)
+	}
+	if mobile != "" {
+		db = db.Where("mobile like ?", mobile)
+	}
+	err = db.Select("user_id", "name", "mobile").Find(&us).Error
 	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()
-	err = global.GLOAB_DB.Model(&DingUser{}).Select("user_id", "name", "mobile").Find(&us).Error
 	//往redis中做一份缓存
 	//for i := 0; i < len(us); i++ {
 	//	batchData := make(map[string]interface{})

@@ -171,8 +171,10 @@ func UpdateDept(c *gin.Context) {
 		response.FailWithMessage("部门不存在", c)
 		return
 	}
-	d := dingding2.DingDept{}
-	err = d.UpdateDept(&p)
+	err = global.GLOAB_DB.Table("ding_depts").Where("dept_id", p.DeptID).Update("is_robot_attendance", p.IsRobotAttendance).Error
+	//使用这个会报错
+	//d := dingding2.DingDept{}
+	//err = d.UpdateDept(&p)
 	if err != nil {
 		response.FailWithMessage("更新部门信息失败！", c)
 		return

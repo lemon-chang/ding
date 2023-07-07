@@ -31,10 +31,12 @@ type DingDept struct {
 	Name      string `json:"name"`
 	ParentId  int    `json:"parent_id"`
 	DingToken
-	IsSendFirstPerson int    `json:"is_send_first_person"` // 0为不推送，1为推送
-	RobotToken        string `json:"robot_token"`
-	IsRobotAttendance int    `json:"is_robot_attendance"` //是否
-	IsJianShuOrBlog   int    `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+	IsSendFirstPerson int        `json:"is_send_first_person"` // 0为不推送，1为推送
+	RobotToken        string     `json:"robot_token"`
+	IsRobotAttendance bool       `json:"is_robot_attendance"` //是否
+	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+	IsLeetCode        int        `json:"is_leet_code"`
+	ResponsibleUsers  []DingUser `json:"responsible_users"`
 }
 
 //获取用户的考勤信息
@@ -668,6 +670,10 @@ func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
 //更新部门信息
 func (d *DingDept) UpdateDept(p *ding.ParamUpdateDeptToCron) (err error) {
 	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog}
-	err = global.GLOAB_DB.Updates(dept).Error
+	err = global.GLOAB_DB.Preload("ResponsibleUsers").Updates(dept).Error
 	return err
+}
+func (d *DingAttendGroup) UpdateSchool(s *ding.ParameIsInSchool) (err error) {
+	err = global.GLOAB_DB.Model(&DingAttendGroup{}).Where("group_id", s.GroupId).Update("is_in_school", s.IsInSchool).Error
+	return
 }

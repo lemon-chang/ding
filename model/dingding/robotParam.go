@@ -95,7 +95,7 @@ type Body struct {
 	SenderCorpId              string    `json:"senderCorpId"`              //企业内部群有的发送者当前群的企业corpId。
 	ConversationTitle         string    `json:"conversationTitle"`         //群聊时才有的会话标题。
 	IsInAtList                bool      `json:"isInAtList"`                //是否在@列表中。
-	SessionWebhook            string    `json:"sessionWebhook"`            //当前会话的Webhook地址。
+	SessionWebhook            string    `json:"sessionWebhook"`            //当前会话的Webhook地址
 	Text                      text      `json:"text"`                      //机器人收到的信息
 	Msgtype                   string    `json:"msgtype"`                   //目前只支持text
 	ConversationType          string    `json:"conversationType"`

@@ -63,6 +63,7 @@ type DingUser struct {
 	Title               string                `json:"title"` //职位
 	JianShuAddr         string                `json:"jianshu_addr"`
 	BlogAddr            string                `json:"blog_addr"`
+	LeetCodeAddr        string                `json:"leet_code_addr"`
 	AuthToken           string                `json:"auth_token" gorm:"-"`
 	DingToken           `json:"ding_token" gorm:"-"`
 	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
@@ -340,9 +341,16 @@ func (d *DingUser) ImportUserToMysql() error {
 
 }
 
-func (d *DingUser) FindDingUsers() (us []DingUser, err error) {
+func (d *DingUser) FindDingUsers(name, mobile string) (us []DingUser, err error) {
+	db := global.GLOAB_DB.Model(&DingUser{})
+	if name != "" {
+		db = db.Where("name LIKE ?", "%"+name+"%")
+	}
+	if mobile != "" {
+		db = db.Where("mobile like ?", "%"+mobile+"%")
+	}
+	err = db.Select("user_id", "name", "mobile").Find(&us).Error
 	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()
-	err = global.GLOAB_DB.Model(&DingUser{}).Select("user_id", "name", "mobile").Find(&us).Error
 	//往redis中做一份缓存
 	//for i := 0; i < len(us); i++ {
 	//	batchData := make(map[string]interface{})

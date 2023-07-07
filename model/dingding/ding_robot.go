@@ -715,6 +715,33 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	}
 	return nil
 }
+func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
+	//var msg map[string]interface{}
+	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+	if strings.Contains(p.Text.Content, "已到宿舍") {
+		r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
+		global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Updates(&r)
+	} else {
+		r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: false, Content: p.Text.Content}
+		global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Updates(&r)
+	}
+
+	b, err := json.Marshal("收到")
+	if err != nil {
+		return err
+	}
+	var resp *http.Response
+
+	resp, err = http.Post(p.SessionWebhook, "application/json", bytes.NewBuffer(b))
+
+	defer resp.Body.Close()
+	date, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(date)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func TypingInviation() (TypingInvitationCode string, expire time.Duration, err error) {
 	zap.L().Info("进入到了chromedp，开始申请")
 	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
@@ -985,7 +1012,7 @@ func GetImage(c *gin.Context) { //显示图片的方法
 func (t *DingRobot) StopTask(taskId string) (err error) {
 	//先来判断一下是否拥有这个定时任务
 	var task Task
-	err = global.GLOAB_DB.Where("task_id = ?", taskId).First(&task).Error
+	err = global.GLOAB_DB.Where("task_id", taskId).First(&task).Error
 	if err != nil {
 		zap.L().Info("通过taskId查找定时任务失败", zap.Error(err))
 		return err
@@ -1084,6 +1111,48 @@ func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
 		return
 	}
 	return
+}
+
+func (t *DingRobot) EditTaskContent(r *EditTaskContentParam) (err error) {
+
+	//开启事务
+	//先暂停该任务
+	//err = t.StopTask(r.TaskID)
+	//if err != nil {
+	//	zap.L().Error("定时任务暂停失败", zap.Error(err))
+	//	return
+	//}
+	//根据任务id查询该任务的msg_texts的id
+	var msg_text_id string
+	err = global.GLOAB_DB.Table("msg_texts").Select("id").Where("task_id", r.TaskID).Find(&msg_text_id).Error
+	if err != nil {
+		zap.L().Error("查询失败", zap.Error(err))
+		return
+	}
+	//根据msg_texts的id查询texts表中的content
+	err = global.GLOAB_DB.Table(" texts").Where("msg_text_id", msg_text_id).Update("content", r.Content).Error
+	if err != nil {
+		zap.L().Error("修改内容失败", zap.Error(err))
+		return
+	}
+	//修改后重启任务
+	//_, err = t.ReStartTask(r.TaskID)
+	//if err != nil {
+	//	zap.L().Error("定时任务重启失败", zap.Error(err))
+	//	return
+	//}
+	return
+}
+
+// 获取所有的公共机器人
+func GetAllPublicRobot() (robot []DingRobot, err error) {
+	//IsShare值为1为公共机器人
+	err = global.GLOAB_DB.Where("is_shared=?", 1).Find(&robot).Error
+	if err != nil {
+		zap.L().Error("服务繁忙", zap.Error(err))
+		return nil, err
+	}
+	return robot, err
 }
 
 type result struct {

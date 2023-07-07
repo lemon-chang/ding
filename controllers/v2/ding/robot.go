@@ -40,6 +40,23 @@ func OutGoing(c *gin.Context) {
 	}
 	response.ResponseSuccess(c, "回调成功")
 }
+func GxpRobot(c *gin.Context) {
+	var p dingding.ParamReveiver
+	err := c.ShouldBindJSON(&p)
+	err = c.ShouldBindHeader(&p)
+	if err != nil {
+		zap.L().Error("OutGoing invaild param", zap.Error(err))
+		errs, ok := err.(validator.ValidationErrors)
+		if !ok {
+			response.ResponseError(c, response.CodeInvalidParam)
+			return
+		} else {
+			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
+			return
+		}
+	}
+	err = (&dingding.DingRobot{}).GxpSendSessionWebHook(&p)
+}
 
 // addRobot 添加机器人
 // 思路如下：
@@ -446,6 +463,25 @@ func ReStartTask(c *gin.Context) {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
 }
+
+//修改定时任务的内容
+func EditTaskContent(c *gin.Context) {
+	var r *dingding.EditTaskContentParam
+	err := c.ShouldBindJSON(&r)
+	if err != nil && r.TaskID == "" {
+		zap.L().Error("编辑定时任务内容参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	err = (&dingding.DingRobot{}).EditTaskContent(r)
+	if err != nil {
+		zap.L().Error("编辑失败", zap.Error(err))
+		response.FailWithMessage("编辑失败", c)
+		return
+	}
+	response.OkWithMessage("修改成功", c)
+}
+
 func GetTaskDetail(c *gin.Context) {
 	var p *dingding.ParamGetTaskDeatil
 	if err := c.ShouldBindQuery(&p); err != nil {
@@ -458,6 +494,20 @@ func GetTaskDetail(c *gin.Context) {
 		response.FailWithMessage("ReStartTask定时任务失败", c)
 	} else {
 		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
+	}
+}
+
+// 获取所有的公共机器人
+func GetAllPublicRobot(c *gin.Context) {
+	robots, err := dingding.GetAllPublicRobot()
+	if err != nil {
+		zap.L().Error("查询所有公共机器人失败", zap.Error(err))
+		response.FailWithMessage("获取机器人失败", c)
+	} else if len(robots) == 0 {
+		response.FailWithMessage("没有公共机器人", c)
+	} else {
+		//返回机器人的基本信息
+		response.ResponseSuccess(c, robots)
 	}
 }
 

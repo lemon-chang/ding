@@ -15,6 +15,7 @@ const (
 	Attendance = "attendance:" //考勤状态部分
 	User       = "user:"
 	UserSign   = User + "sign:"
+	LeetCode   = "leetCode:"
 )
 
 func Init(redisCfg *settings.RedisConfig) (err error) {

@@ -10,6 +10,7 @@ import (
 
 var (
 	GLOAB_DB          *gorm.DB            //mysql数据库连接
+	GLOAB_DB1         *gorm.DB            //mysql数据库连接
 	GLOBAL_REDIS      *redis.Client       //redis连接
 	GLOAB_CORN        *cron.Cron          //Cron定时器连接
 	GLOBAL_Feishu     *lark.Client        //飞书客户端

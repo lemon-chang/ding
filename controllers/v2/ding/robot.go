@@ -451,7 +451,7 @@ func ReStartTask(c *gin.Context) {
 func EditTaskContent(c *gin.Context) {
 	var r *dingding.EditTaskContentParam
 	err := c.ShouldBindJSON(&r)
-	if err != nil && r.TaskID == "" {
+	if err != nil && r.TaskID == 0 {
 		zap.L().Error("编辑定时任务内容参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return

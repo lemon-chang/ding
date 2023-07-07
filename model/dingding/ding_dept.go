@@ -35,7 +35,12 @@ type DingDept struct {
 	IsRobotAttendance bool       `json:"is_robot_attendance"` //是否
 	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 	IsLeetCode        int        `json:"is_leet_code"`
-	ResponsibleUsers  []DingUser `json:"responsible_users"`
+	ResponsibleUsers  []DingUser `gorm:"-"`
+}
+type UserDept struct {
+	DingUserUserID string
+	DingDeptDeptID string
+	IsResponsible  bool
 }
 
 func (d *DingDept) SendFrequencyLeave(startWeek int) error {

@@ -281,6 +281,7 @@ func (r *DingRobot) ChatSendGroupMessage(p *ParamChat) (map[string]interface{}, 
 }
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
 	robotId := r.RobotId
+	//转化时候出现问题
 	spec, detailTimeForUser, err := HandleSpec(p)
 	if p.Spec != "" {
 		spec = p.Spec
@@ -856,7 +857,7 @@ func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""
 	detailTimeForUser = ""
 	n := len(p.DetailTime)
-	if p.RepeatTime == "1" {
+	if p.RepeatTime == "仅发送一次" {
 		second := p.DetailTime[n-2:]
 		minute := p.DetailTime[n-5 : n-3]
 		hour := p.DetailTime[n-8 : n-6]
@@ -1086,34 +1087,49 @@ func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
 	return
 }
 
-func (t *DingRobot) EditTaskContent(r *EditTaskContentParam) (err error) {
-
-	//开启事务
-	//先暂停该任务
-	//err = t.StopTask(r.TaskID)
-	//if err != nil {
-	//	zap.L().Error("定时任务暂停失败", zap.Error(err))
-	//	return
-	//}
-	//根据任务id查询该任务的msg_texts的id
-	var msg_text_id string
-	err = global.GLOAB_DB.Table("msg_texts").Select("id").Where("task_id", r.TaskID).Find(&msg_text_id).Error
+func (t *DingRobot) EditTaskContent(p *EditTaskContentParam) (err error) {
+	//根据任务id查询该任务的msg
+	task := Task{
+		Model: gorm.Model{ID: p.TaskID},
+	}
+	err = global.GLOAB_DB.Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").First(&task).Error
 	if err != nil {
-		zap.L().Error("查询失败", zap.Error(err))
+		zap.L().Error("EditTaskContent err", zap.Error(err))
 		return
 	}
-	//根据msg_texts的id查询texts表中的content
-	err = global.GLOAB_DB.Table(" texts").Where("msg_text_id", msg_text_id).Update("content", r.Content).Error
+	task.MsgText.Text.Content = p.Content
+	err = global.GLOAB_DB.Save(&task.MsgText.Text).Error
 	if err != nil {
-		zap.L().Error("修改内容失败", zap.Error(err))
+		zap.L().Error("EditTaskContent err", zap.Error(err))
 		return
 	}
-	//修改后重启任务
-	//_, err = t.ReStartTask(r.TaskID)
-	//if err != nil {
-	//	zap.L().Error("定时任务重启失败", zap.Error(err))
-	//	return
-	//}
+	//杀死旧任务
+	oldtaskId, _ := strconv.Atoi(task.TaskID)
+	global.GLOAB_CORN.Remove(cron.EntryID(oldtaskId))
+	//启动新任务
+	paramCronTask := ParamCronTask{
+		MsgText:     task.MsgText,
+		MsgLink:     task.MsgLink,
+		MsgMarkDown: task.MsgMarkDown,
+		RobotId:     task.RobotId,
+	}
+	d := DingRobot{
+		RobotId: task.RobotId,
+		Secret:  task.Secret,
+	}
+	tasker := func() {
+		err := d.SendMessage(&paramCronTask)
+		if err != nil {
+			zap.L().Error(fmt.Sprintf("重启定时任务失败"), zap.Error(err))
+			return
+		}
+	}
+	taskId, err := global.GLOAB_CORN.AddFunc(task.Spec, tasker)
+	err = global.GLOAB_DB.Table("tasks").Where("task_id = ? ", task.TaskID).Update("task_id", taskId).Error
+	if err != nil {
+		zap.L().Error("重启项目后更新任务id失败", zap.Error(err))
+		return
+	}
 	return
 }
 

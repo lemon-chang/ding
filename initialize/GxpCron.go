@@ -52,7 +52,7 @@ func CronSendTwo() (err error) {
 		var AllUsers []dingding.TongXinUser
 		var atRobotUsers []dingding.TongXinUser
 		var notAtRobotUserIds []common.AtUserId
-		global.GLOAB_DB1.Preload("Records", "created_at like ?", "%"+day+"%").Find(&AllUsers)
+		global.GLOAB_DB1.Where("is_school = ?", 1).Preload("Records", "created_at like ?", "%"+day+"%").Find(&AllUsers)
 		for _, user := range AllUsers {
 			if user.Records == nil || len(user.Records) == 0 {
 				notAtRobotUserIds = append(notAtRobotUserIds, common.AtUserId{
@@ -99,7 +99,7 @@ func CronSendThree() (err error) {
 		var AllUsers []dingding.TongXinUser
 		var atRobotUsers []dingding.TongXinUser
 		var notAtRobotUsers []dingding.TongXinUser
-		global.GLOAB_DB1.Preload("Records", "created_at like ?", "%"+day+"%").Find(&AllUsers)
+		global.GLOAB_DB1.Where("is_school = ?", 1).Preload("Records", "created_at like ?", "%"+day+"%").Find(&AllUsers)
 		for _, user := range AllUsers {
 			if user.Records == nil || len(user.Records) == 0 {
 				notAtRobotUsers = append(notAtRobotUsers, user)

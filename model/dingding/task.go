@@ -29,7 +29,8 @@ type Task struct {
 
 //编辑定时任务内容
 type EditTaskContentParam struct {
-	TaskID  string `json:"task_id"`
+	ID      uint   `json:"id"`
+	TaskID  uint   `json:"task_id"`
 	Content string `json:"content"`
 }
 

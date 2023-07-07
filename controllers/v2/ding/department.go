@@ -74,14 +74,8 @@ func GetSubDepartmentListByID(c *gin.Context) {
 	var p params.ParamGetDepartmentListByID
 	if err := c.ShouldBindQuery(&p); err != nil {
 		zap.L().Error("GetDepartmentListByID invaild param", zap.Error(err))
-		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			response.ResponseError(c, response.CodeInvalidParam)
-			return
-		} else {
-			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
-			return
-		}
+		response.FailWithMessage("参数错误", c)
+		return
 	}
 	var d dingding2.DingDept
 	d.DingToken.Token = p.Token
@@ -126,19 +120,16 @@ func GetDeptListFromMysql(c *gin.Context) {
 	var p params.ParamGetDeptListFromMysql
 	if err := c.ShouldBindQuery(&p); err != nil {
 		zap.L().Error("GetDepartmentListByID invaild param", zap.Error(err))
-		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			response.ResponseError(c, response.CodeInvalidParam)
-			return
-		} else {
-			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
-			return
-		}
+		response.FailWithMessage("参数错误", c)
 	}
 	//var t dingding2.DingToken
 	//token, err := t.GetAccessToken()
 	var d dingding2.DingDept
 	DepartmentList, total, err := d.GetDeptByListFromMysql(&p)
+	for i := 0; i < len(DepartmentList); i++ {
+		//
+		//DepartmentList[i].ResponsibleUsers =
+	}
 	if err != nil {
 		response.FailWithMessage("获取子部门信息失败！", c)
 		return

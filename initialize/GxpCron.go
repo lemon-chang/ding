@@ -86,7 +86,7 @@ func CronSendTwo() (err error) {
 			return
 		}
 	})
-	fmt.Println("关鑫鹏22：00定时任务", entryID)
+	fmt.Println("关鑫鹏22：20定时任务", entryID)
 	return
 }
 
@@ -118,7 +118,17 @@ func CronSendThree() (err error) {
 		}
 
 		zap.L().Info("message编辑完成，开始封装发送信息参数")
-
+		//关鑫鹏个人的userid
+		var userId = []string{"01144160064621256183"}
+		p := &dingding.ParamChat{
+			RobotCode: RobotToken,
+			UserIds:   userId,
+			MsgKey:    "sampleText",
+			MsgParam:  message,
+		}
+		err := (&dingding.DingRobot{
+			RobotId: RobotToken,
+		}).CommonSingleChat(p)
 		//p := &dingding.ParamCronTask{
 		//	MsgText: &common.MsgText{
 		//		At: common.At{
@@ -135,10 +145,10 @@ func CronSendThree() (err error) {
 		//	RobotId: RobotToken,
 		//}).SendMessage(p)
 		if err != nil {
-			zap.L().Error("发送关鑫鹏22：20定时任务失败", zap.Error(err))
+			zap.L().Error("发送关鑫鹏22：35定时任务失败", zap.Error(err))
 			return
 		}
 	})
-	fmt.Println("关鑫鹏22：00定时任务", entryID)
+	fmt.Println("关鑫鹏22：35定时任务", entryID)
 	return
 }

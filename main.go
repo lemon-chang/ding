@@ -100,13 +100,16 @@ func main() {
 	//}
 	err = initialize.CronSendOne()
 	if err != nil {
-		return
+		zap.L().Error("关鑫鹏22：00定时任务发送失败，", zap.Error(err))
 	} //晚上10点的定时提醒
 	err = initialize.CronSendTwo()
 	if err != nil {
-		return
+		zap.L().Error("关鑫鹏22：20定时任务发送失败，", zap.Error(err))
 	} //晚上10:20@未到宿舍的人员
-	initialize.CronSendThree() //晚上10：35统计结果发给gxp
+	err = initialize.CronSendThree()
+	if err != nil {
+		zap.L().Error("关鑫鹏22：35定时任务发送失败，", zap.Error(err))
+	} //晚上10：35统计结果发给gxp
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
 	//	zap.L().Error("启动爬虫爬取定时任务失败", zap.Error(err))

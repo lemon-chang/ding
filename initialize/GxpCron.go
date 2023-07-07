@@ -49,17 +49,18 @@ func CronSendTwo() (err error) {
 	//开启定时器，定时22：20提醒未到宿舍人员(cron定时任务的创建)
 	entryID, err := global.GLOAB_CORN.AddFunc(spec, func() {
 		day := time.Now().Format("2006-01-02")
-		var records []dingding.Record
-		err = global.GLOAB_DB.Where("created_at like ?", "%"+day+"%").Find(&records).Error
-		if err != nil {
-			zap.L().Error(fmt.Sprintf("查询%s的数据失败", day), zap.Error(err))
-			return
-		}
-		//将records中的id提取出来
-		notAtRobotUserIds := make([]common.AtUserId, 0)
-		//通过每条数据中的userid查询同学姓名
-		for _, record := range records {
-			notAtRobotUserIds = append(notAtRobotUserIds, common.AtUserId{AtUserId: record.TongXinUserID})
+		var AllUsers []dingding.TongXinUser
+		var atRobotUsers []dingding.TongXinUser
+		var notAtRobotUserIds []common.AtUserId
+		global.GLOAB_DB1.Preload("Records", "created_at like ?", "%"+day+"%").Find(&AllUsers)
+		for _, user := range AllUsers {
+			if user.Records == nil || len(user.Records) == 0 {
+				notAtRobotUserIds = append(notAtRobotUserIds, common.AtUserId{
+					AtUserId: user.ID,
+				})
+			} else {
+				atRobotUsers = append(atRobotUsers, user)
+			}
 		}
 
 		message := "截至目前还有以下同学未报备是否到达宿舍：\n"
@@ -80,6 +81,59 @@ func CronSendTwo() (err error) {
 		err := (&dingding.DingRobot{
 			RobotId: RobotToken,
 		}).SendMessage(p)
+		if err != nil {
+			zap.L().Error("发送关鑫鹏22：20定时任务失败", zap.Error(err))
+			return
+		}
+	})
+	fmt.Println("关鑫鹏22：00定时任务", entryID)
+	return
+}
+
+// CronSendThree 晚上10：35统计结果发给gxp
+func CronSendThree() (err error) {
+	spec := "0 35 22 ? * * "
+	//开启定时器，定时22：20提醒未到宿舍人员(cron定时任务的创建)
+	entryID, err := global.GLOAB_CORN.AddFunc(spec, func() {
+		day := time.Now().Format("2006-01-02")
+		var AllUsers []dingding.TongXinUser
+		var atRobotUsers []dingding.TongXinUser
+		var notAtRobotUsers []dingding.TongXinUser
+		global.GLOAB_DB1.Preload("Records", "created_at like ?", "%"+day+"%").Find(&AllUsers)
+		for _, user := range AllUsers {
+			if user.Records == nil || len(user.Records) == 0 {
+				notAtRobotUsers = append(notAtRobotUsers, user)
+			} else {
+				atRobotUsers = append(atRobotUsers, user)
+			}
+		}
+
+		message := "截至目前还有以下同学未报备是否到达宿舍：\n"
+		for _, notAtRobotUser := range notAtRobotUsers {
+			message += notAtRobotUser.Name + "  "
+		}
+		message += "\n" + "已发送消息的同学：\n"
+		for i, atRobotUser := range atRobotUsers {
+			message += atRobotUser.Name + ",发送消息内容：" + atRobotUser.Records[i].Content + "\n"
+		}
+
+		zap.L().Info("message编辑完成，开始封装发送信息参数")
+
+		//p := &dingding.ParamCronTask{
+		//	MsgText: &common.MsgText{
+		//		At: common.At{
+		//			AtUserIds: notAtRobotUserIds,
+		//		},
+		//		Text: common.Text{
+		//			Content: message,
+		//		},
+		//		Msgtype: "text",
+		//	},
+		//	RobotId: RobotToken,
+		//}
+		//err := (&dingding.DingRobot{
+		//	RobotId: RobotToken,
+		//}).SendMessage(p)
 		if err != nil {
 			zap.L().Error("发送关鑫鹏22：20定时任务失败", zap.Error(err))
 			return

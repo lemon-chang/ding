@@ -98,9 +98,15 @@ func main() {
 	//if err != nil {
 	//	fmt.Println("导入人员失败")
 	//}
-	//initialize.CronSendOne() //晚上10点的定时提醒
-	//initialize.CronSendTwo() //晚上10:20@未到宿舍的人员
-	//initialize.CronSendThree() //晚上10：35统计结果发给gxp
+	err = initialize.CronSendOne()
+	if err != nil {
+		return
+	} //晚上10点的定时提醒
+	err = initialize.CronSendTwo()
+	if err != nil {
+		return
+	} //晚上10:20@未到宿舍的人员
+	initialize.CronSendThree() //晚上10：35统计结果发给gxp
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
 	//	zap.L().Error("启动爬虫爬取定时任务失败", zap.Error(err))

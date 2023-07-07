@@ -56,6 +56,10 @@ func GxpRobot(c *gin.Context) {
 		}
 	}
 	err = (&dingding.DingRobot{}).GxpSendSessionWebHook(&p)
+	if err != nil {
+		zap.L().Error("钉钉机器人回调出错", zap.Error(err))
+		return
+	}
 }
 
 // addRobot 添加机器人

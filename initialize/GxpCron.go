@@ -121,13 +121,13 @@ func CronSendThree() (err error) {
 		//关鑫鹏个人的userid
 		var userId = []string{"01144160064621256183"}
 		p := &dingding.ParamChat{
-			RobotCode: RobotToken,
+			RobotCode: "dingpi0onbdchuv5anhn",
 			UserIds:   userId,
 			MsgKey:    "sampleText",
 			MsgParam:  message,
 		}
 		err := (&dingding.DingRobot{
-			RobotId: RobotToken,
+			RobotId: "dingpi0onbdchuv5anhn",
 		}).CommonSingleChat(p)
 		//p := &dingding.ParamCronTask{
 		//	MsgText: &common.MsgText{

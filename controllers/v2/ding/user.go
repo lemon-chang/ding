@@ -182,3 +182,63 @@ func GetAllActiveTask(c *gin.Context) {
 	zap.L().Info("获取所有获取定时任务成功")
 	response.OkWithDetailed(tasks, "获取所有获取定时任务成功", c)
 }
+func MakeupSign(c *gin.Context) {
+	var p params.ParamMakeupSign
+	if err := c.ShouldBindJSON(&p); err != nil {
+		response.FailWithMessage("参数错误", c)
+		zap.L().Error("参数错误", zap.Error(err))
+		return
+	}
+	consecutiveSignNum, err := (&dingding2.DingUser{UserId: p.Userid}).Sign(p.Year, p.UpOrDown, p.StartWeek, p.WeekDay, p.MNE)
+	if err != nil {
+		zap.L().Error("为用户补签失败", zap.Error(err))
+		response.FailWithMessage("为用户补签失败", c)
+		return
+	}
+	response.OkWithDetailed(consecutiveSignNum, "补签成功", c)
+}
+func GetWeekConsecutiveSignNum(c *gin.Context) {
+	var p params.ParamGetWeekConsecutiveSignNum
+	if err := c.ShouldBindJSON(&p); err != nil {
+		response.FailWithMessage("参数错误", c)
+		zap.L().Error("参数错误", zap.Error(err))
+		return
+	}
+	consecutiveSignNum, err := (&dingding2.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Year, p.UpOrDown, p.StartWeek, p.WeekDay, p.MNE)
+	if err != nil {
+		zap.L().Error("获取用户本周连续签到次数失败", zap.Error(err))
+		response.FailWithMessage("获取用户本周连续签到次数失败", c)
+		return
+	}
+	response.OkWithDetailed(consecutiveSignNum, "获取用户本周连续签到次数成功", c)
+}
+func GetWeekSignNum(c *gin.Context) {
+	var p params.ParamGetWeekSignNum
+	if err := c.ShouldBindJSON(&p); err != nil {
+		response.FailWithMessage("参数错误", c)
+		zap.L().Error("参数错误", zap.Error(err))
+		return
+	}
+	WeekSignNum, err := (&dingding2.DingUser{UserId: p.Userid}).GetWeekSignNum(p.Year, p.UpOrDown, p.StartWeek)
+	if err != nil {
+		zap.L().Error("获取用户一周的签到次数失败", zap.Error(err))
+		response.FailWithMessage("获取用户一周的签到次数失败", c)
+		return
+	}
+	response.OkWithDetailed(WeekSignNum, "获取用户一周的签到次数成功", c)
+}
+func GetWeekSignDetail(c *gin.Context) {
+	var p params.ParamGetWeekSignDetail
+	if err := c.ShouldBindJSON(&p); err != nil {
+		response.FailWithMessage("参数错误", c)
+		zap.L().Error("参数错误", zap.Error(err))
+		return
+	}
+	WeekSignNum, err := (&dingding2.DingUser{UserId: p.Userid}).GetWeekSignDetail(p.Year, p.UpOrDown, p.StartWeek)
+	if err != nil {
+		zap.L().Error("获取用户一周的签到详情失败", zap.Error(err))
+		response.FailWithMessage("获取用户一周的签到详情失败", c)
+		return
+	}
+	response.OkWithDetailed(WeekSignNum, "获取用户一周的签到详情成功", c)
+}

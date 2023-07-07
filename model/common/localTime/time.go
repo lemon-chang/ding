@@ -13,7 +13,7 @@ type MySelfTime struct {
 	TimeStamp   int64
 	Format      string // 完整的时间字符串
 	Time        time.Time
-	Duration    int //上午 下午 晚上
+	Duration    int //上午 下午 晚上 1 2 3
 	ClassNumber int //当前是第几课节
 	Week        int //周几
 }
@@ -210,8 +210,6 @@ func (t *MySelfTime) StampToString(s int64) string {
 	return time.Unix(s/1000, 0).Format("2006-01-02 15:04:05")
 
 }
-
-//
 func (t *MySelfTime) GetWeek(T *time.Time) string {
 	if T != nil {
 		return T.Weekday().String()

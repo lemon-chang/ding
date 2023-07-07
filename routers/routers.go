@@ -40,10 +40,11 @@ func Setup(mode string) *gin.Engine {
 
 	V3.POST("/outgoing", ding.OutGoing) //outgoing接口是让官方
 	V3.POST("/robotAt", ding.RobotAt)
+
+	V3.POST("/gxpRobot", ding.GxpRobot)
 	System := r.Group("/api/system")
 	System.Use(middlewares.JWTAuthMiddleware())
 	system.SetupSystem(System)
-
 	Ding := r.Group("/api/ding")
 	{
 		Ding.POST("login", ding.LoginHandler)

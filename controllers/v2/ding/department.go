@@ -126,10 +126,14 @@ func GetDeptListFromMysql(c *gin.Context) {
 	//token, err := t.GetAccessToken()
 	var d dingding2.DingDept
 	DepartmentList, total, err := d.GetDeptByListFromMysql(&p)
-	for i := 0; i < len(DepartmentList); i++ {
-		//
-		//DepartmentList[i].ResponsibleUsers =
-	}
+	//for _, dept := range DepartmentList {
+	//	//获取到部门负责人
+	//	//dept.ResponsibleUsers =
+	//}
+	//for i := 0; i < len(DepartmentList); i++ {
+	//	//获取到部门负责人
+	//	//DepartmentList[i].ResponsibleUsers =
+	//}
 	if err != nil {
 		response.FailWithMessage("获取子部门信息失败！", c)
 		return

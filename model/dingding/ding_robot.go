@@ -126,6 +126,80 @@ type MySendParam struct {
 	UserIds   []string `json:"userIds"`
 }
 
+//通用单聊方法
+func (r *DingRobot) CommonSingleChat(p *ParamChat) (err error) {
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	URL := "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend"
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+	//此处是post请求的请求题，我们先初始化一个对象
+	var b MySendParam
+	b.RobotCode = p.RobotCode
+	if p.MsgKey == "sampleText" {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = p.RobotCode
+		b.UserIds = p.UserIds
+		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
+	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
+		b.MsgKey = p.MsgKey
+		b.RobotCode = p.RobotCode
+		b.UserIds = p.UserIds
+		b.MsgParam = p.MsgParam
+	}
+	//然后把结构体对象序列化一下
+	bodymarshal, err := json.Marshal(&b)
+	if err != nil {
+		return nil
+	}
+	//再处理一下
+	reqBody := strings.NewReader(string(bodymarshal))
+	//然后就可以放入具体的request中的
+	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
+	if err != nil {
+		return nil
+	}
+	token, err := r.DingToken.GetAccessToken()
+	if err != nil {
+		return err
+	}
+	request.Header.Set("x-acs-dingtalk-access-token", token)
+	request.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(request)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return nil
+	}
+	h := struct {
+		Code                      string   `json:"code"`
+		Message                   string   `json:"message"`
+		ProcessQueryKey           string   `json:"processQueryKey"`
+		InvalidStaffIdList        []string `json:"invalidStaffIdList"`
+		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
+	}{}
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &h)
+	if err != nil {
+		return nil
+	}
+	if h.Code != "" {
+		return errors.New(h.Message)
+	}
+	// 此处举行具体的逻辑判断，然后返回即可
+
+	return nil
+
+}
+
 // 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client

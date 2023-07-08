@@ -860,21 +860,44 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 
 	//var msg map[string]interface{}
-	getTime := time.Now().Format("15:04")
-	time := strings.Split(getTime, ":")
+	getTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
+	startHour := ""
+	startMin := ""
+	if 0 <= utils.StartHour && utils.StartHour < 10 {
+		startHour = "0" + strconv.Itoa(utils.StartHour)
+	} else {
+		startHour = strconv.Itoa(utils.StartHour)
+	}
+	if 0 <= utils.StartMin && utils.StartMin < 10 {
+		startMin = "0" + strconv.Itoa(utils.StartMin)
+	} else {
+		startMin = strconv.Itoa(utils.StartMin)
+	}
+	startTime := startHour + ":" + startMin
+	startTimer, _ := time.Parse("15:04", startTime)
+	endHour := ""
+	endMin := ""
+	if 0 <= utils.EndHour && utils.EndHour < 10 {
+		endHour = "0" + strconv.Itoa(utils.EndHour)
+	} else {
+		endHour = strconv.Itoa(utils.EndHour)
+	}
+	if 0 <= utils.EndMin && utils.EndMin < 10 {
+		endMin = "0" + strconv.Itoa(utils.EndMin)
+	} else {
+		endMin = strconv.Itoa(utils.EndMin)
+	}
+	endTime := endHour + ":" + endMin
+	endTimer, _ := time.Parse("15:04", endTime)
 	var msg map[string]interface{}
-	hour, _ := strconv.Atoi(time[0])
-	min, _ := strconv.Atoi(time[1])
-	fmt.Println(hour, min)
-
-	if hour <= utils.StartHour && min < utils.StartMin {
+	if getTime.Before(startTimer) {
 		msg = map[string]interface{}{
 			"msgtype": "text",
 			"text": map[string]string{
-				"content": fmt.Sprintf("未到报备时间，请%s:%s后重新报备", strconv.Itoa(utils.StartHour), strconv.Itoa(utils.StartMin)),
+				"content": fmt.Sprintf("未到报备时间，请%s后重新报备", startTimer.Format("15:04")),
 			},
 		}
-	} else if hour >= utils.EndHour && min >= utils.EndMin {
+	} else if getTime.After(endTimer) {
 		return
 	} else {
 		//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
@@ -902,6 +925,21 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 			"atUserIds": []string{p.SenderStaffId},
 		}
 	}
+
+	//timerr := strings.Split(getTime, ":")
+	//
+	//var msg map[string]interface{}
+	//hour, _ := strconv.Atoi(timerr[0])
+	//min, _ := strconv.Atoi(time[1])
+	//fmt.Println(hour, min)
+	//
+	//if (hour == utils.StartHour && min < utils.StartMin) || hour < utils.StartHour {
+	//
+	//} else if hour >= utils.EndHour && min >= utils.EndMin {
+	//	return
+	//} else {
+	//
+	//}
 
 	b, err := json.Marshal(msg)
 	if err != nil {

@@ -845,7 +845,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 						continue
 					}
 					leaveStatusList = append(leaveStatusList, leaveStatusListSection...)
-
 					hasMore = HasMore
 					if hasMore {
 						Offset = Offset + 1
@@ -929,13 +928,23 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
 				continue
 			}
+			//查数据库，找到该部门的负责人封装到userids中
+			var userids []string
+			global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, DeptId).Select("ding_user_user_id").Find(&userids)
 			//将考勤数据发给部门负责人以及管理人员
-
-			//(DingRobot{}).CommonSingleChat()
+			p := &ParamChat{
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   userids,
+				MsgKey:    "sampleText",
+				MsgParam:  message,
+			}
+			err = (&DingRobot{}).ChatSendMessage(p)
+			if err != nil {
+				zap.L().Error("向部门负责人发送考勤信息失败", zap.Error(err))
+			}
 			// 向各部门根据请假次数排序的集合中 设置key
 			// 获取此次考勤该部门的请假次数
 			zap.L().Info(fmt.Sprintf("部门：%v开始统计请假迟到信息到redis中", DeptDetail.Name))
-
 			leaveCount := len(result["Leave"])
 			// 该部门的总人数
 			var deptNumbers float64 = float64(len(deptAttendanceUser[DeptId]))

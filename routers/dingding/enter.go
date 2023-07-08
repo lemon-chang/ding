@@ -14,16 +14,16 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.GET("ImportDeptData", ding.ImportDeptData)                       // 递归获取部门列表存储到数据库
 		Dept.GET("getSubDepartmentListById", ding.GetSubDepartmentListByID)   // 官方接口获取子部门
 		Dept.GET("getSubDepartmentListById2", ding.GetSubDepartmentListByID2) // 从数据库中一层一层的取出部门
-		Dept.GET("getDeptListFromMysql", ding.GetDeptListFromMysql)
-		Dept.PUT("updateDept", ding.UpdateDept)     // 更新部门信息，用来设置机器人token，各种开关
-		Dept.PUT("updateSchool", ding.UpdateSchool) //更新部门是否在校信息
+		Dept.GET("getDeptListFromMysql", ding.GetDeptListFromMysql)           //从数据库中取出部门信息，包括该部门的负责人
+		Dept.PUT("updateDept", ding.UpdateDept)                               // 更新部门信息，用来设置机器人token，各种开关
+		Dept.PUT("updateSchool", ding.UpdateSchool)                           //更新部门是否在校信息
+		Dept.PUT("setDeptManager", ding.SetDeptManager)                       //更新部门负责人
 	}
 
 	AttendanceGroup := System.Group("attendanceGroup")
 	{
-		AttendanceGroup.GET("ImportAttendanceGroupData", ding.ImportAttendanceGroupData) //将考勤组信息导入到数据库中
-		AttendanceGroup.PUT("updateAttendanceGroup", ding.UpdateAttendanceGroup)         //考勤组开关
-
+		AttendanceGroup.GET("ImportAttendanceGroupData", ding.ImportAttendanceGroupData)    //将考勤组信息导入到数据库中
+		AttendanceGroup.PUT("updateAttendanceGroup", ding.UpdateAttendanceGroup)            //考勤组开关
 		AttendanceGroup.GET("GetAttendanceGroupList", ding.GetAttendanceGroupListFromMysql) //批量获取考勤组
 	}
 	LeaveGroup := System.Group("leave")
@@ -65,6 +65,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.PUT("editTaskContent", ding.EditTaskContent)      //编辑定时任务的内容
 		Robot.GET("/getTaskDetail", ding.GetTaskDetail)         //获取定时任务详情
 		Robot.GET("/getAllPublicRobot", ding.GetAllPublicRobot) //获取所有的公共机器人
+		Robot.GET("a", ding.B)
 
 		Robot.POST("singleChat", ding.SingleChat)
 	}

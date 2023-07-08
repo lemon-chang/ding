@@ -16,7 +16,7 @@ import (
 //const RobotToken = "11e07612181c7b596e49e80d26cb368318a2662c0f6affd453ccfd3d906c2431"
 
 func getMysqlToken() (token string) {
-	err := global.GLOAB_DB1.Table("configs").Where("key = ?", "token").Select("value").Scan(&token).Error
+	err := global.GLOAB_DB1.Table("configs").Where("k = ?", "token").Select("v").Scan(&token).Error
 	if err != nil {
 		zap.L().Error("通过mysql查询机器人token错误", zap.Error(err))
 	}

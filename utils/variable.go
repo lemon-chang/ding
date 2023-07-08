@@ -14,10 +14,10 @@ var (
 	AttendanceMorningTime, _   = time.Parse("15:04:05", "11:30:00") //上午发送考勤开始时间
 	AttendanceAfternoonTime, _ = time.Parse("15:04:05", "17:30:00") //上午发送考勤开始时间
 	AttendanceEveningTime, _   = time.Parse("15:04:05", "23:59:59") //上午发送考勤开始时间
-	StartHour                  = 17
-	StartMin                   = 33
-	RemindHour                 = 17
-	RemindMin                  = 35
-	EndHour                    = 17
-	EndMin                     = 38
+	StartHour                  = 22
+	StartMin                   = 00
+	RemindHour                 = 22
+	RemindMin                  = 20
+	EndHour                    = 22
+	EndMin                     = 30
 )

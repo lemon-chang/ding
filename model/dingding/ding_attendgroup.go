@@ -693,15 +693,12 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
 				continue
 			}
-<<<<<<< HEAD
 			//在此处使用bitmap来实现存储功能
 			err = BitMapHandle(result, curTime, startWeek, week)
 			if err != nil {
 				zap.L().Error("使用bitmap存储每个人的记录失败", zap.Error(err))
 			}
-=======
 			//将考勤数据发给部门负责人以及管理人员
->>>>>>> 3fbe10b78b67a2583661fdb2c02eb996a95817e4
 
 			//(DingRobot{}).CommonSingleChat()
 			// 向各部门根据请假次数排序的集合中 设置key

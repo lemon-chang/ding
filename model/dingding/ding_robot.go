@@ -844,7 +844,7 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 		msg = map[string]interface{}{
 			"msgtype": "text",
 			"text": map[string]string{
-				"content": "收到",
+				"content": "收到,学习辛苦了[送花花]",
 			},
 		}
 		msg["at"] = map[string][]string{

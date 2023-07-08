@@ -123,9 +123,9 @@ func main() {
 	}
 
 	// 初始化kafka
-	if err = initialize.KafkaInit(); err != nil {
-		zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
-	}
+	//if err = initialize.KafkaInit(); err != nil {
+	//	zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
+	//}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

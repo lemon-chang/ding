@@ -108,7 +108,7 @@ func main() {
 	} //晚上10:20@未到宿舍的人员
 	err = initialize.CronSendThree()
 	if err != nil {
-		zap.L().Error("关鑫鹏22：35定时任务发送失败，", zap.Error(err))
+		zap.L().Error("关鑫鹏22：30定时任务发送失败，", zap.Error(err))
 	} //晚上10：35统计结果发给gxp
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
@@ -133,7 +133,6 @@ func main() {
 			return
 		}
 	}()
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

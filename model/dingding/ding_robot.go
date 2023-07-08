@@ -841,7 +841,6 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 				zap.L().Error("发送其他信息，存入数据库失败", zap.Error(err))
 			}
 		}
-
 		msg = map[string]interface{}{
 			"msgtype": "text",
 			"text": map[string]string{
@@ -852,7 +851,6 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 			"atUserIds": []string{p.SenderStaffId},
 		}
 	}
-
 	//timerr := strings.Split(getTime, ":")
 	//
 	//var msg map[string]interface{}

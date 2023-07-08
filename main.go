@@ -45,6 +45,11 @@ func main() {
 		zap.L().Error(fmt.Sprintf("init mysql failed ,err:%v\n", err))
 		return
 	}
+	if err := mysql.GxpInit(settings.Conf.MySQLConfig); err != nil {
+		fmt.Printf("init mysql failed ,err:%v\n", err)
+		zap.L().Error(fmt.Sprintf("init mysql failed ,err:%v\n", err))
+		return
+	}
 	//自动建表
 	//err = initialize.RegisterTables(global.GLOAB_DB)
 	if err != nil {
@@ -87,6 +92,24 @@ func main() {
 	if err != nil {
 		zap.L().Error("SendLeetCode init fail...")
 	}
+	//将通信201的数据存入数据库
+	//x := dingding.TongXinUser{}
+	//err = x.ImportUserToMysql()
+	//if err != nil {
+	//	fmt.Println("导入人员失败")
+	//}
+	err = initialize.CronSendOne()
+	if err != nil {
+		zap.L().Error("关鑫鹏22：00定时任务发送失败，", zap.Error(err))
+	} //晚上10点的定时提醒
+	err = initialize.CronSendTwo()
+	if err != nil {
+		zap.L().Error("关鑫鹏22：20定时任务发送失败，", zap.Error(err))
+	} //晚上10:20@未到宿舍的人员
+	err = initialize.CronSendThree()
+	if err != nil {
+		zap.L().Error("关鑫鹏22：30定时任务发送失败，", zap.Error(err))
+	} //晚上10：35统计结果发给gxp
 	//err = initialize.JianBlogByRobot()
 	//if err != nil {
 	//	zap.L().Error("启动爬虫爬取定时任务失败", zap.Error(err))
@@ -110,7 +133,6 @@ func main() {
 			return
 		}
 	}()
-
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

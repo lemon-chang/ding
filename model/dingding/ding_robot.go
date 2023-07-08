@@ -126,6 +126,73 @@ type MySendParam struct {
 	UserIds   []string `json:"userIds"`
 }
 
+func (r *DingRobot) GxpSingleChat(p *ParamChat) (err error) {
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	URL := "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend"
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+	//此处是post请求的请求题，我们先初始化一个对象
+	var b MySendParam
+	b.RobotCode = p.RobotCode
+	b.MsgKey = p.MsgKey
+	b.RobotCode = p.RobotCode
+	b.UserIds = p.UserIds
+	b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
+
+	//然后把结构体对象序列化一下
+	bodymarshal, err := json.Marshal(&b)
+	if err != nil {
+		return nil
+	}
+	//再处理一下
+	reqBody := strings.NewReader(string(bodymarshal))
+	//然后就可以放入具体的request中的
+	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
+	if err != nil {
+		return nil
+	}
+	token, err := r.DingToken.GxpGetAccessToken()
+	if err != nil {
+		return err
+	}
+	request.Header.Set("x-acs-dingtalk-access-token", token)
+	request.Header.Set("Content-Type", "application/json")
+	resp, err = client.Do(request)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return nil
+	}
+	h := struct {
+		Code                      string   `json:"code"`
+		Message                   string   `json:"message"`
+		ProcessQueryKey           string   `json:"processQueryKey"`
+		InvalidStaffIdList        []string `json:"invalidStaffIdList"`
+		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
+	}{}
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &h)
+	if err != nil {
+		return nil
+	}
+	if h.Code != "" {
+		return errors.New(h.Message)
+	}
+	// 此处举行具体的逻辑判断，然后返回即可
+
+	return nil
+
+}
+
 // 钉钉机器人单聊
 func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	var client *http.Client
@@ -699,6 +766,107 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 			"atUserIds": []string{p.SenderStaffId},
 		}
 	}
+
+	b, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	var resp *http.Response
+
+	resp, err = http.Post(p.SessionWebhook, "application/json", bytes.NewBuffer(b))
+
+	defer resp.Body.Close()
+	date, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(date)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
+
+	//var msg map[string]interface{}
+	getTime, _ := time.Parse("15:04", time.Now().Format("15:04"))
+	startHour := ""
+	startMin := ""
+	if 0 <= utils.StartHour && utils.StartHour < 10 {
+		startHour = "0" + strconv.Itoa(utils.StartHour)
+	} else {
+		startHour = strconv.Itoa(utils.StartHour)
+	}
+	if 0 <= utils.StartMin && utils.StartMin < 10 {
+		startMin = "0" + strconv.Itoa(utils.StartMin)
+	} else {
+		startMin = strconv.Itoa(utils.StartMin)
+	}
+	startTime := startHour + ":" + startMin
+	startTimer, _ := time.Parse("15:04", startTime)
+	endHour := ""
+	endMin := ""
+	if 0 <= utils.EndHour && utils.EndHour < 10 {
+		endHour = "0" + strconv.Itoa(utils.EndHour)
+	} else {
+		endHour = strconv.Itoa(utils.EndHour)
+	}
+	if 0 <= utils.EndMin && utils.EndMin < 10 {
+		endMin = "0" + strconv.Itoa(utils.EndMin)
+	} else {
+		endMin = strconv.Itoa(utils.EndMin)
+	}
+	endTime := endHour + ":" + endMin
+	endTimer, _ := time.Parse("15:04", endTime)
+	var msg map[string]interface{}
+	if getTime.Before(startTimer) {
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": fmt.Sprintf("未到报备时间，请%s后重新报备", startTimer.Format("15:04")),
+			},
+		}
+	} else if getTime.After(endTimer) {
+		return
+	} else {
+		//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+		if strings.Contains(p.Text.Content, "已到宿舍") {
+			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
+			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
+			if err != nil {
+				zap.L().Error("发送到宿舍后，存入数据库失败", zap.Error(err))
+			}
+		} else {
+			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: false, Content: p.Text.Content}
+			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
+			if err != nil {
+				zap.L().Error("发送其他信息，存入数据库失败", zap.Error(err))
+			}
+		}
+
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": "收到",
+			},
+		}
+		msg["at"] = map[string][]string{
+			"atUserIds": []string{p.SenderStaffId},
+		}
+	}
+
+	//timerr := strings.Split(getTime, ":")
+	//
+	//var msg map[string]interface{}
+	//hour, _ := strconv.Atoi(timerr[0])
+	//min, _ := strconv.Atoi(time[1])
+	//fmt.Println(hour, min)
+	//
+	//if (hour == utils.StartHour && min < utils.StartMin) || hour < utils.StartHour {
+	//
+	//} else if hour >= utils.EndHour && min >= utils.EndMin {
+	//	return
+	//} else {
+	//
+	//}
 
 	b, err := json.Marshal(msg)
 	if err != nil {

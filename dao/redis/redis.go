@@ -13,6 +13,8 @@ const (
 	Perfix     = "ding:"
 	ActiveTask = "activeTask:" //活跃任务部分
 	Attendance = "attendance:" //考勤状态部分
+	User       = "user:"
+	UserSign   = User + "sign:"
 	LeetCode   = "leetCode:"
 )
 

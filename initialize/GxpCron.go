@@ -4,6 +4,7 @@ import (
 	"ding/global"
 	"ding/model/common"
 	"ding/model/dingding"
+	"ding/utils"
 	"fmt"
 	"go.uber.org/zap"
 	"strconv"
@@ -15,12 +16,12 @@ import (
 const RobotToken = "11e07612181c7b596e49e80d26cb368318a2662c0f6affd453ccfd3d906c2431"
 
 func CronSendOne() (err error) {
-	spec := "0 0 16 ? * * "
+	spec := fmt.Sprintf("0 %v %v ? * * ", utils.StartMin, utils.StartHour)
+
 	//开启定时器，定时每晚10：00(cron定时任务的创建)
 	entryID, err := global.GLOAB_CORN.AddFunc(spec, func() {
 		message := "大家现在到宿舍的话就可以开始报备了[爱意]"
 		fmt.Println(message)
-
 		zap.L().Info("message编辑完成，开始封装发送信息参数")
 		p := &dingding.ParamCronTask{
 			MsgText: &common.MsgText{
@@ -47,7 +48,7 @@ func CronSendOne() (err error) {
 }
 
 func CronSendTwo() (err error) {
-	spec := "0 05 16 ? * * "
+	spec := fmt.Sprintf("0 %v %v ? * * ", utils.RemindMin, utils.RemindHour)
 	//开启定时器，定时22：20提醒未到宿舍人员(cron定时任务的创建)
 	entryID, err := global.GLOAB_CORN.AddFunc(spec, func() {
 		day := time.Now().Format("2006-01-02")
@@ -98,7 +99,7 @@ func CronSendTwo() (err error) {
 
 // CronSendThree 晚上10：35统计结果发给gxp
 func CronSendThree() (err error) {
-	spec := "0 10 16 ? * * "
+	spec := fmt.Sprintf("0 %v %v ? * * ", utils.EndMin, utils.EndHour)
 	//开启定时器，定时22：30发送私聊以及群消息
 	entryID, err := global.GLOAB_CORN.AddFunc(spec, func() {
 		day := time.Now().Format("2006-01-02")
@@ -113,13 +114,16 @@ func CronSendThree() (err error) {
 				atRobotUsers = append(atRobotUsers, user)
 			}
 		}
-		message := "应留校" + strconv.Itoa(len(AllUsers)) + "人\n已到寝\n"
+		message := "应留校" + strconv.Itoa(len(AllUsers)) + "人\n已到寝"
 		var atRoomNum int
 		var atRoomUsers []dingding.TongXinUser
+		var notAtRoomUsers []dingding.TongXinUser
 		for _, atRobotUser := range atRobotUsers {
-			if strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到宿舍") {
+			if strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到宿舍") || strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到寝室") {
 				atRoomUsers = append(atRoomUsers, atRobotUser)
 				atRoomNum++
+			} else {
+				notAtRoomUsers = append(notAtRoomUsers, atRobotUser)
 			}
 		}
 		//var numbers = len(atRobotUsers)
@@ -127,11 +131,9 @@ func CronSendThree() (err error) {
 		//for _, atRobotUser := range atRobotUsers {
 		//	message += atRobotUser.Name + " "
 		//}
-		message += "\n特殊原因：\n"
-		for _, atRobotUser := range atRobotUsers {
-			if !(strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到宿舍")) {
-				message += atRobotUser.Name + ":" + atRobotUser.Records[len(atRobotUser.Records)-1].Content
-			}
+		message += "特殊原因：\n"
+		for _, notAtRoomUser := range notAtRoomUsers {
+			message += notAtRoomUser.Name + ":" + notAtRoomUser.Records[len(notAtRoomUser.Records)-1].Content + "\n"
 		}
 		message += "\n未报备：\n"
 		for _, notAtRobotUser := range notAtRobotUsers {
@@ -146,7 +148,7 @@ func CronSendThree() (err error) {
 		//关鑫鹏个人的userid
 		//var userId = []string{"01144160064621256183"}
 		//闫佳鹏的userid
-		var userId = []string{"413550622937553255"}
+		var userId = []string{"413550622937553255", "01144160064621256183"}
 		//私聊消息
 		p := &dingding.ParamChat{
 			RobotCode: "dingpi0onbdchuv5anhn",

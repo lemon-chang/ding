@@ -856,33 +856,53 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	}
 	return nil
 }
+
 func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
+
 	//var msg map[string]interface{}
-	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
-	if strings.Contains(p.Text.Content, "已到宿舍") {
-		r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
-		err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
-		if err != nil {
-			zap.L().Error("发送到宿舍后，存入数据库失败", zap.Error(err))
+	getTime := time.Now().Format("15:04")
+	time := strings.Split(getTime, ":")
+	var msg map[string]interface{}
+	hour, _ := strconv.Atoi(time[0])
+	min, _ := strconv.Atoi(time[1])
+	fmt.Println(hour, min)
+
+	if hour <= utils.StartHour && min < utils.StartMin {
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": fmt.Sprintf("未到报备时间，请%s:%s后重新报备", strconv.Itoa(utils.StartHour), strconv.Itoa(utils.StartMin)),
+			},
 		}
+	} else if hour >= utils.EndHour && min >= utils.EndMin {
+		return
 	} else {
-		r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: false, Content: p.Text.Content}
-		err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
-		if err != nil {
-			zap.L().Error("发送其他信息，存入数据库失败", zap.Error(err))
+		//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
+		if strings.Contains(p.Text.Content, "已到宿舍") {
+			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
+			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
+			if err != nil {
+				zap.L().Error("发送到宿舍后，存入数据库失败", zap.Error(err))
+			}
+		} else {
+			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: false, Content: p.Text.Content}
+			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
+			if err != nil {
+				zap.L().Error("发送其他信息，存入数据库失败", zap.Error(err))
+			}
+		}
+
+		msg = map[string]interface{}{
+			"msgtype": "text",
+			"text": map[string]string{
+				"content": "收到",
+			},
+		}
+		msg["at"] = map[string][]string{
+			"atUserIds": []string{p.SenderStaffId},
 		}
 	}
 
-	var msg map[string]interface{}
-	msg = map[string]interface{}{
-		"msgtype": "text",
-		"text": map[string]string{
-			"content": "收到",
-		},
-	}
-	msg["at"] = map[string][]string{
-		"atUserIds": []string{p.SenderStaffId},
-	}
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err

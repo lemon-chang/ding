@@ -126,7 +126,7 @@ func CronSendThree() (err error) {
 		var atRoomUsers []dingding.TongXinUser
 		var notAtRoomUsers []dingding.TongXinUser
 		for _, atRobotUser := range atRobotUsers {
-			if strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到宿舍") || strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到寝室") {
+			if strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "宿舍") || strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "寝室") {
 				atRoomUsers = append(atRoomUsers, atRobotUser)
 				atRoomNum++
 			} else {

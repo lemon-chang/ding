@@ -16,7 +16,7 @@ import (
 //const RobotToken = "11e07612181c7b596e49e80d26cb368318a2662c0f6affd453ccfd3d906c2431"
 
 func getMysqlToken() (token string) {
-	err := global.GLOAB_DB1.Table("configs").Where("key = ?", "token").Select("value").Scan(&token).Error
+	err := global.GLOAB_DB1.Table("configs").Where("k = ?", "token").Select("v").Scan(&token).Error
 	if err != nil {
 		zap.L().Error("通过mysql查询机器人token错误", zap.Error(err))
 	}
@@ -126,7 +126,7 @@ func CronSendThree() (err error) {
 		var atRoomUsers []dingding.TongXinUser
 		var notAtRoomUsers []dingding.TongXinUser
 		for _, atRobotUser := range atRobotUsers {
-			if strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到宿舍") || strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "已到寝室") {
+			if strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "宿舍") || strings.Contains(atRobotUser.Records[len(atRobotUser.Records)-1].Content, "寝室") {
 				atRoomUsers = append(atRoomUsers, atRobotUser)
 				atRoomNum++
 			} else {

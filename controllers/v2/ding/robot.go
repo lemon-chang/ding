@@ -272,10 +272,8 @@ func GetRobots(c *gin.Context) {
 		return
 	}
 
-	response.ResponseSuccess(c, gin.H{
-		"response": robots,
-	})
-	return
+	response.ResponseSuccess(c, robots)
+	//return
 }
 func UpdateRobot(c *gin.Context) {
 	var p dingding.ParamUpdateRobot

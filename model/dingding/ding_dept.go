@@ -42,6 +42,12 @@ type UserDept struct {
 	DingUserUserID string
 	DingDeptDeptID string
 	IsResponsible  bool
+	Deleted        gorm.DeletedAt
+}
+
+//自定义表名建表
+func (UserDept) user_dept() string {
+	return "user_dept"
 }
 
 //获取用户的考勤信息

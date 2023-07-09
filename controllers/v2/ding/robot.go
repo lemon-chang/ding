@@ -465,6 +465,27 @@ func ReStartTask(c *gin.Context) {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
 }
+func B(c *gin.Context) {
+	var users []dingding.DingUser
+	var userids []string
+	//global.GLOAB_DB.Model(&dingding.DingDept{}).Preload("")
+	global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, 546623914).Select("ding_user_user_id").Find(&userids)
+	global.GLOAB_DB.Model(&dingding.DingUser{}).Where("user_id IN ?", userids).Find(&users)
+	response.ResponseSuccess(c, users)
+	//var userids []string
+	//deptid := 546623914
+	//global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, deptid).Select("ding_user_user_id").Find(&userids)
+	//p := &dingding.ParamChat{
+	//	RobotCode: "dingepndjqy7etanalhi",
+	//	UserIds:   userids,
+	//	MsgKey:    "sampleText",
+	//	MsgParam:  "测试单聊消息的发送",
+	//}
+	//err := (&dingding.DingRobot{}).ChatSendMessage(p)
+	//if err != nil {
+	//	fmt.Println("wochucuol:", err)
+	//}
+}
 
 //修改定时任务的内容
 func EditTaskContent(c *gin.Context) {

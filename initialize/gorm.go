@@ -10,6 +10,7 @@ import (
 )
 
 func RegisterTables(db *gorm.DB) (err error) {
+	err = db.AutoMigrate(&dingding2.UserDept{})
 	err = db.AutoMigrate(&dingding2.DingUser{})
 	err = db.AutoMigrate(&dingding2.DingRobot{})
 	err = db.AutoMigrate(&dingding2.DingDept{})

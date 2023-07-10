@@ -55,7 +55,7 @@ func Setup(mode string) *gin.Engine {
 		Ding.POST("getLeetCode", ding.GetLeetCode)
 	}
 
-	//Ding.Use(middlewares.JWTAuthMiddleware())
+	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)

@@ -602,6 +602,30 @@ func SubscribeTo(c *gin.Context) {
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
 }
+
+type ParamLeetCodeAddr struct {
+	Name         string `json:"name"`
+	LeetCodeAddr string `json:"leetCodeAddr"`
+}
+
+func GetLeetCode(c *gin.Context) {
+	var leetcode ParamLeetCodeAddr
+	err := c.ShouldBindJSON(&leetcode)
+	if err != nil {
+		zap.L().Error("LeetCodeResp", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	fmt.Println(leetcode)
+	err = global.GLOAB_DB.Table("ding_users").Where("name = ?", leetcode.Name).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
+	if err != nil {
+		zap.L().Error("存入数据库失败", zap.Error(err))
+		response.FailWithMessage("存入数据库失败", c)
+		return
+	}
+	response.ResponseSuccess(c, "成功")
+}
+
 func RobotAt(c *gin.Context) {
 	var resp *dingding.RobotAtResp
 	if err := c.ShouldBindJSON(&resp); err != nil {

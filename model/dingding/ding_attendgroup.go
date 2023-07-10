@@ -539,7 +539,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 13,33,51 8,17,21 * * ?"
+	//spec = "00 13,33,33 8,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -655,11 +655,11 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
 				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
 			}
-			if week == 7 && curTime.Duration == 3 {
-				zap.L().Info("周日晚上跳过")
-				//直接所有部门都不再发送了
-				return
-			}
+			//if week == 7 && curTime.Duration == 3 {
+			//	zap.L().Info("周日晚上跳过")
+			//	//直接所有部门都不再发送了
+			//	return
+			//}
 			if week == 1 && curTime.Duration == 1 && DeptDetail.DeptId == 440395094 {
 				zap.L().Info("周一上午三期社招跳过")
 				//跳过三期校招，继续循环其他部门

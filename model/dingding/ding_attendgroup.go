@@ -539,7 +539,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 09,20,27 8,14,22 * * ?"
+	spec = "00 09,35,27 8,14,22 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -688,18 +688,29 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-			if err != nil {
-				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-				continue
-			}
+			//err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+			//if err != nil {
+			//	zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+			//	continue
+			//}
 			//在此处使用bitmap来实现存储功能
 			err = BitMapHandle(result, curTime, startWeek, week)
 			if err != nil {
 				zap.L().Error("使用bitmap存储每个人的记录失败", zap.Error(err))
 			}
 			//将考勤数据发给部门负责人以及管理人员
-
+			var userids []string
+			global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, DeptId).Select("ding_user_user_id").Find(&userids)
+			p := &ParamChat{
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   userids,
+				MsgKey:    "sampleText",
+				MsgParam:  message,
+			}
+			err = (&DingRobot{}).ChatSendMessage(p)
+			if err != nil {
+				zap.L().Error("发送至部门负责人失败", zap.Error(err))
+			}
 			//(DingRobot{}).CommonSingleChat()
 			// 向各部门根据请假次数排序的集合中 设置key
 			// 获取此次考勤该部门的请假次数

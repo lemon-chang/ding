@@ -828,7 +828,7 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 		return
 	} else {
 		//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
-		if strings.Contains(p.Text.Content, "已到宿舍") {
+		if strings.Contains(p.Text.Content, "宿舍") || strings.Contains(p.Text.Content, "寝室") {
 			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
 			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
 			if err != nil {
@@ -844,7 +844,7 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 		msg = map[string]interface{}{
 			"msgtype": "text",
 			"text": map[string]string{
-				"content": "收到",
+				"content": "收到,学习辛苦了[送花花]",
 			},
 		}
 		msg["at"] = map[string][]string{

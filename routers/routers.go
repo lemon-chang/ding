@@ -53,7 +53,7 @@ func Setup(mode string) *gin.Engine {
 		Ding.POST("subscribeTo", ding.SubscribeTo)
 	}
 
-	//Ding.Use(middlewares.JWTAuthMiddleware())
+	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)

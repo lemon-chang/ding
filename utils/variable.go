@@ -19,5 +19,5 @@ var (
 	RemindHour                 = 22
 	RemindMin                  = 20
 	EndHour                    = 22
-	EndMin                     = 30
+	EndMin                     = 35
 )

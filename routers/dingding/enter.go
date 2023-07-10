@@ -45,6 +45,7 @@ func SetupDing(System *gin.RouterGroup) {
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
 		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
+		User.GET("getAllTask", ding.GetAllTask)                                //获取所有定时任务，包括暂停的任务
 		User.GET("/getActiveTask", ding.GetAllActiveTask)                      //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
 		User.POST("/MakeupSign", ding.MakeupSign)                              //为用户补签到并返回用户联系签到次数
 		User.GET("/getWeekConsecutiveSignNum", ding.GetWeekConsecutiveSignNum) //获取用户当周连续签到次数

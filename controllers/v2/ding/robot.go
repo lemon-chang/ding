@@ -262,6 +262,8 @@ func RemoveRobot(c *gin.Context) {
 func GetRobots(c *gin.Context) {
 	uid, err := global.GetCurrentUserId(c)
 	if err != nil {
+		zap.L().Error("获取uid失败", zap.Error(err))
+		response.FailWithMessage("身份获取失败", c)
 		return
 	}
 	//查询到所有的机器人

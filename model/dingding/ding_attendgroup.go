@@ -688,11 +688,11 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			//err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-			//if err != nil {
-			//	zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-			//	continue
-			//}
+			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+			if err != nil {
+				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+				continue
+			}
 			//在此处使用bitmap来实现存储功能
 			err = BitMapHandle(result, curTime, startWeek, week)
 			if err != nil {

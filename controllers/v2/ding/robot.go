@@ -535,6 +535,19 @@ func GetAllPublicRobot(c *gin.Context) {
 		response.ResponseSuccess(c, robots)
 	}
 }
+func AlterResultByRobot(c *gin.Context) {
+	var p *dingding.ParamAlterResultByRobot
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("AlterResultByRobot参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err := dingding.AlterResultByRobot(p)
+	if err != nil {
+		zap.L().Error("AlterResultByRobot失败", zap.Error(err))
+		response.FailWithMessage("更新失败", c)
+	}
+	response.ResponseSuccess(c, "更新成功")
+}
 
 // 进行单聊
 func SingleChat(c *gin.Context) {

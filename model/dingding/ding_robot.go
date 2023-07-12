@@ -1310,6 +1310,11 @@ func GetAllPublicRobot() (robot []DingRobot, err error) {
 	return robot, err
 }
 
+func AlterResultByRobot(p *ParamAlterResultByRobot) (err error) {
+	err = global.GLOAB_DB.Table("ding_depts").Where("dept_id", p.DeptId).Update("robot_token", p.Token).Error
+	return
+}
+
 type result struct {
 	ChatId string `json:"chatId"`
 	Title  string `json:"title"`

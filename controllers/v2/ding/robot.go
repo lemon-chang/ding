@@ -528,8 +528,10 @@ func GetAllPublicRobot(c *gin.Context) {
 	if err != nil {
 		zap.L().Error("查询所有公共机器人失败", zap.Error(err))
 		response.FailWithMessage("获取机器人失败", c)
+		return
 	} else if len(robots) == 0 {
 		response.FailWithMessage("没有公共机器人", c)
+		return
 	} else {
 		//返回机器人的基本信息
 		response.ResponseSuccess(c, robots)
@@ -540,11 +542,13 @@ func AlterResultByRobot(c *gin.Context) {
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("AlterResultByRobot参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
+		return
 	}
 	err := dingding.AlterResultByRobot(p)
 	if err != nil {
 		zap.L().Error("AlterResultByRobot失败", zap.Error(err))
 		response.FailWithMessage("更新失败", c)
+		return
 	}
 	response.ResponseSuccess(c, "更新成功")
 }

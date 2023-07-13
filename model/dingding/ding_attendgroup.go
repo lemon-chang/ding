@@ -838,6 +838,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	min = min[:len(min)-1]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
 	spec := "00 " + min + " " + hour + " * * ?"
+	spec = "00 13,10,33 8,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -969,19 +970,18 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 			//一个部门的考勤结束了，开始封装信息，发送考勤消息
 			//message := MessageHandle(curTime, DeptDetail, result)
 			zap.L().Info("message编辑完成，开始封装发送信息参数")
-			late = append(late, "43605942651709855765")
 			//在此处使用bitmap来实现存储功能
 			//将考勤数据发给部门负责人以及管理人员
-			p := &ParamChat{
-				RobotCode: "dingepndjqy7etanalhi",
-				UserIds:   late,
-				MsgKey:    "sampleText",
-				MsgParam:  "还有五分钟上班，你还没有打卡",
-			}
-			err = (&DingRobot{}).ChatSendMessage(p)
-			if err != nil {
-				zap.L().Error("发送至部门负责人失败", zap.Error(err))
-			}
+			//p := &ParamChat{
+			//	RobotCode: "dingepndjqy7etanalhi",
+			//	UserIds:   late,
+			//	MsgKey:    "sampleText",
+			//	MsgParam:  "还有五分钟上班，你还没有打卡",
+			//}
+			//err = (&DingRobot{}).ChatSendMessage(p)
+			//if err != nil {
+			//	zap.L().Error("发送至部门负责人失败", zap.Error(err))
+			//}
 		}
 		return
 	}
@@ -1077,7 +1077,7 @@ func LeaveLateHandle(NotRecordUserIdList []string, token string, result map[stri
 	limit := 20
 	Offset := 0
 	hasMore := true
-	late = make([]string, 0)
+	late = make([]string, len(NotRecordUserIdList))
 	//遍历每一个没有考勤记录的同学
 	for i := 0; i < len(NotRecordUserIdList); i++ {
 		var u DingUser

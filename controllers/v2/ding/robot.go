@@ -679,6 +679,8 @@ func RobotAt(c *gin.Context) {
 			if err != nil {
 				return
 			}
+		} else if str == "学习资源" {
+
 		} else {
 			err := dingRobot.RobotSendHelpCard(resp)
 			if err != nil {
@@ -707,5 +709,23 @@ func RobotAt(c *gin.Context) {
 			}
 		}
 	}
+	response.ResponseSuccess(c, "成功")
+}
+
+//上传个人资源
+func UpdatePersonalDate(c *gin.Context) {
+
+	response.ResponseSuccess(c, "成功")
+}
+
+//上传部门资源
+func UpdateDeptDate(c *gin.Context) {
+
+	response.ResponseSuccess(c, "成功")
+}
+
+//上传公共资源
+func UpdatePublicDate(c *gin.Context) {
+
 	response.ResponseSuccess(c, "成功")
 }

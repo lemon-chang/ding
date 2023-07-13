@@ -211,8 +211,9 @@ func UpdateSchool(c *gin.Context) {
 }
 
 type ParamSetDeptManager struct {
-	UserId         string `json:"user_id"`
-	DeptId         int    `json:"dept_id"`
+	OldUserId      string `json:"old_user_id"`
+	NewUserId      string `json:"new_user_id"`
+	DeptId         int    `json:"dept_id" `
 	Is_responsible bool   `json:"is_responsible"`
 }
 
@@ -225,13 +226,24 @@ func SetDeptManager(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-
-	//更新数据库中的字段
-	err := global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id = ? AND ding_dept_dept_id = ?", p.UserId, p.DeptId).Update("is_responsible", p.Is_responsible).Error
-	if err != nil {
-		zap.L().Error("更新管理员字段失败", zap.Error(err))
-		response.FailWithMessage("更新失败", c)
-		return
+	//判断一下是否是修该
+	if p.NewUserId != "" {
+		err := global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id = ? AND ding_dept_dept_id = ?", p.OldUserId, p.DeptId).Update("is_responsible", false).Error
+		err = global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id = ? AND ding_dept_dept_id = ?", p.NewUserId, p.DeptId).Update("is_responsible", true).Error
+		if err != nil {
+			zap.L().Error("更新管理员字段失败", zap.Error(err))
+			response.FailWithMessage("更新失败", c)
+			return
+		}
+		response.ResponseSuccess(c, "更新成功")
+	} else {
+		//更新数据库中的字段
+		err := global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id = ? AND ding_dept_dept_id = ?", p.OldUserId, p.DeptId).Update("is_responsible", p.Is_responsible).Error
+		if err != nil {
+			zap.L().Error("更新管理员字段失败", zap.Error(err))
+			response.FailWithMessage("更新失败", c)
+			return
+		}
+		response.ResponseSuccess(c, "更新成功")
 	}
-	response.ResponseSuccess(c, "更新成功")
 }

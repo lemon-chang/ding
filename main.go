@@ -110,23 +110,16 @@ func main() {
 	if err != nil {
 		zap.L().Error("关鑫鹏22：30定时任务发送失败，", zap.Error(err))
 	} //晚上10：35统计结果发给gxp
-	//err = initialize.JianBlogByRobot()
-	//if err != nil {
-	//	zap.L().Error("启动爬虫爬取定时任务失败", zap.Error(err))
-	//	return
-	//}
 	r := routers.Setup(settings.Conf.Mode)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", settings.Conf.App.Port),
 		Handler: r,
 	}
-
 	// 初始化kafka
 	//if err = initialize.KafkaInit(); err != nil {
 	//	zap.L().Error(fmt.Sprintf("kafka init failed ... ,err:%v\n", err))
 	//}
-
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("lister: %s\n", err)

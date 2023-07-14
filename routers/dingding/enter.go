@@ -18,7 +18,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.PUT("updateDept", ding.UpdateDept)                               // 更新部门信息，用来设置机器人token，各种开关
 		Dept.PUT("updateSchool", ding.UpdateSchool)                           //更新部门是否在校信息
 		Dept.PUT("setDeptManager", ding.SetDeptManager)                       //更新部门负责人
-		Dept.POST("getLeetCode", ding.GetLeetCode)                            //统计leetcode地址
+		Dept.GET("getUserByDeptid", ding.GetUserByDeptid)                     //根据部门id查询用户信息
 	}
 
 	AttendanceGroup := System.Group("attendanceGroup")

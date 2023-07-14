@@ -109,6 +109,6 @@ type text struct {
 }
 
 type ParamAlterResultByRobot struct {
-	DeptId string `json:"dept_id"`
+	DeptId int    `json:"dept_id"`
 	Token  string `json:"token"`
 }

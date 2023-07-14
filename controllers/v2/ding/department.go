@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 //递归获取部门列表（官方接口）
@@ -211,9 +212,10 @@ func UpdateSchool(c *gin.Context) {
 }
 
 type ParamSetDeptManager struct {
-	UserId         string `json:"user_id"`
-	DeptId         int    `json:"dept_id"`
-	Is_responsible bool   `json:"is_responsible"`
+	OldUserId      []string `json:"old_user_id"`
+	NewUserId      []string `json:"new_user_id"`
+	DeptId         int      `json:"dept_id" `
+	Is_responsible bool     `json:"is_responsible"`
 }
 
 //设置或修改部门负责人
@@ -225,13 +227,37 @@ func SetDeptManager(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 		return
 	}
+	//判断一下是否是修该
+	if len(p.NewUserId) > 0 {
+		err := global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.OldUserId, p.DeptId).Update("is_responsible", false).Error
+		err = global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.NewUserId, p.DeptId).Update("is_responsible", true).Error
+		if err != nil {
+			zap.L().Error("更新管理员字段失败", zap.Error(err))
+			response.FailWithMessage("更新失败", c)
+			return
+		}
+		response.ResponseSuccess(c, "更新成功")
+	} else {
+		//更新数据库中的字段
+		err := global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.OldUserId, p.DeptId).Update("is_responsible", p.Is_responsible).Error
+		if err != nil {
+			zap.L().Error("更新管理员字段失败", zap.Error(err))
+			response.FailWithMessage("更新失败", c)
+			return
+		}
+		response.ResponseSuccess(c, "更新成功")
+	}
+}
 
-	//更新数据库中的字段
-	err := global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id = ? AND ding_dept_dept_id = ?", p.UserId, p.DeptId).Update("is_responsible", p.Is_responsible).Error
+func GetUserByDeptid(c *gin.Context) {
+	deptId := c.Query("dept_id")
+	deptid, _ := strconv.Atoi(deptId)
+	var p *dingding2.DingDept
+	err := global.GLOAB_DB.Preload("UserList").Where("dept_id", deptid).First(&p).Error
 	if err != nil {
-		zap.L().Error("更新管理员字段失败", zap.Error(err))
-		response.FailWithMessage("更新失败", c)
+		zap.L().Error("查询列表错误", zap.Error(err))
+		response.FailWithMessage("查询列表错误", c)
 		return
 	}
-	response.ResponseSuccess(c, "更新成功")
+	response.OkWithDetailed(p, "查询成功", c)
 }

@@ -42,6 +42,8 @@ func Setup(mode string) *gin.Engine {
 	V3.POST("/robotAt", ding.RobotAt)
 
 	V3.POST("/gxpRobot", ding.GxpRobot)
+	//获取力扣地址
+	V3.POST("getLeetCode", ding.GetLeetCode)
 	System := r.Group("/api/system")
 	System.Use(middlewares.JWTAuthMiddleware())
 	system.SetupSystem(System)
@@ -51,8 +53,7 @@ func Setup(mode string) *gin.Engine {
 		Ding.POST("singleChat", ding.ChatHandler)
 		//放给钉钉用的接口
 		Ding.POST("subscribeTo", ding.SubscribeTo)
-		//获取力扣地址
-		Ding.POST("getLeetCode", ding.GetLeetCode)
+
 	}
 
 	Ding.Use(middlewares.JWTAuthMiddleware())

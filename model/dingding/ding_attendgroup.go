@@ -838,7 +838,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	min = min[:len(min)-1]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
 	spec := "00 " + min + " " + hour + " * * ?"
-	spec = "00 13,10,33 8,17,20 * * ?"
+	//spec = "00 13,10,33 8,17,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -899,6 +899,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 				zap.L().Error(fmt.Sprintf("通过部门id：%s获取部门详情失败，继续执行下一轮循环", DeptId), zap.Error(err))
 				continue
 			}
+			fmt.Println("当前部门名称", DeptDetail.Name)
 			//todo 判断一下此部门是否开启推送考勤
 			if DeptDetail.IsRobotAttendance == false || DeptDetail.RobotToken == "" {
 				zap.L().Error(fmt.Sprintf("该部门:%s为开启考勤或者机器人robotToken:%s是空，跳过", DeptDetail.Name, DeptDetail.RobotToken))
@@ -917,6 +918,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 			if err != nil {
 				zap.L().Error("根据部门用户id列表获取用户打卡情况失败", zap.Error(err))
 			}
+			fmt.Println("已经打卡的同学", attendanceList)
 			//遍历考勤数据,有课的优先级高于考勤
 			for _, attendance := range attendanceList {
 				flag := false
@@ -944,7 +946,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 				当前周、高级筛选中的部门，我们找到部门中有课的同学，然后跳过即可
 			*/
 			//处理没有考勤记录的同学，看看其是否有课，map传递的引用类型
-
+			fmt.Println("没有打卡的同学", NotRecordUserIdList)
 			if isInSchool {
 				//调用课表小程序接口，判断没有考勤数据的人是否请假了
 				//需要参数：当前周、周几、第几节课，NotRecordUserIdList
@@ -967,21 +969,17 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 			}
 			fmt.Println(late)
 			zap.L().Info("没有考勤数据的同学已经处理完成")
-			//一个部门的考勤结束了，开始封装信息，发送考勤消息
-			//message := MessageHandle(curTime, DeptDetail, result)
-			zap.L().Info("message编辑完成，开始封装发送信息参数")
-			//在此处使用bitmap来实现存储功能
 			//将考勤数据发给部门负责人以及管理人员
-			//p := &ParamChat{
-			//	RobotCode: "dingepndjqy7etanalhi",
-			//	UserIds:   late,
-			//	MsgKey:    "sampleText",
-			//	MsgParam:  "还有五分钟上班，你还没有打卡",
-			//}
-			//err = (&DingRobot{}).ChatSendMessage(p)
-			//if err != nil {
-			//	zap.L().Error("发送至部门负责人失败", zap.Error(err))
-			//}
+			p := &ParamChat{
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   late,
+				MsgKey:    "sampleText",
+				MsgParam:  "还有五分钟上班，你还没有打卡",
+			}
+			err = (&DingRobot{}).ChatSendMessage(p)
+			if err != nil {
+				zap.L().Error("发送提醒信息失败", zap.Error(err))
+			}
 		}
 		return
 	}

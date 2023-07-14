@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+	"strconv"
 )
 
 //递归获取部门列表（官方接口）
@@ -246,4 +247,17 @@ func SetDeptManager(c *gin.Context) {
 		}
 		response.ResponseSuccess(c, "更新成功")
 	}
+}
+
+func GetUserByDeptid(c *gin.Context) {
+	deptId := c.Query("dept_id")
+	deptid, _ := strconv.Atoi(deptId)
+	var p *dingding2.DingDept
+	err := global.GLOAB_DB.Preload("UserList").Where("dept_id", deptid).First(&p).Error
+	if err != nil {
+		zap.L().Error("查询列表错误", zap.Error(err))
+		response.FailWithMessage("查询列表错误", c)
+		return
+	}
+	response.OkWithDetailed(p, "查询成功", c)
 }

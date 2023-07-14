@@ -1256,7 +1256,7 @@ func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
 func (t *DingRobot) EditTaskContent(p *EditTaskContentParam) (err error) {
 	//根据任务id查询该任务的msg
 	task := Task{
-		Model: gorm.Model{ID: p.TaskID},
+		Model: gorm.Model{ID: p.ID},
 	}
 	err = global.GLOAB_DB.Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").First(&task).Error
 	if err != nil {

@@ -17,7 +17,7 @@ const CtxUserAuthorityIDKey = "authority_id"
 const CtxRobotIDKey = "robotID"
 const CtxCornTab = "task"
 
-// GetCurrentUser 获取当前登录函数的ID
+// GetCurrentUser 获取当前登录用户的ID
 func GetCurrentUserId(c *gin.Context) (UserID string, err error) {
 	uid, ok := c.Get(CtxUserIDKey)
 	if !ok {
@@ -28,6 +28,17 @@ func GetCurrentUserId(c *gin.Context) (UserID string, err error) {
 	return UserID, err
 }
 
+// GetCurrentAuthorityIDKey 获取当前登录用户是否是负责人
+//func GetCurrentAuthorityIDKey(c *gin.Context) (UserID string, err error) {
+//	uid, ok := c.Get(CtxUserAuthorityIDKey)
+//	if !ok {
+//		err = ErrorUserNotLogin
+//		return
+//	}
+//	UserID = uid.(string) // 进行类型断言
+//	return UserID, err
+//}
+
 func GetCurrentUserName(c *gin.Context) (UserName string, err error) {
 	uName, ok := c.Get(CtxUserNameKey)
 	if !ok {
@@ -36,5 +47,14 @@ func GetCurrentUserName(c *gin.Context) (UserName string, err error) {
 	}
 	UserName = uName.(string)
 	return
-
 }
+
+//func GetCurrentDeptId(c *gin.Context) (DeptID string, err error) {
+//	uName, ok := c.Get(CtxUserNameKey)
+//	if !ok {
+//		err = errors.New("获取当前登录用户的姓名失败")
+//		return
+//	}
+//	UserName = uName.(string)
+//	return
+//}

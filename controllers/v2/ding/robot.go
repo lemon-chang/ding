@@ -623,7 +623,7 @@ func SubscribeTo(c *gin.Context) {
 }
 
 type ParamLeetCodeAddr struct {
-	Name         string `json:"name"`
+	UserId       string `json:"user_id"`
 	LeetCodeAddr string `json:"leetCodeAddr"`
 }
 
@@ -636,7 +636,7 @@ func GetLeetCode(c *gin.Context) {
 		return
 	}
 	fmt.Println(leetcode)
-	err = global.GLOAB_DB.Table("ding_users").Where("name = ?", leetcode.Name).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
+	err = global.GLOAB_DB.Table("ding_users").Where("user_id = ?", leetcode.UserId).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
 	if err != nil {
 		zap.L().Error("存入数据库失败", zap.Error(err))
 		response.FailWithMessage("存入数据库失败", c)
@@ -683,6 +683,8 @@ func RobotAt(c *gin.Context) {
 			if err != nil {
 				return
 			}
+		} else if str == "学习资源" {
+
 		} else {
 			err := dingRobot.RobotSendHelpCard(resp)
 			if err != nil {
@@ -712,4 +714,26 @@ func RobotAt(c *gin.Context) {
 		}
 	}
 	response.ResponseSuccess(c, "成功")
+}
+
+//上传资源
+func UpdateDate(c *gin.Context) {
+	//UserId, err := global.GetCurrentUserId(c)
+
+	response.OkWithMessage("成功", c)
+}
+
+//删除资源
+func DeleteDate(c *gin.Context) {
+	response.OkWithMessage("成功", c)
+}
+
+//修改资源
+func PutDate(c *gin.Context) {
+	response.OkWithMessage("成功", c)
+}
+
+//查询资源
+func GetDate(c *gin.Context) {
+	response.OkWithMessage("成功", c)
 }

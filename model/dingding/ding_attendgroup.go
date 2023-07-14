@@ -852,7 +852,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 		return
 	}
 	g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
-	commutingTime, err := g.GetCommutingTime()
+	commutingTime, err := g.GetCommutingTime1()
 	if err != nil {
 		zap.L().Error("根据考勤组获取上下班时间失败", zap.Error(err))
 		return

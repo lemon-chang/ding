@@ -1450,7 +1450,7 @@ func (t *DingRobot) RobotPutPrivateMessage(resp *RobotAtResp) (err error) {
 }
 func (t *DingRobot) RobotSendHelpCard(resp *RobotAtResp) error {
 	param := &ParamChat{
-		MsgKey: "sampleActionCard3",
+		MsgKey: "sampleActionCard4",
 		MsgParam: "{\n" +
 			"        \"title\": \"帮助\",\n" +
 			"        \"text\": \"请问你是否在查找以下功能\",\n" +
@@ -1460,6 +1460,14 @@ func (t *DingRobot) RobotSendHelpCard(resp *RobotAtResp) error {
 			fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
 			"        \"actionTitle3\": \"获取个人信息\",\n" +
 			fmt.Sprintf("'actionURL3':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("获取个人信息")) +
+			"        \"actionTitle4\": \"学习资源\",\n" +
+			fmt.Sprintf("'actionURL4':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("学习资源")) +
+			//"        \"actionTitle5\": \"部门资源\",\n" +
+			//fmt.Sprintf("'actionURL5':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("部门资源")) +
+			//"        \"actionTitle6\": \"公共资源\",\n" +
+			//fmt.Sprintf("'actionURL6':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("公共资源")) +
+			//"        \"actionTitle7\": \"搜索资源\",\n" +
+			//fmt.Sprintf("'actionURL7':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("搜索资源")) +
 			"    }",
 		RobotCode: "dingepndjqy7etanalhi",
 		UserIds:   []string{resp.SenderStaffId},

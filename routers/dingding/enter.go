@@ -61,7 +61,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("getSharedRobot", ding.GetSharedRobot)
 		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
 		//Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
-		Robot.GET("/getRobotBaseList", ding.GetRobots)           //获取所有及重庆人
+		Robot.GET("/getRobotBaseList", ding.GetRobots)           //获取所有机器人
 		Robot.POST("/cronTask", ding.CronTask)                   //发送定时任务
 		Robot.POST("getTaskList", ding.GetTaskList)              //加载定时任务
 		Robot.POST("stopTask", ding.StopTask)                    //暂停定时任务
@@ -74,5 +74,13 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("a", ding.B)
 
 		Robot.POST("singleChat", ding.SingleChat)
+	}
+	//机器人问答模块
+	QuAndAn := System.Group("quAndAn")
+	{
+		QuAndAn.POST("/updateDate", ding.UpdateDate)   //上传资源
+		QuAndAn.DELETE("/deleteDate", ding.DeleteDate) //删除资源
+		QuAndAn.PUT("/putDate", ding.PutDate)          //修改资源
+		QuAndAn.GET("/getDate", ding.GetDate)          //查询资源
 	}
 }

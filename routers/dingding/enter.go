@@ -75,4 +75,12 @@ func SetupDing(System *gin.RouterGroup) {
 
 		Robot.POST("singleChat", ding.SingleChat)
 	}
+	//机器人问答模块
+	QuAndAn := System.Group("quAndAn")
+	{
+		QuAndAn.POST("/updateDate", ding.UpdateDate)   //上传资源
+		QuAndAn.DELETE("/deleteDate", ding.DeleteDate) //删除资源
+		QuAndAn.PUT("/putDate", ding.PutDate)          //修改资源
+		QuAndAn.GET("/getDate", ding.GetDate)          //查询资源
+	}
 }

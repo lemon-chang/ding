@@ -40,9 +40,6 @@ func Setup(mode string) *gin.Engine {
 
 	V3.POST("/outgoing", ding.OutGoing) //outgoing接口是让官方
 	V3.POST("/robotAt", ding.RobotAt)
-	V3.POST("/personalDate", ding.UpdatePersonalDate) //上传个人资源
-	V3.POST("/deptDate", ding.UpdateDeptDate)         //上传部门资源
-	V3.POST("/publicDate", ding.UpdatePublicDate)     //上传公共资源
 
 	V3.POST("/gxpRobot", ding.GxpRobot)
 	System := r.Group("/api/system")

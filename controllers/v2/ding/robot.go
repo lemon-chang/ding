@@ -712,20 +712,24 @@ func RobotAt(c *gin.Context) {
 	response.ResponseSuccess(c, "成功")
 }
 
-//上传个人资源
-func UpdatePersonalDate(c *gin.Context) {
+//上传资源
+func UpdateDate(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
 
-	response.ResponseSuccess(c, "成功")
+	response.OkWithMessage("成功", c)
 }
 
-//上传部门资源
-func UpdateDeptDate(c *gin.Context) {
-
-	response.ResponseSuccess(c, "成功")
+//删除资源
+func DeleteDate(c *gin.Context) {
+	response.OkWithMessage("成功", c)
 }
 
-//上传公共资源
-func UpdatePublicDate(c *gin.Context) {
+//修改资源
+func PutDate(c *gin.Context) {
+	response.OkWithMessage("成功", c)
+}
 
-	response.ResponseSuccess(c, "成功")
+//查询资源
+func GetDate(c *gin.Context) {
+	response.OkWithMessage("成功", c)
 }

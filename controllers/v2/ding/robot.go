@@ -1,6 +1,7 @@
 package ding
 
 import (
+	"context"
 	"ding/controllers"
 	"ding/global"
 	"ding/model/common"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -716,24 +718,183 @@ func RobotAt(c *gin.Context) {
 	response.ResponseSuccess(c, "成功")
 }
 
-//上传资源
-func UpdateDate(c *gin.Context) {
-	//UserId, err := global.GetCurrentUserId(c)
+type Data struct {
+	Type     int    `json:"type"` //1公共 2部门 3个人
+	DeptId   int    `json:"dept_id"`
+	DataName string `json:"data_name"`
+	DataLink string `json:"data_link"`
+}
 
-	response.OkWithMessage("成功", c)
+func GetRedisRoad(data *Data, UserId string) (redisRoad string) {
+	redisRoad = "learningData:"
+	if data.Type == 1 {
+		//公共存储
+		redisRoad += "public:" + UserId + ":"
+	} else if data.Type == 2 {
+		deptList := dingding.GetDeptByUserId(UserId).DeptList
+		for _, dept := range deptList {
+			redisRoad = "learningData:"
+			if dept.DeptId == data.DeptId {
+				//部门存储
+				redisRoad += "dept:" + strconv.Itoa(data.DeptId) + ":" + UserId + ":"
+				return
+			}
+		}
+
+	} else if data.Type == 3 {
+		//个人存储
+		redisRoad += "personal:" + UserId + ":"
+	}
+	return
+}
+
+//上传资源
+func UpdateData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := GetRedisRoad(data, UserId)
+	if redisRoad == "learningData:" {
+		response.FailWithMessage("您不是该部门的成员，不能添加资源", c)
+		return
+	}
+	result, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.DataName).Result()
+	if err != nil {
+		zap.L().Error("查询redis中是否存在该名字失败", zap.Error(err))
+	}
+	if result {
+		zap.L().Info("已存在该文件名称")
+		response.FailWithMessage("已存在该文件名称", c)
+	} else {
+		err = global.GLOBAL_REDIS.HSet(ctx, redisRoad, data.DataName, data.DataLink).Err()
+		if err != nil {
+			zap.L().Error("将文件名称链接存储进redis中失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+	}
+	response.OkWithMessage("上传成功", c)
 }
 
 //删除资源
-func DeleteDate(c *gin.Context) {
-	response.OkWithMessage("成功", c)
+func DeleteData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := GetRedisRoad(data, UserId)
+	if redisRoad == "learningData:" {
+		response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+		return
+	} else {
+		exist, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.DataName).Result()
+		if err != nil {
+			zap.L().Error("从redis中查询是否存在失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+		if !exist {
+			response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+			return
+		}
+		err = global.GLOBAL_REDIS.HDel(ctx, redisRoad, data.DataName).Err()
+		if err != nil {
+			zap.L().Error("将文件名称链接从redis中删除失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+	}
+	response.OkWithMessage("删除成功", c)
 }
 
 //修改资源
-func PutDate(c *gin.Context) {
+func PutData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := GetRedisRoad(data, UserId)
+	err = global.GLOBAL_REDIS.HSet(ctx, redisRoad, data.DataName, data.DataLink).Err()
+	if err != nil {
+		zap.L().Error("将文件名称链接存储进redis中失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
 	response.OkWithMessage("成功", c)
 }
 
 //查询资源
-func GetDate(c *gin.Context) {
-	response.OkWithMessage("成功", c)
+func GetData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := "learningData:"
+	if data.Type == 1 {
+		redisRoad += "public*"
+	} else if data.Type == 2 {
+		redisRoad += "dept:" + strconv.Itoa(data.DeptId) + "*"
+	} else if data.Type == 3 {
+		redisRoad += "personal" + UserId + "*"
+	}
+	//result, err := global.GLOBAL_REDIS.Keys(context.Background(), "learningData:dept:546623914*").Result()
+	allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
+	if err != nil {
+		zap.L().Error("从redis读取公共数据失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var AllDatas []map[string]string
+	for _, s := range allRedisRoad {
+		AllData, err := global.GLOBAL_REDIS.HGetAll(ctx, s).Result()
+		if err != nil {
+			zap.L().Error("从redis读取失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+		AllDatas = append(AllDatas, AllData)
+	}
+
+	response.OkWithDetailed(AllDatas, "成功", c)
 }

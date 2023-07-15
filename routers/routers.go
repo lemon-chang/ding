@@ -42,6 +42,7 @@ func Setup(mode string) *gin.Engine {
 	V3.POST("/robotAt", ding.RobotAt)
 
 	V3.POST("/gxpRobot", ding.GxpRobot)
+	V3.GET("GetAllUsers", ding.SelectAllUsers) // 查询所有用户信息
 	//获取力扣地址
 	V3.POST("getLeetCode", ding.GetLeetCode)
 	System := r.Group("/api/system")

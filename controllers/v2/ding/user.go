@@ -255,3 +255,15 @@ func GetWeekSignDetail(c *gin.Context) {
 	}
 	response.OkWithDetailed(WeekSignNum, "获取用户一周的签到详情成功", c)
 }
+
+//通过userid查询部门id
+func GetDeptByUserId(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	user := dingding2.GetDeptByUserId(UserId)
+	response.OkWithDetailed(user.DeptList, "该用户的部门信息列表", c)
+}

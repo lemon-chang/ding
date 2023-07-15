@@ -459,12 +459,14 @@ func ReStartTask(c *gin.Context) {
 	err := c.ShouldBindJSON(&p)
 	if err != nil || p.ID == "" {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage(err.Error(), c)
+		response.FailWithMessage("CronTask做定时任务参数绑定失败", c)
+		return
 	}
 	_, err = (&dingding.DingRobot{}).ReStartTask(p.ID)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
 		response.FailWithMessage(err.Error(), c)
+		return
 	} else {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
@@ -495,7 +497,7 @@ func B(c *gin.Context) {
 func EditTaskContent(c *gin.Context) {
 	var r *dingding.EditTaskContentParam
 	err := c.ShouldBindJSON(&r)
-	if err != nil && r.TaskID == 0 {
+	if err != nil && r.TaskID == "" {
 		zap.L().Error("编辑定时任务内容参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return

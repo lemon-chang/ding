@@ -8,10 +8,10 @@
     machine_id: 1
     #测试数据库
   mysql:
-    host: "121.43.119.224"
+    host: "8.130.66.120"
     port: "3306"
     user: "root"
-    password: "18737480171..Yy"
+    password: "12345678"
     dbname: "ding_v3_marchsoft"
     max_open_conns: 200
     max_idle_conns: 50

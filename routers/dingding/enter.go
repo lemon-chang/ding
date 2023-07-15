@@ -51,6 +51,7 @@ func SetupDing(System *gin.RouterGroup) {
 		User.GET("/getWeekConsecutiveSignNum", ding.GetWeekConsecutiveSignNum) //获取用户当周连续签到次数
 		User.GET("/getWeekSignNum", ding.GetWeekSignNum)                       //根据第几星期获取用户签到次数（使用redis的bitCount函数）
 		User.GET("/getWeekSignDetail", ding.GetWeekSignDetail)                 //获取用户某个星期签到情况，默认是当前所处的星期，构建成为一个有序的HashMap
+		User.GET("/getDeptIdByUserId", ding.GetDeptByUserId)                   //通过userid查询部门id
 	}
 	Robot := System.Group("robot")
 	{
@@ -78,9 +79,9 @@ func SetupDing(System *gin.RouterGroup) {
 	//机器人问答模块
 	QuAndAn := System.Group("quAndAn")
 	{
-		QuAndAn.POST("/updateDate", ding.UpdateDate)   //上传资源
-		QuAndAn.DELETE("/deleteDate", ding.DeleteDate) //删除资源
-		QuAndAn.PUT("/putDate", ding.PutDate)          //修改资源
-		QuAndAn.GET("/getDate", ding.GetDate)          //查询资源
+		QuAndAn.POST("/updateData", ding.UpdateData)   //上传资源
+		QuAndAn.DELETE("/deleteData", ding.DeleteData) //删除资源
+		QuAndAn.PUT("/putData", ding.PutData)          //修改资源
+		QuAndAn.GET("/getData", ding.GetData)          //查询资源
 	}
 }

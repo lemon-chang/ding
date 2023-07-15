@@ -182,6 +182,16 @@ func (d *DingUser) GetWeekSignNum(year, uporDown, startWeek int) (WeekSignNum in
 	}
 	return
 }
+
+//通过userid查询部门id
+func GetDeptByUserId(UserId string) (user *DingUser) {
+	err := global.GLOAB_DB.Where("user_id = ?", UserId).Preload("DeptList").First(&user).Error
+	if err != nil {
+		zap.L().Error("通过userid查询用户失败", zap.Error(err))
+		return
+	}
+	return
+}
 func (d *DingUser) SendFrequencyLeave(start int) error {
 	fmt.Println("推送个人请假频率")
 	return nil

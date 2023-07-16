@@ -555,8 +555,10 @@ func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int
 
 // 该考勤组进行机器人考勤
 func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
+
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
+	fmt.Println("access_token:", token)
 	if err != nil || token == "" {
 		zap.L().Error("从redis中取出token失败", zap.Error(err))
 		return
@@ -581,9 +583,10 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 13,44,33 8,14,20 * * ?"
+	//spec = "00 13,39,33 8,14,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
+		token, err = (&DingToken{}).GetAccessToken()
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
 		//a := DingAttendance{DingToken: DingToken{Token: token}}
 		//获取一天上下班的时间
@@ -880,7 +883,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	min = min[:len(min)-1]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
 	spec := "00 " + min + " " + hour + " * * ?"
-	spec = "00 13,35,33 8,15,20 * * ?"
+	//spec = "00 13,35,33 8,15,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -1011,16 +1014,16 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 			fmt.Println(late)
 			zap.L().Info("没有考勤数据的同学已经处理完成")
 			//将考勤数据发给部门负责人以及管理人员
-			//p := &ParamChat{
-			//	RobotCode: "dingepndjqy7etanalhi",
-			//	UserIds:   late,
-			//	MsgKey:    "sampleText",
-			//	MsgParam:  "还有五分钟上班，你还没有打卡",
-			//}
-			//err = (&DingRobot{}).ChatSendMessage(p)
-			//if err != nil {
-			//	zap.L().Error("发送提醒信息失败", zap.Error(err))
-			//}
+			p := &ParamChat{
+				RobotCode: "dingepndjqy7etanalhi",
+				UserIds:   late,
+				MsgKey:    "sampleText",
+				MsgParam:  "还有五分钟上班，你还没有打卡",
+			}
+			err = (&DingRobot{}).ChatSendMessage(p)
+			if err != nil {
+				zap.L().Error("发送提醒信息失败", zap.Error(err))
+			}
 		}
 		return
 	}
@@ -1041,12 +1044,14 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 }
 
 func BitMapHandle(result map[string][]DingAttendance, curTime localTime.MySelfTime, startWeek, weekDay int) (err error) {
+	//把有课，打卡的，请假的放入sign切片中
 	sign := make([]DingAttendance, 0)
 	sign = append(sign, result["Normal"]...)
 	sign = append(sign, result["Leave"]...)
 	sign = append(sign, result["HasCourse"]...)
 	year, _ := strconv.Atoi(curTime.Format[0:4])
 	mouth, _ := strconv.Atoi(curTime.Format[5:7])
+	//upOrDown用于判断是上半年还是下半年
 	upOrDown := 0
 	//如果月份小于九，就是上半年
 	if mouth < 9 {

@@ -82,6 +82,6 @@ func SetupDing(System *gin.RouterGroup) {
 		QuAndAn.POST("/updateData", ding.UpdateData)   //上传资源
 		QuAndAn.DELETE("/deleteData", ding.DeleteData) //删除资源
 		QuAndAn.PUT("/putData", ding.PutData)          //修改资源
-		QuAndAn.GET("/getData", ding.GetData)          //查询资源
+		QuAndAn.POST("/getData", ding.GetData)         //查询资源
 	}
 }

@@ -770,6 +770,11 @@ type Data struct {
 	DataLink    string `json:"data_link"`
 	UserName    string `json:"user_name"`
 }
+type Result struct {
+	Name     string `json:"name"`
+	DataName string `json:"data_name"`
+	DataLink string `json:"data_link"`
+}
 
 func GetRedisRoad(data *Data, UserId string) (redisRoad string) {
 	redisRoad = "learningData:"
@@ -974,7 +979,8 @@ func GetData(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-	var AllDatas []map[string]map[string]string
+	//var AllDatas []map[string]map[string]string
+	var AllDatas []Result
 	for _, s := range allRedisRoad {
 		split := strings.Split(s, ":")
 		userId := split[len(split)-1-1]
@@ -990,7 +996,17 @@ func GetData(c *gin.Context) {
 		userData := make(map[string]map[string]string)
 		userData[user.Name] = AllData
 
-		AllDatas = append(AllDatas, userData)
+		//AllDatas = append(AllDatas, userData)
+
+		for dataName, dataLink := range AllData {
+			r := Result{
+				Name:     user.Name,
+				DataName: dataName,
+				DataLink: dataLink,
+			}
+			AllDatas = append(AllDatas, r)
+		}
+
 	}
 
 	response.OkWithDetailed(AllDatas, "成功", c)

@@ -20,7 +20,6 @@ import (
 )
 
 func Setup(mode string) *gin.Engine {
-
 	if mode == gin.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode) //设置为发布模式
 	}
@@ -29,9 +28,7 @@ func Setup(mode string) *gin.Engine {
 	//r.Use(cors.Default()) //第三方库
 	r.Use(middlewares.Cors())
 	fmt.Println(middlewares.Cors())
-
 	zap.L().Info("跨域配置完成")
-
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 	V3 := r.Group("/api/v3")
 	V3.POST("/jk", v1.Jk)

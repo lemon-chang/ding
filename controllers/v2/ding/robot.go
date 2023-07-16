@@ -649,6 +649,76 @@ func GetLeetCode(c *gin.Context) {
 	response.ResponseSuccess(c, "成功")
 }
 
+//func RobotAt(c *gin.Context) {
+//	var resp *dingding.RobotAtResp
+//	if err := c.ShouldBindJSON(&resp); err != nil {
+//		zap.L().Error("RobotAtResp", zap.Error(err))
+//		response.FailWithMessage("参数错误", c)
+//	}
+//	fmt.Println("内容为:", resp.Text)
+//	//userId := resp.SenderStaffId
+//	conversationType := resp.ConversationType               //聊天类型
+//	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
+//	dingRobot := &dingding.DingRobot{}
+//	//单聊
+//	if conversationType == "1" {
+//		if str == "打字邀请码" {
+//			err := dingRobot.RobotSendInviteCode(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "送水电话号码" {
+//			err := dingRobot.RobotSendWater(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "获取个人信息" {
+//			err := dingRobot.RobotSendPrivateMessage(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if strings.Contains(str, "保存个人信息") {
+//			err := dingRobot.RobotSavePrivateMessage(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if strings.Contains(str, "更改个人信息") {
+//			err := dingRobot.RobotPutPrivateMessage(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "学习资源" {
+//
+//		} else {
+//			err := dingRobot.RobotSendHelpCard(resp)
+//			if err != nil {
+//				return
+//			}
+//		}
+//		//群聊
+//	} else if conversationType == "2" {
+//		if str == "打字邀请码" {
+//			//_ 代表res["processQueryKey"]可以查看已读状态
+//			_, err := dingRobot.RobotSendGroupInviteCode(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "送水电话号码" {
+//			//_ 代表res["processQueryKey"]可以查看已读状态
+//			_, err := dingRobot.RobotSendGroupWater(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "帮助" {
+//			//_ 代表res["processQueryKey"]可以查看已读状态
+//			_, err := dingRobot.RobotSendGroupCard(resp)
+//			if err != nil {
+//				return
+//			}
+//		}
+//	}
+//	response.ResponseSuccess(c, "成功")
+//}
 func RobotAt(c *gin.Context) {
 	var resp *dingding.RobotAtResp
 	if err := c.ShouldBindJSON(&resp); err != nil {
@@ -657,45 +727,12 @@ func RobotAt(c *gin.Context) {
 	}
 	fmt.Println("内容为:", resp.Text)
 	//userId := resp.SenderStaffId
-	conversationType := resp.ConversationType               //群聊id
+	conversationType := resp.ConversationType               //聊天类型
 	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
 	dingRobot := &dingding.DingRobot{}
 	//单聊
 	if conversationType == "1" {
-		if str == "打字邀请码" {
-			err := dingRobot.RobotSendInviteCode(resp)
-			if err != nil {
-				return
-			}
-		} else if str == "送水电话号码" {
-			err := dingRobot.RobotSendWater(resp)
-			if err != nil {
-				return
-			}
-		} else if str == "获取个人信息" {
-			err := dingRobot.RobotSendPrivateMessage(resp)
-			if err != nil {
-				return
-			}
-		} else if strings.Contains(str, "保存个人信息") {
-			err := dingRobot.RobotSavePrivateMessage(resp)
-			if err != nil {
-				return
-			}
-		} else if strings.Contains(str, "更改个人信息") {
-			err := dingRobot.RobotPutPrivateMessage(resp)
-			if err != nil {
-				return
-			}
-		} else if str == "学习资源" {
 
-		} else {
-			err := dingRobot.RobotSendHelpCard(resp)
-			if err != nil {
-				return
-			}
-		}
-		//群聊
 	} else if conversationType == "2" {
 		if str == "打字邀请码" {
 			//_ 代表res["processQueryKey"]可以查看已读状态
@@ -718,6 +755,11 @@ func RobotAt(c *gin.Context) {
 		}
 	}
 	response.ResponseSuccess(c, "成功")
+}
+func GetAllData(str string) map[string]string {
+	searchData := make(map[string]string)
+
+	return searchData
 }
 
 type Data struct {

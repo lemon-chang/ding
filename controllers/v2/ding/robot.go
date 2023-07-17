@@ -730,8 +730,37 @@ func RobotAt(c *gin.Context) {
 	conversationType := resp.ConversationType               //聊天类型
 	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
 	dingRobot := &dingding.DingRobot{}
+
+	//获得的字符串状态
+	var staus int
 	//单聊
 	if conversationType == "1" {
+		dataByStr, err := GetAllDataByStr(str, resp.SenderStaffId)
+		if err != nil {
+			zap.L().Error("GetAllDataByStr", zap.Error(err))
+			response.FailWithMessage("通过字符串获取资源失败", c)
+		}
+		fmt.Println(dataByStr)
+		for _, data := range dataByStr {
+			if data.DataName == str {
+				staus++
+			}
+		}
+		if staus != len(dataByStr) && len(dataByStr) != 1 {
+			//发送卡片信息
+			fmt.Println("卡片")
+			err := dingRobot.RobotSendCardToPerson(resp, dataByStr)
+			if err != nil {
+				zap.L().Error("RobotSendCardToPerson", zap.Error(err))
+			}
+		} else {
+			//发送直接数据
+			fmt.Println("数据")
+			err := dingRobot.RobotSendMessageToPerson(resp, dataByStr)
+			if err != nil {
+				zap.L().Error("RobotSendMessageToPerson", zap.Error(err))
+			}
+		}
 
 	} else if conversationType == "2" {
 		if str == "打字邀请码" {
@@ -740,26 +769,89 @@ func RobotAt(c *gin.Context) {
 			if err != nil {
 				return
 			}
-		} else if str == "送水电话号码" {
-			//_ 代表res["processQueryKey"]可以查看已读状态
-			_, err := dingRobot.RobotSendGroupWater(resp)
-			if err != nil {
-				return
+		}
+	}
+}
+func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, err error) {
+	var AllDatas []dingding.Result
+	//查询所有个人资源
+	redisRoad := "learningData:personal:" + userId + ":"
+	AllPersonalData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), redisRoad).Result()
+	if err != nil {
+		zap.L().Error("从redis读取失败", zap.Error(err))
+	}
+	user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+	if err != nil {
+		zap.L().Error("userid查询用户信息失败", zap.Error(err))
+	}
+	for dataName, dataLink := range AllPersonalData {
+		r := dingding.Result{
+			Name:     user.Name,
+			DataName: dataName,
+			DataLink: dataLink,
+		}
+		AllDatas = append(AllDatas, r)
+	}
+	//查询所有公共资源
+	redisRoad = "learningData:public*"
+	allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
+	if err != nil {
+		zap.L().Error("从redis读取公共数据失败", zap.Error(err))
+		return
+	}
+	for _, s := range allRedisRoad {
+		split := strings.Split(s, ":")
+		userId := split[len(split)-1-1]
+		user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+		AllPublicData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), s).Result()
+		if err != nil {
+			zap.L().Error("从redis读取失败", zap.Error(err))
+		}
+		for dataName, dataLink := range AllPublicData {
+			r := dingding.Result{
+				Name:     user.Name,
+				DataName: dataName,
+				DataLink: dataLink,
 			}
-		} else if str == "帮助" {
-			//_ 代表res["processQueryKey"]可以查看已读状态
-			_, err := dingRobot.RobotSendGroupCard(resp)
+			AllDatas = append(AllDatas, r)
+		}
+	}
+
+	//查询此人所有部门内的所有资源
+	deptList := dingding.GetDeptByUserId(userId).DeptList
+	for _, dept := range deptList {
+		redisRoad = "learningData:dept:" + strconv.Itoa(dept.DeptId) + ":*"
+		allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
+		if err != nil {
+			zap.L().Error("从redis读取公共数据失败", zap.Error(err))
+		}
+		for _, s := range allRedisRoad {
+			split := strings.Split(s, ":")
+			userId := split[len(split)-1-1]
+			user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+			AllPublicData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), s).Result()
 			if err != nil {
-				return
+				zap.L().Error("从redis读取失败", zap.Error(err))
+			}
+			for dataName, dataLink := range AllPublicData {
+				r := dingding.Result{
+					Name:     user.Name,
+					DataName: dataName,
+					DataLink: dataLink,
+				}
+				AllDatas = append(AllDatas, r)
 			}
 		}
 	}
-	response.ResponseSuccess(c, "成功")
-}
-func GetAllData(str string) map[string]string {
-	searchData := make(map[string]string)
 
-	return searchData
+	for _, data := range AllDatas {
+		if str == data.DataName {
+			DatasByStr = append(DatasByStr, data)
+		} else if strings.Contains(data.DataName, str) {
+			DatasByStr = append(DatasByStr, data)
+		}
+	}
+	return
 }
 
 type Data struct {
@@ -769,11 +861,6 @@ type Data struct {
 	DataName    string `json:"data_name"`
 	DataLink    string `json:"data_link"`
 	UserName    string `json:"user_name"`
-}
-type Result struct {
-	Name     string `json:"name"`
-	DataName string `json:"data_name"`
-	DataLink string `json:"data_link"`
 }
 
 func GetRedisRoad(data *Data, UserId string) (redisRoad string) {
@@ -980,7 +1067,7 @@ func GetData(c *gin.Context) {
 		return
 	}
 	//var AllDatas []map[string]map[string]string
-	var AllDatas []Result
+	var AllDatas []dingding.Result
 	for _, s := range allRedisRoad {
 		split := strings.Split(s, ":")
 		userId := split[len(split)-1-1]
@@ -993,13 +1080,13 @@ func GetData(c *gin.Context) {
 		}
 
 		//AllDatas = append(AllDatas, AllData)
-		userData := make(map[string]map[string]string)
-		userData[user.Name] = AllData
+		//userData := make(map[string]map[string]string)
+		//userData[user.Name] = AllData
 
 		//AllDatas = append(AllDatas, userData)
 
 		for dataName, dataLink := range AllData {
-			r := Result{
+			r := dingding.Result{
 				Name:     user.Name,
 				DataName: dataName,
 				DataLink: dataLink,

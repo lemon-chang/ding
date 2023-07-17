@@ -888,6 +888,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	//spec = "00 13,35,33 8,15,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
+		token, err = (&DingToken{}).GetAccessToken()
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
 		//a := DingAttendance{DingToken: DingToken{Token: token}}
 		//获取一天上下班的时间

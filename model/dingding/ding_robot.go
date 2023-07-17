@@ -1538,3 +1538,65 @@ func (t *DingRobot) RobotSendGroupCard(resp *RobotAtResp) (res map[string]interf
 	}
 	return res, nil
 }
+
+type Result struct {
+	Name     string `json:"name"`
+	DataName string `json:"data_name"`
+	DataLink string `json:"data_link"`
+}
+
+//机器人问答发送卡片给个人
+func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result) (err error) {
+	cardLen := len(dataByStr)
+	if cardLen <= 5 {
+	} else {
+		cardLen = 5
+	}
+	action := ""
+	for i, data := range dataByStr {
+		action += "        \"actionTitle" + strconv.Itoa(i+1) + "\": \"" + data.DataName + "\",\n" +
+			fmt.Sprintf("'actionURL%d':'dtmd://dingtalkclient/sendMessage?content=%s',\n", i+1, url.QueryEscape(data.DataName))
+	}
+	fmt.Println(action)
+	param := &ParamChat{
+		MsgKey: "sampleActionCard" + strconv.Itoa(cardLen),
+		MsgParam: "{\n" +
+			"        \"title\": \"资料\",\n" +
+			"        \"text\": \"请问你是否在查找以下资料\",\n" +
+			action +
+			"    }",
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err = t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送chatSendCardToPerson错误" + err.Error())
+	}
+	return
+}
+
+//机器人问答发送信息给个人
+func (t *DingRobot) RobotSendMessageToPerson(resp *RobotAtResp, dataByStr []Result) (err error) {
+	msg := ""
+	if len(dataByStr) == 0 {
+		msg = "您所查询的资源里没有此类资源"
+	} else if len(dataByStr) == 1 {
+		msg = dataByStr[0].DataLink
+	} else {
+		msg = "查询结果如下：\n"
+		for _, data := range dataByStr {
+			msg += "上传资料人员：" + data.Name + "\n" + "资源名称：" + data.DataName + "\n" + "资源内容：" + data.DataLink + "\n"
+		}
+	}
+	param := &ParamChat{
+		MsgKey:    "sampleText",
+		MsgParam:  msg,
+		RobotCode: "dingepndjqy7etanalhi",
+		UserIds:   []string{resp.SenderStaffId},
+	}
+	err = t.ChatSendMessage(param)
+	if err != nil {
+		zap.L().Error("发送chatSendMessageToPerson错误" + err.Error())
+	}
+	return
+}

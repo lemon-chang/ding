@@ -584,7 +584,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
 	//spec = "30 13,39,20 8,14,20 * * ?"
-
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()

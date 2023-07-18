@@ -583,9 +583,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-
 	//spec = "30 13,39,20 8,14,20 * * ?"
-
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()
@@ -885,7 +883,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	min = min[:len(min)-1]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
 	spec := "00 " + min + " " + hour + " * * ?"
-	//spec = "00 13,35,33 8,15,20 * * ?"
+	spec = "00 55,25,55 7,14,19 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()
@@ -937,6 +935,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 		//Len := len(deptAttendanceUser)
 		Count := 0
 		startWeek, week, CourseNumber, err := DateHandle(curTime)
+
 		for DeptId, _ := range deptAttendanceUser { //
 			Count++
 			atoi, _ := strconv.Atoi(DeptId)
@@ -1000,21 +999,29 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
 				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
 			}
+			if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
+				zap.L().Info("freetime跳过")
+				//直接所有部门都不再发送了
+				return
+			}
 			//if week == 7 && curTime.Duration == 3 {
 			//	zap.L().Info("周日晚上跳过")
 			//	//直接所有部门都不再发送了
 			//	return
 			//}
-			if week == 1 && curTime.Duration == 1 && DeptDetail.DeptId == 440395094 {
-				zap.L().Info("周一上午三期社招跳过")
-				//跳过三期校招，继续循环其他部门
-				continue
-			}
+			//if week == 1 && curTime.Duration == 1 && DeptDetail.DeptId == 440395094 {
+			//	zap.L().Info("周一上午三期社招跳过")
+			//	//跳过三期校招，继续循环其他部门
+			//	continue
+			//}
 			err, late := LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
 			}
 			fmt.Println(late)
+			//late1 := make([]string, 0)
+			//late1 = append(late1, "43605942651709855765")
+			//late1 = append(late1, "01145213476838013811")
 			zap.L().Info("没有考勤数据的同学已经处理完成")
 			//将考勤数据发给部门负责人以及管理人员
 			p := &ParamChat{

@@ -18,6 +18,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.PUT("updateDept", ding.UpdateDept)                               // 更新部门信息，用来设置机器人token，各种开关
 		Dept.PUT("updateSchool", ding.UpdateSchool)                           //更新部门是否在校信息
 		Dept.PUT("setDeptManager", ding.SetDeptManager)                       //更新部门负责人
+		Dept.POST("getLeetCode", ding.GetLeetCode)                            //统计leetcode地址
 	}
 
 	AttendanceGroup := System.Group("attendanceGroup")
@@ -44,6 +45,7 @@ func SetupDing(System *gin.RouterGroup) {
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
 		//User.GET("getQRCode", ding.GetQRCode)             //获取群聊基本信息已经群成员id
+		User.GET("getAllTask", ding.GetAllTask)                                //获取所有定时任务，包括暂停的任务
 		User.GET("/getActiveTask", ding.GetAllActiveTask)                      //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
 		User.POST("/MakeupSign", ding.MakeupSign)                              //为用户补签到并返回用户联系签到次数
 		User.GET("/getWeekConsecutiveSignNum", ding.GetWeekConsecutiveSignNum) //获取用户当周连续签到次数
@@ -52,7 +54,6 @@ func SetupDing(System *gin.RouterGroup) {
 	}
 	Robot := System.Group("robot")
 	{
-
 		Robot.POST("/pingRobot", ding.PingRobot)
 		Robot.POST("/addRobot", ding.AddRobot)
 		Robot.DELETE("/removeRobot", ding.RemoveRobot)
@@ -60,15 +61,16 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("getSharedRobot", ding.GetSharedRobot)
 		Robot.GET("getRobotDetailByRobotId", ding.GetRobotDetailByRobotId)
 		//Robot.GET("getRobotBaseList", ding.GetRobotBaseList)
-		Robot.GET("/getRobotBaseList", ding.GetRobots)          //获取所有及重庆人
-		Robot.POST("/cronTask", ding.CronTask)                  //发送定时任务
-		Robot.POST("getTaskList", ding.GetTaskList)             //加载定时任务
-		Robot.POST("stopTask", ding.StopTask)                   //暂停定时任务
-		Robot.DELETE("removeTask", ding.RemoveTask)             //移除定时任务
-		Robot.POST("reStartTask", ding.ReStartTask)             //重启定时任务
-		Robot.PUT("editTaskContent", ding.EditTaskContent)      //编辑定时任务的内容
-		Robot.GET("/getTaskDetail", ding.GetTaskDetail)         //获取定时任务详情
-		Robot.GET("/getAllPublicRobot", ding.GetAllPublicRobot) //获取所有的公共机器人
+		Robot.GET("/getRobotBaseList", ding.GetRobots)           //获取所有及重庆人
+		Robot.POST("/cronTask", ding.CronTask)                   //发送定时任务
+		Robot.POST("getTaskList", ding.GetTaskList)              //加载定时任务
+		Robot.POST("stopTask", ding.StopTask)                    //暂停定时任务
+		Robot.DELETE("removeTask", ding.RemoveTask)              //移除定时任务
+		Robot.POST("reStartTask", ding.ReStartTask)              //重启定时任务
+		Robot.PUT("editTaskContent", ding.EditTaskContent)       //编辑定时任务的内容
+		Robot.GET("/getTaskDetail", ding.GetTaskDetail)          //获取定时任务详情
+		Robot.GET("/getAllPublicRobot", ding.GetAllPublicRobot)  //获取所有的公共机器人
+		Robot.PUT("alterResultByRobot", ding.AlterResultByRobot) //修改部门考勤果推送到哪个群,给我一个要修改到哪个群的公共机器人的token，你要修改的部门id
 		Robot.GET("a", ding.B)
 
 		Robot.POST("singleChat", ding.SingleChat)

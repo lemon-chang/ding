@@ -17,13 +17,42 @@ import (
 	"time"
 )
 
+func SetWeek() (err error) {
+	err = global.GLOBAL_REDIS.SetNX(context.Background(), "leetCode:week", 1, 0).Err()
+	if err != nil {
+		zap.L().Error("初始化week存入redis失败", zap.Error(err))
+	}
+	return
+}
 func SendLeetCode() (err error) {
-	week := 1
-	spec := "0 0 0 ? * 1 "
-	//spec := "50 18 21 ? * 4 "
+	//每周一下午2点30运行
+	spec := "0 30 14 ? * 1 "
+	//spec := "10 33 14 ? * 3 "
 	//spec:="0 0 0 ? * * "
 	//开启定时器，定时周一晚上00：00(cron定时任务的创建)
 	entryID, err := global.GLOAB_CORN.AddFunc(spec, func() {
+		var week int
+		//每次运行是redis中的week自增
+		_, err = global.GLOBAL_REDIS.Incr(context.Background(), "leetCode:week").Result()
+		if err != nil {
+			zap.L().Error("redis中week自增失败", zap.Error(err))
+			return
+		}
+		//从redis中读取week的值
+		result, err := global.GLOBAL_REDIS.Get(context.Background(), "leetCode:week").Result()
+		if err != nil {
+			zap.L().Error("从redis中读取week失败", zap.Error(err))
+			return
+		}
+		week, err = strconv.Atoi(result)
+		if err != nil {
+			zap.L().Error("week字符串转换失败", zap.Error(err))
+		}
+		fmt.Println(week)
+		//val, err := rdb.Incr(ctx, "key").Result()
+		//if err != nil {
+		//	panic(err)
+		//}
 		// 加载数据库部门表，找到需要查力扣的部门（gorm预加载https://gorm.io/zh_CN/docs/preload.html）
 		var depts []dingding.DingDept
 		err = global.GLOAB_DB.Where("is_leet_code=?", 1).Preload("UserList").Find(&depts).Error
@@ -37,13 +66,6 @@ func SendLeetCode() (err error) {
 			zap.L().Info(fmt.Sprintf("%s开启了查询力扣题目,部门id是%d", dept.Name, dept.DeptId))
 			//遍历某部门的同学，拿到力扣主页地址题目数据
 			userList := dept.UserList
-			//users, err := getUserByDeptId(dept.DeptId)
-			//if err != nil {
-			//	zap.L().Error("获取用户数据失败", zap.Error(err))
-			//}
-			//fmt.Println(users)
-			// 通过课表小程序查找是哪一周，查找上周的数据
-
 			t := time.Now().Format("2006-01-02")
 			lastWeek := time.Now().AddDate(0, 0, -7).Format("2006-01-02")
 			weekDay := fmt.Sprintf("第%d周(%s)", week, t)
@@ -73,7 +95,7 @@ func SendLeetCode() (err error) {
 				oldNum[username] = int(num)
 				sub[username] = leetCodeNum - int(num)
 			}
-			message := weekDay + "力扣题目查询结果如下：\n" +
+			message := weekDay + "力扣题目查询结果如下(该结果是通过查询总提交数来比较，如果您之前做过，那么不会增加总做题数)：\n" +
 				"姓名-上周总题数-本周总提数-上周完成题目数\n"
 			for name, _ := range oldNum {
 				message += name + "-" + strconv.Itoa(oldNum[name]) + "-" + strconv.Itoa(newNum[name]) + "-" + strconv.Itoa(sub[name]) + "\n"
@@ -92,9 +114,11 @@ func SendLeetCode() (err error) {
 					Msgtype: "text",
 				},
 				RobotId: dept.RobotToken,
+				//RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3",
 			}
 			err := (&dingding.DingRobot{
 				RobotId: dept.RobotToken,
+				//RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3",
 			}).SendMessage(p)
 			if err != nil {
 				zap.L().Error("发送力扣题目消息失败", zap.Error(err))

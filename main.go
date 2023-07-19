@@ -86,7 +86,11 @@ func main() {
 	zap.L().Debug("AttendanceByRobot init success...")
 
 	initialize.RegularlySendCourses()
-
+	////初始化redis中的week
+	//err = initialize.SetWeek()
+	//if err != nil {
+	//	zap.L().Error("setWeek init fail...")
+	//}
 	//发送爬取力扣的题目数
 	err = initialize.SendLeetCode()
 	if err != nil {

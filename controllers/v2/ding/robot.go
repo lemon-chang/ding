@@ -262,6 +262,8 @@ func RemoveRobot(c *gin.Context) {
 func GetRobots(c *gin.Context) {
 	uid, err := global.GetCurrentUserId(c)
 	if err != nil {
+		zap.L().Error("获取uid失败", zap.Error(err))
+		response.FailWithMessage("身份获取失败", c)
 		return
 	}
 	//查询到所有的机器人
@@ -533,6 +535,19 @@ func GetAllPublicRobot(c *gin.Context) {
 		response.ResponseSuccess(c, robots)
 	}
 }
+func AlterResultByRobot(c *gin.Context) {
+	var p *dingding.ParamAlterResultByRobot
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("AlterResultByRobot参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	err := dingding.AlterResultByRobot(p)
+	if err != nil {
+		zap.L().Error("AlterResultByRobot失败", zap.Error(err))
+		response.FailWithMessage("更新失败", c)
+	}
+	response.ResponseSuccess(c, "更新成功")
+}
 
 // 进行单聊
 func SingleChat(c *gin.Context) {
@@ -602,6 +617,30 @@ func SubscribeTo(c *gin.Context) {
 	successMap, _ := callbackCrypto.GetEncryptMsg("success")
 	c.JSON(http.StatusOK, successMap)
 }
+
+type ParamLeetCodeAddr struct {
+	Name         string `json:"name"`
+	LeetCodeAddr string `json:"leetCodeAddr"`
+}
+
+func GetLeetCode(c *gin.Context) {
+	var leetcode ParamLeetCodeAddr
+	err := c.ShouldBindJSON(&leetcode)
+	if err != nil {
+		zap.L().Error("LeetCodeResp", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	fmt.Println(leetcode)
+	err = global.GLOAB_DB.Table("ding_users").Where("name = ?", leetcode.Name).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
+	if err != nil {
+		zap.L().Error("存入数据库失败", zap.Error(err))
+		response.FailWithMessage("存入数据库失败", c)
+		return
+	}
+	response.ResponseSuccess(c, "成功")
+}
+
 func RobotAt(c *gin.Context) {
 	var resp *dingding.RobotAtResp
 	if err := c.ShouldBindJSON(&resp); err != nil {

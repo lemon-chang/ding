@@ -50,9 +50,11 @@ func Setup(mode string) *gin.Engine {
 		Ding.POST("singleChat", ding.ChatHandler)
 		//放给钉钉用的接口
 		Ding.POST("subscribeTo", ding.SubscribeTo)
+		//获取力扣地址
+		Ding.POST("getLeetCode", ding.GetLeetCode)
 	}
 
-	//Ding.Use(middlewares.JWTAuthMiddleware())
+	Ding.Use(middlewares.JWTAuthMiddleware())
 	dingding.SetupDing(Ding)
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)

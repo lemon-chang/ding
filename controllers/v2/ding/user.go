@@ -144,6 +144,19 @@ func GetQRCode(c *gin.Context) {
 	}
 	response.OkWithDetailed(result, "获取二维码成功", c)
 }
+
+//获取所有任务列表,包括已暂停的任务
+func GetAllTask(c *gin.Context) {
+	var tasks []dingding2.Task
+	err := global.GLOAB_DB.Model(&tasks).Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
+	if err != nil {
+		zap.L().Error("获取所有定时任务失败", zap.Error(err))
+		response.FailWithMessage("服务繁忙", c)
+		return
+	}
+	response.ResponseSuccess(c, tasks)
+}
+
 func GetAllActiveTask(c *gin.Context) {
 	//先删除所有的任务，然后再重新加载一遍
 	activeTasksKeys, err := global.GLOBAL_REDIS.Keys(context.Background(), fmt.Sprintf("%s*", redis.Perfix+redis.ActiveTask)).Result()
@@ -168,6 +181,7 @@ func GetAllActiveTask(c *gin.Context) {
 	//把找到的数据存储到redis中 ，现在先写成手动获取
 	//应该是存放在一个集合里面，集合里面存放着此条任务的所有信息，以id作为标识
 	//哈希特别适合存储对象，所以我们用哈希来存储
+
 	for _, task := range tasks {
 		taskValue, err := json.Marshal(task) //把对象序列化成为一个json字符串
 		if err != nil {

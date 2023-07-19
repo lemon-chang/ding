@@ -17,10 +17,13 @@ func AttendanceByRobot() (err error) {
 	for _, group := range groupList {
 		if group.IsRobotAttendance {
 			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
+			//正常考勤
 			_, taskID, err := group.AllDepartAttendByRobot(p)
 			if err != nil {
 				return err
 			}
+			//提醒没有打开的人考勤
+			group.AlertAttent(p)
 			err = global.GLOAB_DB.Model(&group).Update("robot_attend_task_id", int(taskID)).Error
 			if err != nil {
 				return err

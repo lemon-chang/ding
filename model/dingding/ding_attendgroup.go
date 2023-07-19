@@ -59,7 +59,6 @@ type DingAttendGroup struct {
 	ReadyTime         int    `json:"ready_time"`           //如果预备了，提前几分钟
 	NextTime          string `json:"next_time"`            //下次执行时间
 	IsSecondClass     int    `json:"is_second_class"`      //是否开启第二节课考勤
-	Rests             []Rest `json:"rests"`
 }
 type Rest struct {
 	gorm.Model
@@ -562,7 +561,6 @@ func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int
 
 // 该考勤组进行机器人考勤
 func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
-
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	fmt.Println("access_token:", token)
@@ -590,7 +588,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-	//spec = "00 13,36,18 8,14,20 * * ?"
+	spec = "00 13,54,18 8,14,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()
@@ -845,7 +843,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
 	g.NextTime = nextTime
 	err = global.GLOAB_DB.Updates(&g).Error
-
 	if err != nil {
 		zap.L().Error("获取定时任务下一次执行时间有误", zap.Error(err))
 		return
@@ -890,7 +887,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	min = min[:len(min)-1]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
 	spec := "00 " + min + " " + hour + " * * ?"
-	spec = "00 55,25,55 7,14,19 * * ?"
+	//spec = "00 55,25,55 7,14,19 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()

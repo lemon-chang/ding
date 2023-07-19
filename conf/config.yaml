@@ -11,7 +11,7 @@
     host: "8.130.66.120"
     port: "3306"
     user: "root"
-    password: "12345687"
+    password: "ZZZjingqi123"
     dbname: "ding_v3_marchsoft"
     max_open_conns: 200
     max_idle_conns: 50

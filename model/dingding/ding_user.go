@@ -151,7 +151,7 @@ func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[
 	//使用bitFiled来获取int64，然后使用位运算计算结果
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v:%v", d.UserId, year, uporDown, startWeek)
 	fmt.Println(key)
-	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(7), "0").Result()
+	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(21), "0").Result()
 	if err != nil || list == nil || len(list) == 0 || list[0] == 0 {
 		zap.L().Error("使用redis中的bitmap失败", zap.Error(err))
 		return nil, errors.New("使用redis中的bitmap失败")
@@ -169,7 +169,7 @@ func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[
 	//	v = v >> 1
 	//	x = x >> 1
 	//}
-	for i := 8; i > 0; i-- {
+	for i := 7; i > 0; i-- {
 		for j := 0; j < 3; j++ {
 			if v>>1<<1 == v {
 				//说明没有签到

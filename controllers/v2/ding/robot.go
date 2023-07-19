@@ -101,45 +101,6 @@ func AddRobot(c *gin.Context) {
 		Name:       p.Name,
 		IsShared:   p.IsShared,
 	}
-	if p.Type == "" {
-		zap.L().Info("前端没有告知机器人的类型,我们前往数据库进行查询")
-		err = global.GLOAB_DB.Where("robot_id = ?", p.RobotId).First(&dingRobot).Error
-		p.Type = dingRobot.Type
-		zap.L().Info(fmt.Sprintf("%v对应的机器人姓名为：%v,type = %v", p.RobotId, p.Name, p.Type))
-	}
-	if p.Type == "1" {
-		//我们需要让用户扫码，添加群成员信息
-		//此处展示二维码
-		//_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode(c)
-		if err != nil {
-			zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
-		}
-		//dingRobot.ChatId = ChatID
-		dingRobot.Name = p.Name
-		token, err1 := (&dingding.DingToken{}).GetAccessToken()
-		if err1 != nil {
-			zap.L().Error("获取token失败", zap.Error(err))
-			return
-		}
-		openConversationID := (&dingding.DingGroup{Token: dingding.DingToken{Token: token}}).GetOpenConversationID()
-		dingRobot.OpenConversationID = openConversationID
-		userIds, err := (&dingding.DingRobot{DingToken: dingding.DingToken{Token: token}, OpenConversationID: openConversationID}).GetGroupUserIds()
-		var users []dingding.DingUser
-
-		err2 := global.GLOAB_DB.Where("user_id in ?", userIds).Find(&users).Error
-		if err2 != nil {
-			zap.L().Error(fmt.Sprintf("根据userids查询users失败"), zap.Error(err2))
-		}
-		global.GLOAB_DB.Model(&dingRobot)
-		//dingRobot.DingUsers = users
-		err = global.GLOAB_DB.Model(dingRobot).Association("DingUsers").Replace(users)
-		if err != nil {
-			zap.L().Error("global.GLOAB_DB.Model(dingRobot).Association(\"DingUsers\").Replace(users)有误", zap.Error(err))
-		}
-	} else if p.Type == "2" {
-		//直接更新即可
-
-	}
 	// 2.逻辑处理
 	err = dingRobot.CreateOrUpdateRobot()
 	if err != nil {

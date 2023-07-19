@@ -18,6 +18,7 @@ import (
 	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"net/http"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -51,20 +52,21 @@ type DingAttendGroup struct {
 		} `gorm:"-" json:"sections"`
 	} `gorm:"-" json:"selected_class"`
 	DingToken         `gorm:"-"`
-	IsRobotAttendance bool   `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
-	RobotAttendTaskID int    `json:"robot_attend_task_id"`
-	IsSendFirstPerson int    `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
-	IsInSchool        bool   `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
-	IsReady           int    `json:"is_ready"`             //是否预备
-	ReadyTime         int    `json:"ready_time"`           //如果预备了，提前几分钟
-	NextTime          string `json:"next_time"`            //下次执行时间
-	IsSecondClass     int    `json:"is_second_class"`      //是否开启第二节课考勤
+	IsRobotAttendance bool       `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
+	RobotAttendTaskID int        `json:"robot_attend_task_id"`
+	IsSendFirstPerson int        `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
+	IsInSchool        bool       `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
+	IsReady           int        `json:"is_ready"`             //是否预备
+	ReadyTime         int        `json:"ready_time"`           //如果预备了，提前几分钟
+	NextTime          string     `json:"next_time"`            //下次执行时间
+	IsSecondClass     int        `json:"is_second_class"`      //是否开启第二节课考勤
+	RestTimes         []RestTime `json:"rest_times" gorm:"foreignKey:AttendGroupID;references:group_id"`
 }
-type Rest struct {
-	gorm.Model
-	Week    int
-	MAE     int
-	GroupId int
+type RestTime struct {
+	gorm.Model    // 1 2 2 0 2 1
+	WeekDay       int
+	MAE           int // 0 1 2
+	AttendGroupID int
 }
 type DingAttendanceGroupMemberList struct {
 	AtcFlag  string `json:"atc_flag"`
@@ -72,6 +74,27 @@ type DingAttendanceGroupMemberList struct {
 	MemberID string `json:"member_id"`
 }
 
+//通过考勤组id获取休息时间
+//func (DingAttendGroup *DingAttendGroup) GetRestTimes(weekDay int) (RestTimes []RestTime) {
+//	//err := global.GLOAB_DB.Model(&DingAttendGroup).Preload("RestTimes").Find(&RestTimes).Error
+//	//if err != nil {
+//	//	zap.L().Error("")
+//	//}
+//
+//	//err := global.GLOAB_DB.Model(&DingAttendGroup).Association("RestTimes").Find(&RestTimes).Error
+//	//if err != nil {
+//	//	zap.L().Error("")
+//	//}
+//	//return RestTimes
+//
+//	err := global.GLOAB_DB.Preload("RestTimes").First(DingAttendGroup)
+//	if err != nil {
+//		zap.L().Error("")
+//	}
+//	RestTimes = make([]RestTime, len(DingAttendGroup.RestTimes))
+//	RestTimes = DingAttendGroup.RestTimes
+//	return RestTimes
+//}
 func (DingAttendGroup *DingAttendGroup) BeforeCreate(tx *gorm.DB) (err error) {
 	DingAttendGroup.CreatedAt = time.Now()
 	return
@@ -586,13 +609,18 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	}
 	hour = hour[:len(hour)-1]
 	min = min[:len(min)-1]
-	spec := "00 " + min + " " + hour + " * * ?"
+	spec := ""
+	if runtime.GOOS == "windows" {
+		spec = "00 13,54,18 8,14,20 * * ?"
+	} else if runtime.GOOS == "linux" {
+		spec = "00 " + min + " " + hour + " * * ?"
+	}
 	//readySpec := ""
-	//spec = "00 13,54,18 8,14,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
+
 		//a := DingAttendance{DingToken: DingToken{Token: token}}
 		//获取一天上下班的时间
 		commutingTimes, err := g.GetCommutingTime()
@@ -704,11 +732,11 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
 				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
 			}
-			if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
-				zap.L().Info("freetime跳过")
-				//直接所有部门都不再发送了
-				return
-			}
+			//if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
+			//	zap.L().Info("freetime跳过")
+			//	//直接所有部门都不再发送了
+			//	return
+			//}
 			err, _ = LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))

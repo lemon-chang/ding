@@ -59,6 +59,13 @@ type DingAttendGroup struct {
 	ReadyTime         int    `json:"ready_time"`           //如果预备了，提前几分钟
 	NextTime          string `json:"next_time"`            //下次执行时间
 	IsSecondClass     int    `json:"is_second_class"`      //是否开启第二节课考勤
+	Rests             []Rest `json:"rests"`
+}
+type Rest struct {
+	gorm.Model
+	Week    int
+	MAE     int
+	GroupId int
 }
 type DingAttendanceGroupMemberList struct {
 	AtcFlag  string `json:"atc_flag"`
@@ -583,9 +590,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := "00 " + min + " " + hour + " * * ?"
 	//readySpec := ""
-
-	spec = "00 13,36,33 8,14,20 * * ?"
-
+	//spec = "00 13,36,18 8,14,20 * * ?"
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()

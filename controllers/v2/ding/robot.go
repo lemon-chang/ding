@@ -401,7 +401,6 @@ func GetTaskList(c *gin.Context) {
 
 }
 func RemoveTask(c *gin.Context) {
-
 	var p *dingding.ParamStopTask
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))

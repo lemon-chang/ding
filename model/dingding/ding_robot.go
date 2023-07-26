@@ -1182,7 +1182,7 @@ func (t *DingRobot) GetTaskList(RobotId string) (tasks []Task, err error) {
 func (t *DingRobot) RemoveTask(taskId string) (err error) {
 	//先来判断一下是否拥有这个定时任务
 	var task Task
-	err = global.GLOAB_DB.Where("id = ?", taskId).First(&task).Error
+	err = global.GLOAB_DB.Unscoped().Where("id = ?", taskId).First(&task).Error
 	if err != nil {
 		zap.L().Info("通过taskId查找定时任务失败", zap.Error(err))
 		return err

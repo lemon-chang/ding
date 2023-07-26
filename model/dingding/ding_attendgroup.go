@@ -725,18 +725,17 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				当前周、高级筛选中的部门，我们找到部门中有课的同学，然后跳过即可
 			*/
 			//处理没有考勤记录的同学，看看其是否有课，map传递的引用类型
-
 			if isInSchool {
 				//调用课表小程序接口，判断没有考勤数据的人是否请假了
 				//需要参数：当前周、周几、第几节课，NotRecordUserIdList
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
 				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
 			}
-			//if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
-			//	zap.L().Info("freetime跳过")
-			//	//直接所有部门都不再发送了
-			//	return
-			//}
+			if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
+				zap.L().Info("freetime跳过")
+				//直接所有部门都不再发送了
+				return
+			}
 			err, _ = LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))

@@ -431,26 +431,24 @@ func ReStartTask(c *gin.Context) {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
 }
-func B(c *gin.Context) {
-	var users []dingding.DingUser
-	var userids []string
-	//global.GLOAB_DB.Model(&dingding.DingDept{}).Preload("")
-	global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, 546623914).Select("ding_user_user_id").Find(&userids)
-	global.GLOAB_DB.Model(&dingding.DingUser{}).Where("user_id IN ?", userids).Find(&users)
-	response.ResponseSuccess(c, users)
-	//var userids []string
-	//deptid := 546623914
-	//global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, deptid).Select("ding_user_user_id").Find(&userids)
-	//p := &dingding.ParamChat{
-	//	RobotCode: "dingepndjqy7etanalhi",
-	//	UserIds:   userids,
-	//	MsgKey:    "sampleText",
-	//	MsgParam:  "测试单聊消息的发送",
-	//}
-	//err := (&dingding.DingRobot{}).ChatSendMessage(p)
-	//if err != nil {
-	//	fmt.Println("wochucuol:", err)
-	//}
+func UpdateMobile(c *gin.Context) {
+	token, _ := (&dingding.DingToken{}).GetAccessToken()
+	//向数据库拿到考勤组id
+	deptids := make([]string, 0)
+	global.GLOAB_DB.Model(dingding.DingDept{}).Where("is_robot_attendance", 1).Select("dept_id").Find(&deptids)
+	for _, deptid := range deptids {
+		var p dingding.DingDept
+		p.DingToken.Token = token
+		id, _ := strconv.Atoi(deptid)
+		p.DeptId = id
+		list, _, err := p.GetUserListByDepartmentID(0, 100)
+		fmt.Println("err :", err)
+		//将数据存到数据库
+		for _, user := range list {
+			global.GLOAB_DB.Model(dingding.DingUser{}).Where("user_id", user.UserId).Updates(dingding.DingUser{Mobile: user.Mobile, Password: "123456"})
+		}
+	}
+	response.ResponseSuccess(c, "更新成功")
 }
 
 //修改定时任务的内容
@@ -470,7 +468,6 @@ func EditTaskContent(c *gin.Context) {
 	}
 	response.OkWithMessage("修改成功", c)
 }
-
 func GetTaskDetail(c *gin.Context) {
 	var p *dingding.ParamGetTaskDeatil
 	if err := c.ShouldBindQuery(&p); err != nil {

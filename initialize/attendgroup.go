@@ -15,6 +15,7 @@ func AttendanceByRobot() (err error) {
 		return
 	}
 	for _, group := range groupList {
+		//根据考勤组id获取成员信息
 		if group.IsRobotAttendance {
 			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
 			//正常考勤
@@ -28,6 +29,7 @@ func AttendanceByRobot() (err error) {
 			if err != nil {
 				return err
 			}
+
 			//d := &dingding.ParamCronTask{
 			//	MsgText: &common.MsgText{
 			//		Msgtype: "text",

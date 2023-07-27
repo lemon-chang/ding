@@ -1,7 +1,6 @@
 package initialize
 
 import (
-	dingding2 "ding/model/dingding"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"os"
@@ -12,8 +11,8 @@ func RegisterTables(db *gorm.DB) (err error) {
 	//err = db.AutoMigrate(&dingding2.DingUser{})
 	//err = db.AutoMigrate(&dingding2.DingRobot{})
 	//err = db.AutoMigrate(&dingding2.DingDept{})
-	err = db.AutoMigrate(&dingding2.DingAttendGroup{})
-	err = db.AutoMigrate(&dingding2.RestTime{})
+	//err = db.AutoMigrate(&dingding2.DingAttendGroup{})
+	//err = db.AutoMigrate(&dingding2.RestTime{})
 	//err = db.AutoMigrate(&dingding2.Task{})
 	//err = db.AutoMigrate(&common.MsgText{})
 	//err = db.AutoMigrate(&common.MsgLink{})

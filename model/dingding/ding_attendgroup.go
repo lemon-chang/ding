@@ -599,6 +599,13 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	}
 	//获取到上班时间
 	OnDutyTimeList := commutingTime["OnDuty"]
+	//获取到不考勤时间
+	var restTime []RestTime
+	err = global.GLOAB_DB.Where("attend_group_id", a.GroupId).Find(&restTime).Error
+	if err != nil {
+		zap.L().Error("根据考勤组获取休息时间失败", zap.Error(err))
+		return
+	}
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
 	min := ""
 	hour := ""
@@ -668,6 +675,14 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		Len := len(deptAttendanceUser)
 		Count := 0
 		startWeek, week, CourseNumber, err := DateHandle(curTime)
+		//判断是不是freetime时间
+		for _, rest := range restTime {
+			if week == rest.WeekDay && curTime.Duration == rest.MAE {
+				zap.L().Info("freetime跳过")
+				//直接所有部门都不再发送了
+				return
+			}
+		}
 		for DeptId, _ := range deptAttendanceUser { //
 			Count++
 			atoi, _ := strconv.Atoi(DeptId)
@@ -731,11 +746,13 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
 				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
 			}
-			if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
-				zap.L().Info("freetime跳过")
-				//直接所有部门都不再发送了
-				return
-			}
+
+			//if (week == restTime[0].WeekDay && curTime.Duration == restTime[0].MAE) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
+			//	zap.L().Info("freetime跳过")
+			//	//直接所有部门都不再发送了
+			//	return
+			//}
+
 			err, _ = LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))

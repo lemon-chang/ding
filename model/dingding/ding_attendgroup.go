@@ -52,16 +52,6 @@ type DingAttendGroup struct {
 		} `gorm:"-" json:"sections"`
 	} `gorm:"-" json:"selected_class"`
 	DingToken         `gorm:"-"`
-<<<<<<< HEAD
-	IsRobotAttendance bool   `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
-	RobotAttendTaskID int    `json:"robot_attend_task_id"`
-	IsSendFirstPerson int    `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
-	IsInSchool        bool   `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
-	IsReady           int    `json:"is_ready"`             //是否预备
-	ReadyTime         int    `json:"ready_time"`           //如果预备了，提前几分钟
-	NextTime          string `json:"next_time"`            //下次执行时间
-	IsSecondClass     int    `json:"is_second_class"`      //是否开启第二节课考勤
-=======
 	IsRobotAttendance bool       `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
 	RobotAttendTaskID int        `json:"robot_attend_task_id"`
 	IsSendFirstPerson int        `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
@@ -71,7 +61,6 @@ type DingAttendGroup struct {
 	NextTime          string     `json:"next_time"`            //下次执行时间
 	IsSecondClass     int        `json:"is_second_class"`      //是否开启第二节课考勤
 	RestTimes         []RestTime `json:"rest_times" gorm:"foreignKey:AttendGroupID;references:group_id"`
->>>>>>> b0631fa6bfa7b71bc98d61c2c355d1b094ab2803
 }
 type RestTime struct {
 	gorm.Model    // 1 2 2 0 2 1
@@ -634,11 +623,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		spec = "00 " + min + " " + hour + " * * ?"
 	}
 	//readySpec := ""
-<<<<<<< HEAD
-	spec = "00 13,45,18 8,14,20 * * ?"
-
-=======
->>>>>>> b0631fa6bfa7b71bc98d61c2c355d1b094ab2803
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()

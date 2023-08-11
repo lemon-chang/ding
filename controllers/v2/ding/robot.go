@@ -1,6 +1,7 @@
 package ding
 
 import (
+	"context"
 	"ding/controllers"
 	"ding/global"
 	"ding/model/common"
@@ -13,6 +14,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -457,12 +459,14 @@ func ReStartTask(c *gin.Context) {
 	err := c.ShouldBindJSON(&p)
 	if err != nil || p.ID == "" {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage(err.Error(), c)
+		response.FailWithMessage("CronTask做定时任务参数绑定失败", c)
+		return
 	}
 	_, err = (&dingding.DingRobot{}).ReStartTask(p.ID)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
 		response.FailWithMessage(err.Error(), c)
+		return
 	} else {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
@@ -493,7 +497,7 @@ func B(c *gin.Context) {
 func EditTaskContent(c *gin.Context) {
 	var r *dingding.EditTaskContentParam
 	err := c.ShouldBindJSON(&r)
-	if err != nil && r.TaskID == 0 {
+	if err != nil && r.TaskID == "" {
 		zap.L().Error("编辑定时任务内容参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return
@@ -528,8 +532,10 @@ func GetAllPublicRobot(c *gin.Context) {
 	if err != nil {
 		zap.L().Error("查询所有公共机器人失败", zap.Error(err))
 		response.FailWithMessage("获取机器人失败", c)
+		return
 	} else if len(robots) == 0 {
 		response.FailWithMessage("没有公共机器人", c)
+		return
 	} else {
 		//返回机器人的基本信息
 		response.ResponseSuccess(c, robots)
@@ -540,11 +546,13 @@ func AlterResultByRobot(c *gin.Context) {
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("AlterResultByRobot参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
+		return
 	}
 	err := dingding.AlterResultByRobot(p)
 	if err != nil {
 		zap.L().Error("AlterResultByRobot失败", zap.Error(err))
 		response.FailWithMessage("更新失败", c)
+		return
 	}
 	response.ResponseSuccess(c, "更新成功")
 }
@@ -619,7 +627,7 @@ func SubscribeTo(c *gin.Context) {
 }
 
 type ParamLeetCodeAddr struct {
-	Name         string `json:"name"`
+	UserId       string `json:"user_id"`
 	LeetCodeAddr string `json:"leetCodeAddr"`
 }
 
@@ -632,7 +640,7 @@ func GetLeetCode(c *gin.Context) {
 		return
 	}
 	fmt.Println(leetcode)
-	err = global.GLOAB_DB.Table("ding_users").Where("name = ?", leetcode.Name).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
+	err = global.GLOAB_DB.Table("ding_users").Where("user_id = ?", leetcode.UserId).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
 	if err != nil {
 		zap.L().Error("存入数据库失败", zap.Error(err))
 		response.FailWithMessage("存入数据库失败", c)
@@ -641,6 +649,76 @@ func GetLeetCode(c *gin.Context) {
 	response.ResponseSuccess(c, "成功")
 }
 
+//func RobotAt(c *gin.Context) {
+//	var resp *dingding.RobotAtResp
+//	if err := c.ShouldBindJSON(&resp); err != nil {
+//		zap.L().Error("RobotAtResp", zap.Error(err))
+//		response.FailWithMessage("参数错误", c)
+//	}
+//	fmt.Println("内容为:", resp.Text)
+//	//userId := resp.SenderStaffId
+//	conversationType := resp.ConversationType               //聊天类型
+//	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
+//	dingRobot := &dingding.DingRobot{}
+//	//单聊
+//	if conversationType == "1" {
+//		if str == "打字邀请码" {
+//			err := dingRobot.RobotSendInviteCode(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "送水电话号码" {
+//			err := dingRobot.RobotSendWater(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "获取个人信息" {
+//			err := dingRobot.RobotSendPrivateMessage(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if strings.Contains(str, "保存个人信息") {
+//			err := dingRobot.RobotSavePrivateMessage(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if strings.Contains(str, "更改个人信息") {
+//			err := dingRobot.RobotPutPrivateMessage(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "学习资源" {
+//
+//		} else {
+//			err := dingRobot.RobotSendHelpCard(resp)
+//			if err != nil {
+//				return
+//			}
+//		}
+//		//群聊
+//	} else if conversationType == "2" {
+//		if str == "打字邀请码" {
+//			//_ 代表res["processQueryKey"]可以查看已读状态
+//			_, err := dingRobot.RobotSendGroupInviteCode(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "送水电话号码" {
+//			//_ 代表res["processQueryKey"]可以查看已读状态
+//			_, err := dingRobot.RobotSendGroupWater(resp)
+//			if err != nil {
+//				return
+//			}
+//		} else if str == "帮助" {
+//			//_ 代表res["processQueryKey"]可以查看已读状态
+//			_, err := dingRobot.RobotSendGroupCard(resp)
+//			if err != nil {
+//				return
+//			}
+//		}
+//	}
+//	response.ResponseSuccess(c, "成功")
+//}
 func RobotAt(c *gin.Context) {
 	var resp *dingding.RobotAtResp
 	if err := c.ShouldBindJSON(&resp); err != nil {
@@ -649,43 +727,41 @@ func RobotAt(c *gin.Context) {
 	}
 	fmt.Println("内容为:", resp.Text)
 	//userId := resp.SenderStaffId
-	conversationType := resp.ConversationType               //群聊id
+	conversationType := resp.ConversationType               //聊天类型
 	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
 	dingRobot := &dingding.DingRobot{}
+
+	//获得的字符串状态
+	var staus int
 	//单聊
 	if conversationType == "1" {
-		if str == "打字邀请码" {
-			err := dingRobot.RobotSendInviteCode(resp)
-			if err != nil {
-				return
-			}
-		} else if str == "送水电话号码" {
-			err := dingRobot.RobotSendWater(resp)
-			if err != nil {
-				return
-			}
-		} else if str == "获取个人信息" {
-			err := dingRobot.RobotSendPrivateMessage(resp)
-			if err != nil {
-				return
-			}
-		} else if strings.Contains(str, "保存个人信息") {
-			err := dingRobot.RobotSavePrivateMessage(resp)
-			if err != nil {
-				return
-			}
-		} else if strings.Contains(str, "更改个人信息") {
-			err := dingRobot.RobotPutPrivateMessage(resp)
-			if err != nil {
-				return
-			}
-		} else {
-			err := dingRobot.RobotSendHelpCard(resp)
-			if err != nil {
-				return
+		dataByStr, err := GetAllDataByStr(str, resp.SenderStaffId)
+		if err != nil {
+			zap.L().Error("GetAllDataByStr", zap.Error(err))
+			response.FailWithMessage("通过字符串获取资源失败", c)
+		}
+		fmt.Println(dataByStr)
+		for _, data := range dataByStr {
+			if data.DataName == str {
+				staus++
 			}
 		}
-		//群聊
+		if staus != len(dataByStr) && len(dataByStr) != 1 {
+			//发送卡片信息
+			fmt.Println("卡片")
+			err := dingRobot.RobotSendCardToPerson(resp, dataByStr)
+			if err != nil {
+				zap.L().Error("RobotSendCardToPerson", zap.Error(err))
+			}
+		} else {
+			//发送直接数据
+			fmt.Println("数据")
+			err := dingRobot.RobotSendMessageToPerson(resp, dataByStr)
+			if err != nil {
+				zap.L().Error("RobotSendMessageToPerson", zap.Error(err))
+			}
+		}
+
 	} else if conversationType == "2" {
 		if str == "打字邀请码" {
 			//_ 代表res["processQueryKey"]可以查看已读状态
@@ -693,19 +769,332 @@ func RobotAt(c *gin.Context) {
 			if err != nil {
 				return
 			}
-		} else if str == "送水电话号码" {
-			//_ 代表res["processQueryKey"]可以查看已读状态
-			_, err := dingRobot.RobotSendGroupWater(resp)
-			if err != nil {
-				return
+		}
+	}
+}
+func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, err error) {
+	var AllDatas []dingding.Result
+	//查询所有个人资源
+	redisRoad := "learningData:personal:" + userId + ":"
+	AllPersonalData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), redisRoad).Result()
+	if err != nil {
+		zap.L().Error("从redis读取失败", zap.Error(err))
+	}
+	user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+	if err != nil {
+		zap.L().Error("userid查询用户信息失败", zap.Error(err))
+	}
+	for dataName, dataLink := range AllPersonalData {
+		r := dingding.Result{
+			Name:     user.Name,
+			DataName: dataName,
+			DataLink: dataLink,
+		}
+		AllDatas = append(AllDatas, r)
+	}
+	//查询所有公共资源
+	redisRoad = "learningData:public*"
+	allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
+	if err != nil {
+		zap.L().Error("从redis读取公共数据失败", zap.Error(err))
+		return
+	}
+	for _, s := range allRedisRoad {
+		split := strings.Split(s, ":")
+		userId := split[len(split)-1-1]
+		user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+		AllPublicData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), s).Result()
+		if err != nil {
+			zap.L().Error("从redis读取失败", zap.Error(err))
+		}
+		for dataName, dataLink := range AllPublicData {
+			r := dingding.Result{
+				Name:     user.Name,
+				DataName: dataName,
+				DataLink: dataLink,
 			}
-		} else if str == "帮助" {
-			//_ 代表res["processQueryKey"]可以查看已读状态
-			_, err := dingRobot.RobotSendGroupCard(resp)
+			AllDatas = append(AllDatas, r)
+		}
+	}
+
+	//查询此人所有部门内的所有资源
+	deptList := dingding.GetDeptByUserId(userId).DeptList
+	for _, dept := range deptList {
+		redisRoad = "learningData:dept:" + strconv.Itoa(dept.DeptId) + ":*"
+		allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
+		if err != nil {
+			zap.L().Error("从redis读取公共数据失败", zap.Error(err))
+		}
+		for _, s := range allRedisRoad {
+			split := strings.Split(s, ":")
+			userId := split[len(split)-1-1]
+			user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+			AllPublicData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), s).Result()
 			if err != nil {
-				return
+				zap.L().Error("从redis读取失败", zap.Error(err))
+			}
+			for dataName, dataLink := range AllPublicData {
+				r := dingding.Result{
+					Name:     user.Name,
+					DataName: dataName,
+					DataLink: dataLink,
+				}
+				AllDatas = append(AllDatas, r)
 			}
 		}
 	}
-	response.ResponseSuccess(c, "成功")
+
+	for _, data := range AllDatas {
+		if str == data.DataName {
+			DatasByStr = append(DatasByStr, data)
+		} else if strings.Contains(data.DataName, str) {
+			DatasByStr = append(DatasByStr, data)
+		}
+	}
+	return
+}
+
+type Data struct {
+	Type        int    `json:"type"` //1公共 2部门 3个人
+	DeptId      int    `json:"dept_id"`
+	OldDataName string `json:"old_data_name"`
+	DataName    string `json:"data_name"`
+	DataLink    string `json:"data_link"`
+	UserName    string `json:"user_name"`
+}
+
+func GetRedisRoad(data *Data, UserId string) (redisRoad string) {
+	redisRoad = "learningData:"
+	if data.Type == 1 {
+		//公共存储
+		redisRoad += "public:" + UserId + ":"
+	} else if data.Type == 2 {
+		deptList := dingding.GetDeptByUserId(UserId).DeptList
+		for _, dept := range deptList {
+			redisRoad = "learningData:"
+			if dept.DeptId == data.DeptId {
+				//部门存储
+				redisRoad += "dept:" + strconv.Itoa(data.DeptId) + ":" + UserId + ":"
+				return
+			}
+		}
+
+	} else if data.Type == 3 {
+		//个人存储
+		redisRoad += "personal:" + UserId + ":"
+	}
+	return
+}
+
+//上传资源
+func UpdateData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := GetRedisRoad(data, UserId)
+	if redisRoad == "learningData:" {
+		response.FailWithMessage("您不是该部门的成员，不能添加资源", c)
+		return
+	}
+	result, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.DataName).Result()
+	if err != nil {
+		zap.L().Error("查询redis中是否存在该名字失败", zap.Error(err))
+	}
+	if result {
+		zap.L().Info("已存在该文件名称")
+		response.FailWithMessage("已存在该文件名称", c)
+	} else {
+		err = global.GLOBAL_REDIS.HSet(ctx, redisRoad, data.DataName, data.DataLink).Err()
+		if err != nil {
+			zap.L().Error("将文件名称链接存储进redis中失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+	}
+	response.OkWithMessage("上传成功", c)
+}
+
+//删除资源
+func DeleteData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := GetRedisRoad(data, UserId)
+	if redisRoad == "learningData:" {
+		response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+		return
+	} else {
+		exist, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.DataName).Result()
+		if err != nil {
+			zap.L().Error("从redis中查询是否存在失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+		dataLink, err := global.GLOBAL_REDIS.HGet(ctx, redisRoad, data.DataName).Result()
+		if err != nil {
+			zap.L().Error("从redis中没有查到该DataName", zap.Error(err))
+			response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+			return
+		}
+		user, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+		if user.Name != data.UserName || !exist || data.DataLink != dataLink {
+			response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+			return
+		}
+		err = global.GLOBAL_REDIS.HDel(ctx, redisRoad, data.DataName).Err()
+		if err != nil {
+			zap.L().Error("将文件名称链接从redis中删除失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+	}
+	response.OkWithMessage("删除成功", c)
+}
+
+//修改资源
+func PutData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := GetRedisRoad(data, UserId)
+	user, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	//判断是否已存在该键
+	exist, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.OldDataName).Result()
+	if err != nil {
+		zap.L().Error("从redis中查询是否存在失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	if !exist || data.UserName != user.Name {
+		response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+		return
+	} else {
+		exist, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.DataName).Result()
+		if err != nil {
+			zap.L().Error("从redis中查询是否存在失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+		oldDataLink, err := global.GLOBAL_REDIS.HGet(ctx, redisRoad, data.OldDataName).Result()
+		if err != nil {
+			zap.L().Error("从redis中没有查到该DataName", zap.Error(err))
+			response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
+			return
+		}
+		if exist && oldDataLink == data.DataLink {
+			response.FailWithMessage("没有进行修改或已存在该键", c)
+			return
+		}
+		err = global.GLOBAL_REDIS.HDel(ctx, redisRoad, data.OldDataName).Err()
+		if err != nil {
+			zap.L().Error("将文件名称链接从redis中删除失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+		err = global.GLOBAL_REDIS.HSet(ctx, redisRoad, data.DataName, data.DataLink).Err()
+		if err != nil {
+			zap.L().Error("将文件名称链接存储进redis中失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+	}
+	response.OkWithMessage("成功", c)
+}
+
+//查询资源
+func GetData(c *gin.Context) {
+	UserId, err := global.GetCurrentUserId(c)
+	if err != nil {
+		zap.L().Error("token获取userid失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	var data *Data
+	err = c.ShouldBindJSON(&data)
+	if err != nil {
+		zap.L().Error("JSON绑定错误", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	ctx := context.Background()
+	redisRoad := "learningData:"
+	if data.Type == 1 {
+		redisRoad += "public*"
+	} else if data.Type == 2 {
+		redisRoad += "dept:" + strconv.Itoa(data.DeptId) + ":*"
+	} else if data.Type == 3 {
+		redisRoad += "personal:" + UserId + ":*"
+	}
+	//result, err := global.GLOBAL_REDIS.Keys(context.Background(), "learningData:dept:546623914*").Result()
+	fmt.Println(redisRoad)
+	allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
+	if err != nil {
+		zap.L().Error("从redis读取公共数据失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+		return
+	}
+	//var AllDatas []map[string]map[string]string
+	var AllDatas []dingding.Result
+	for _, s := range allRedisRoad {
+		split := strings.Split(s, ":")
+		userId := split[len(split)-1-1]
+		user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+		AllData, err := global.GLOBAL_REDIS.HGetAll(ctx, s).Result()
+		if err != nil {
+			zap.L().Error("从redis读取失败", zap.Error(err))
+			response.FailWithMessage("参数错误", c)
+			return
+		}
+
+		//AllDatas = append(AllDatas, AllData)
+		//userData := make(map[string]map[string]string)
+		//userData[user.Name] = AllData
+
+		//AllDatas = append(AllDatas, userData)
+
+		for dataName, dataLink := range AllData {
+			r := dingding.Result{
+				Name:     user.Name,
+				DataName: dataName,
+				DataLink: dataLink,
+			}
+			AllDatas = append(AllDatas, r)
+		}
+
+	}
+
+	response.OkWithDetailed(AllDatas, "成功", c)
 }

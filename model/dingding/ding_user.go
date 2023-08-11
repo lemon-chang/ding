@@ -135,31 +135,51 @@ func (d *DingUser) GetConsecutiveSignNum(year, uporDown, startWeek, weekDay, MNE
 	return
 }
 
+type days struct {
+	morning bool
+	midday  bool
+	night   bool
+}
+
 //统计用户当前周签到的详情情况
-func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[int]bool, err error) {
-	result = make(map[int]bool, 0)
+func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[int][]bool, err error) {
+	result = make(map[int][]bool, 0)
 	//if year == 0 || uporDown == 0 || startWeek == 0 {
 	//	curTime, _ := (&localTime.MySelfTime{}).GetCurTime(nil)
 	//
 	//}
-
 	//使用bitFiled来获取int64，然后使用位运算计算结果
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v:%v", d.UserId, year, uporDown, startWeek)
-	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(7), "0").Result()
+	fmt.Println(key)
+	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(21), "0").Result()
 	if err != nil || list == nil || len(list) == 0 || list[0] == 0 {
 		zap.L().Error("使用redis中的bitmap失败", zap.Error(err))
 		return nil, errors.New("使用redis中的bitmap失败")
 	}
 	v := list[0]
+	//110001111111111101111000
+	//for i := 1; i <= 8; i++ {
+	//	if v>>1<<1 == v {
+	//		//说明没有签到
+	//		result[i] = append(result[i], false)
+	//	} else {
+	//		//说明签到了
+	//		result[i] = append(result[i], true)
+	//	}
+	//	v = v >> 1
+	//	x = x >> 1
+	//}
 	for i := 7; i > 0; i-- {
 		for j := 0; j < 3; j++ {
 			if v>>1<<1 == v {
 				//说明没有签到
-				result[i] = false
+				result[i] = append(result[i], false)
 			} else {
 				//说明签到了
-				result[i] = true
+				result[i] = append(result[i], true)
+				//result[i][j] = true
 			}
+			v = v >> 1
 		}
 	}
 	return
@@ -178,6 +198,16 @@ func (d *DingUser) GetWeekSignNum(year, uporDown, startWeek int) (WeekSignNum in
 	WeekSignNum, err = global.GLOBAL_REDIS.BitCount(context.Background(), key, bitCount).Result()
 	if err != nil {
 		zap.L().Error("使用redis的BitCount失败", zap.Error(err))
+		return
+	}
+	return
+}
+
+//通过userid查询部门id
+func GetDeptByUserId(UserId string) (user *DingUser) {
+	err := global.GLOAB_DB.Where("user_id = ?", UserId).Preload("DeptList").First(&user).Error
+	if err != nil {
+		zap.L().Error("通过userid查询用户失败", zap.Error(err))
 		return
 	}
 	return

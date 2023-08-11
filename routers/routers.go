@@ -20,7 +20,6 @@ import (
 )
 
 func Setup(mode string) *gin.Engine {
-
 	if mode == gin.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode) //设置为发布模式
 	}
@@ -29,9 +28,7 @@ func Setup(mode string) *gin.Engine {
 	//r.Use(cors.Default()) //第三方库
 	r.Use(middlewares.Cors())
 	fmt.Println(middlewares.Cors())
-
 	zap.L().Info("跨域配置完成")
-
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 	V3 := r.Group("/api/v3")
 	V3.POST("/jk", v1.Jk)
@@ -41,20 +38,26 @@ func Setup(mode string) *gin.Engine {
 	V3.POST("/robotAt", ding.RobotAt)
 
 	V3.POST("/gxpRobot", ding.GxpRobot)
+	V3.GET("GetAllUsers", ding.SelectAllUsers) // 查询所有用户信息
+	//获取力扣地址
+	V3.POST("getLeetCode", ding.GetLeetCode)
 	System := r.Group("/api/system")
 	System.Use(middlewares.JWTAuthMiddleware())
+
 	system.SetupSystem(System)
 	Ding := r.Group("/api/ding")
+
 	{
 		Ding.POST("login", ding.LoginHandler)
+
 		Ding.POST("singleChat", ding.ChatHandler)
 		//放给钉钉用的接口
 		Ding.POST("subscribeTo", ding.SubscribeTo)
-		//获取力扣地址
-		Ding.POST("getLeetCode", ding.GetLeetCode)
+
 	}
 
 	Ding.Use(middlewares.JWTAuthMiddleware())
+	Ding.POST("loginByToken", ding.LoginHandlerByToken)
 	dingding.SetupDing(Ding)
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)

@@ -2,6 +2,7 @@ package ding
 
 import (
 	"context"
+	"crypto/tls"
 	"ding/controllers"
 	"ding/dao/redis"
 	"ding/global"
@@ -15,7 +16,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"net/http"
 	"sync"
+	"time"
 )
 
 var wg = sync.WaitGroup{}
@@ -86,7 +90,7 @@ func FindAllJinAndBlog(c *gin.Context) {
 	response.OkWithDetailed(list, "查询简书或者博客成功", c)
 }
 
-// LoginHandler 处理登录请求的函数
+//LoginHandler 处理登录请求的函数
 func LoginHandler(c *gin.Context) {
 	//1.获取请求参数及参数校验
 	var p params.ParamLogin
@@ -120,6 +124,66 @@ func LoginHandler(c *gin.Context) {
 	} else {
 		response.OkWithDetailed(user, "用户登录成功", c)
 	}
+}
+func LoginHandlerByToken(c *gin.Context) {
+	//1.获取请求参数及参数校验
+	authHeader := c.Request.Header.Get("Authorization")
+	if authHeader == "" {
+		response.ResponseError(c, response.CodeNeedLogin)
+		return
+	}
+	//调用oss的接口，来进行登录认证
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	//URL := "https://oapi.dingtalk.com/attendance/listRecord?access_token=" + a.DingToken.Token
+	URL := "http://127.0.0.1:8890/marchsoft/getUserInfo"
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+
+	//然后把结构体对象序列化一下
+	//然后就可以放入具体的request中的
+	request, err := http.NewRequest(http.MethodPost, URL, nil)
+	request.Header.Set("Authorization", authHeader)
+	if err != nil {
+		return
+	}
+	resp, err = client.Do(request)
+	if err != nil {
+		return
+	}
+	zap.L().Info(fmt.Sprintf("发送请求成功，原始resp为:%v", resp))
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return
+	}
+	r := struct {
+		Code int `json:"code"`
+		Data struct {
+			UserId string `json:"userid"`
+			Name   string `json:"name"`
+			Mobile string `json:"mobile"`
+		} `json:"data"`
+		Msg string `json:"msg"`
+	}{}
+
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return
+	}
+	zap.L().Info(fmt.Sprintf("把请求结果序列化到结构体对象中成功%v", r))
+	if r.Code != 0 {
+		response.FailWithMessage("登录失败", c)
+		return
+	}
+	response.OkWithDetailed(r, "登录成功", c)
+
 }
 
 func GetQRCode(c *gin.Context) {
@@ -185,6 +249,7 @@ func GetAllActiveTask(c *gin.Context) {
 	//把找到的数据存储到redis中 ，现在先写成手动获取
 	//应该是存放在一个集合里面，集合里面存放着此条任务的所有信息，以id作为标识
 	//哈希特别适合存储对象，所以我们用哈希来存储
+
 	for _, task := range tasks {
 		taskValue, err := json.Marshal(task) //把对象序列化成为一个json字符串
 		if err != nil {

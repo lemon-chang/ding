@@ -81,8 +81,6 @@ func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom strin
 	if r.Errcode != 0 {
 		return nil, errors.New(r.Errmsg)
 	}
-
 	// 此处举行具体的逻辑判断，然后返回即可
-
 	return r.Recordresult, nil
 }

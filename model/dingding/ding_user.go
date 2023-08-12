@@ -255,6 +255,15 @@ func (d *DingUser) Login() (user *DingUser, err error) {
 		Mobile:   d.Mobile,
 		Password: d.Password,
 	}
+	//判断该用户是否存在
+	err = global.GLOAB_DB.Model(DingUser{}).Where("mobile", d.Mobile).First(user).Error
+	if err != nil {
+		return nil, errors.New("用户不存在")
+	}
+	//判断密码是否正确
+	if user.Password != d.Password {
+		return nil, errors.New("密码错误")
+	}
 	//此处的Login函数传递的是一个指针类型的数据
 	opassword := user.Password //此处是用户输入的密码，不一定是对的
 	err = global.GLOAB_DB.Where(&DingUser{Mobile: user.Mobile}).Preload("Authorities").Preload("Authority").First(user).Error

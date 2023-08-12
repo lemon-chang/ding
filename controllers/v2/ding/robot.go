@@ -47,15 +47,9 @@ func GxpRobot(c *gin.Context) {
 	err := c.ShouldBindJSON(&p)
 	err = c.ShouldBindHeader(&p)
 	if err != nil {
-		zap.L().Error("OutGoing invaild param", zap.Error(err))
-		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			response.ResponseError(c, response.CodeInvalidParam)
-			return
-		} else {
-			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
-			return
-		}
+		zap.L().Error("GxpRobot OutGoing invaild param", zap.Error(err))
+		response.FailWithMessage("outgoing参数绑定失败", c)
+		return
 	}
 	err = (&dingding.DingRobot{}).GxpSendSessionWebHook(&p)
 	if err != nil {
@@ -100,45 +94,6 @@ func AddRobot(c *gin.Context) {
 		UserName:   user.Name,
 		Name:       p.Name,
 		IsShared:   p.IsShared,
-	}
-	if p.Type == "" {
-		zap.L().Info("前端没有告知机器人的类型,我们前往数据库进行查询")
-		err = global.GLOAB_DB.Where("robot_id = ?", p.RobotId).First(&dingRobot).Error
-		p.Type = dingRobot.Type
-		zap.L().Info(fmt.Sprintf("%v对应的机器人姓名为：%v,type = %v", p.RobotId, p.Name, p.Type))
-	}
-	if p.Type == "1" {
-		//我们需要让用户扫码，添加群成员信息
-		//此处展示二维码
-		//_, ChatID, title, err := (&dingding.DingUser{}).GetQRCode(c)
-		if err != nil {
-			zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
-		}
-		//dingRobot.ChatId = ChatID
-		dingRobot.Name = p.Name
-		token, err1 := (&dingding.DingToken{}).GetAccessToken()
-		if err1 != nil {
-			zap.L().Error("获取token失败", zap.Error(err))
-			return
-		}
-		openConversationID := (&dingding.DingGroup{Token: dingding.DingToken{Token: token}}).GetOpenConversationID()
-		dingRobot.OpenConversationID = openConversationID
-		userIds, err := (&dingding.DingRobot{DingToken: dingding.DingToken{Token: token}, OpenConversationID: openConversationID}).GetGroupUserIds()
-		var users []dingding.DingUser
-
-		err2 := global.GLOAB_DB.Where("user_id in ?", userIds).Find(&users).Error
-		if err2 != nil {
-			zap.L().Error(fmt.Sprintf("根据userids查询users失败"), zap.Error(err2))
-		}
-		global.GLOAB_DB.Model(&dingRobot)
-		//dingRobot.DingUsers = users
-		err = global.GLOAB_DB.Model(dingRobot).Association("DingUsers").Replace(users)
-		if err != nil {
-			zap.L().Error("global.GLOAB_DB.Model(dingRobot).Association(\"DingUsers\").Replace(users)有误", zap.Error(err))
-		}
-	} else if p.Type == "2" {
-		//直接更新即可
-
 	}
 	// 2.逻辑处理
 	err = dingRobot.CreateOrUpdateRobot()
@@ -440,7 +395,6 @@ func GetTaskList(c *gin.Context) {
 
 }
 func RemoveTask(c *gin.Context) {
-
 	var p *dingding.ParamStopTask
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
@@ -471,26 +425,24 @@ func ReStartTask(c *gin.Context) {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
 }
-func B(c *gin.Context) {
-	var users []dingding.DingUser
-	var userids []string
-	//global.GLOAB_DB.Model(&dingding.DingDept{}).Preload("")
-	global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, 546623914).Select("ding_user_user_id").Find(&userids)
-	global.GLOAB_DB.Model(&dingding.DingUser{}).Where("user_id IN ?", userids).Find(&users)
-	response.ResponseSuccess(c, users)
-	//var userids []string
-	//deptid := 546623914
-	//global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, deptid).Select("ding_user_user_id").Find(&userids)
-	//p := &dingding.ParamChat{
-	//	RobotCode: "dingepndjqy7etanalhi",
-	//	UserIds:   userids,
-	//	MsgKey:    "sampleText",
-	//	MsgParam:  "测试单聊消息的发送",
-	//}
-	//err := (&dingding.DingRobot{}).ChatSendMessage(p)
-	//if err != nil {
-	//	fmt.Println("wochucuol:", err)
-	//}
+func UpdateMobile(c *gin.Context) {
+	token, _ := (&dingding.DingToken{}).GetAccessToken()
+	//向数据库拿到考勤组id
+	deptids := make([]string, 0)
+	global.GLOAB_DB.Model(dingding.DingDept{}).Where("is_robot_attendance", 1).Select("dept_id").Find(&deptids)
+	for _, deptid := range deptids {
+		var p dingding.DingDept
+		p.DingToken.Token = token
+		id, _ := strconv.Atoi(deptid)
+		p.DeptId = id
+		list, _, err := p.GetUserListByDepartmentID(0, 100)
+		fmt.Println("err :", err)
+		//将数据存到数据库
+		for _, user := range list {
+			global.GLOAB_DB.Model(dingding.DingUser{}).Where("user_id", user.UserId).Updates(dingding.DingUser{Mobile: user.Mobile, Password: "123456"})
+		}
+	}
+	response.ResponseSuccess(c, "更新成功")
 }
 
 //修改定时任务的内容
@@ -510,7 +462,6 @@ func EditTaskContent(c *gin.Context) {
 	}
 	response.OkWithMessage("修改成功", c)
 }
-
 func GetTaskDetail(c *gin.Context) {
 	var p *dingding.ParamGetTaskDeatil
 	if err := c.ShouldBindQuery(&p); err != nil {

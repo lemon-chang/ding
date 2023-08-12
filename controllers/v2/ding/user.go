@@ -108,6 +108,10 @@ func LoginHandler(c *gin.Context) {
 	//2.业务逻辑处理
 	//3.返回响应
 	user, err := (&dingding2.DingUser{Mobile: p.Mobile, Password: p.Password}).Login()
+	if err != nil {
+		response.FailWithMessage("用户登录失败", c)
+		return
+	}
 	// 生成JWT
 	token, err := jwt.GenToken(c, user)
 	if err != nil {

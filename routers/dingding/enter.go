@@ -72,8 +72,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("/getTaskDetail", ding.GetTaskDetail)          //获取定时任务详情
 		Robot.GET("/getAllPublicRobot", ding.GetAllPublicRobot)  //获取所有的公共机器人
 		Robot.PUT("alterResultByRobot", ding.AlterResultByRobot) //修改部门考勤果推送到哪个群,给我一个要修改到哪个群的公共机器人的token，你要修改的部门id
-		Robot.GET("a", ding.B)
-
+		Robot.GET("updateMobile", ding.UpdateMobile)
 		Robot.POST("singleChat", ding.SingleChat)
 	}
 	//机器人问答模块

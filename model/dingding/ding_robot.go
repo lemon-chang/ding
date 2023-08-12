@@ -828,18 +828,19 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 		return
 	} else {
 		//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
-		if strings.Contains(p.Text.Content, "宿舍") || strings.Contains(p.Text.Content, "寝室") {
-			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
-			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
-			if err != nil {
-				zap.L().Error("发送到宿舍后，存入数据库失败", zap.Error(err))
-			}
-		} else {
-			r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: false, Content: p.Text.Content}
-			err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
-			if err != nil {
-				zap.L().Error("发送其他信息，存入数据库失败", zap.Error(err))
-			}
+		//if strings.Contains(p.Text.Content, "到") || strings.Contains(p.Text.Content, "宿舍") || strings.Contains(p.Text.Content, "寝室") {
+		//
+		//} else {
+		//	r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: false, Content: p.Text.Content}
+		//	err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
+		//	if err != nil {
+		//		zap.L().Error("发送其他信息，存入数据库失败", zap.Error(err))
+		//	}
+		//}
+		r := Record{TongXinUserID: p.SenderStaffId, IsAtRobot: true, IsInRoom: true, Content: p.Text.Content}
+		err = global.GLOAB_DB1.Where("id = ?", p.SenderStaffId).Create(&r).Error
+		if err != nil {
+			zap.L().Error("发送到宿舍后，存入数据库失败", zap.Error(err))
 		}
 		msg = map[string]interface{}{
 			"msgtype": "text",
@@ -851,21 +852,6 @@ func (*DingRobot) GxpSendSessionWebHook(p *ParamReveiver) (err error) {
 			"atUserIds": []string{p.SenderStaffId},
 		}
 	}
-	//timerr := strings.Split(getTime, ":")
-	//
-	//var msg map[string]interface{}
-	//hour, _ := strconv.Atoi(timerr[0])
-	//min, _ := strconv.Atoi(time[1])
-	//fmt.Println(hour, min)
-	//
-	//if (hour == utils.StartHour && min < utils.StartMin) || hour < utils.StartHour {
-	//
-	//} else if hour >= utils.EndHour && min >= utils.EndMin {
-	//	return
-	//} else {
-	//
-	//}
-
 	b, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -1182,7 +1168,7 @@ func (t *DingRobot) GetTaskList(RobotId string) (tasks []Task, err error) {
 func (t *DingRobot) RemoveTask(taskId string) (err error) {
 	//先来判断一下是否拥有这个定时任务
 	var task Task
-	err = global.GLOAB_DB.Where("task_id = ?", taskId).First(&task).Error
+	err = global.GLOAB_DB.Unscoped().Where("id = ?", taskId).First(&task).Error
 	if err != nil {
 		zap.L().Info("通过taskId查找定时任务失败", zap.Error(err))
 		return err

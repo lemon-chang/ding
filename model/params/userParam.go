@@ -12,7 +12,9 @@ type ParamLogin struct {
 	Mobile   string `json:"mobile" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
-
+type ParamLoginByToken struct {
+	Token string `json:"token"`
+}
 type ParamOutGoing struct {
 }
 

@@ -622,7 +622,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + min + " " + hour + " * * ?"
 	}
-	//readySpec := ""
 	zap.L().Info(spec)
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()

@@ -47,15 +47,9 @@ func GxpRobot(c *gin.Context) {
 	err := c.ShouldBindJSON(&p)
 	err = c.ShouldBindHeader(&p)
 	if err != nil {
-		zap.L().Error("OutGoing invaild param", zap.Error(err))
-		errs, ok := err.(validator.ValidationErrors)
-		if !ok {
-			response.ResponseError(c, response.CodeInvalidParam)
-			return
-		} else {
-			response.ResponseErrorWithMsg(c, response.CodeInvalidParam, controllers.RemoveTopStruct(errs.Translate(controllers.Trans)))
-			return
-		}
+		zap.L().Error("GxpRobot OutGoing invaild param", zap.Error(err))
+		response.FailWithMessage("outgoing参数绑定失败", c)
+		return
 	}
 	err = (&dingding.DingRobot{}).GxpSendSessionWebHook(&p)
 	if err != nil {

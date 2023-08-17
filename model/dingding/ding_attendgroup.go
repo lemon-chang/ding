@@ -618,7 +618,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := ""
 	if runtime.GOOS == "windows" {
-		spec = "00 13,54,18 8,14,20 * * ?"
+		spec = "00 02,11,11 9,14,20 * * ?"
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + min + " " + hour + " * * ?"
 	}
@@ -774,7 +774,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+			err = (&DingRobot{RobotId: "d9679e8ce46b6e464e71fd06a571c1de9bb48a02f39d0670b3da2187b4345c25"}).SendMessage(pSend)
 			if err != nil {
 				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
 				continue

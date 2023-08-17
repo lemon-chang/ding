@@ -215,8 +215,16 @@ func GetQRCode(c *gin.Context) {
 
 //获取所有任务列表,包括已暂停的任务
 func GetAllTask(c *gin.Context) {
+	user_id, _ := c.Get(global.CtxUserIDKey)
+	//var user *dingding2.DingUser
+	//err := global.GLOAB_DB.Where("user_id", user_id).First(&user).Error
+	//if err != nil {
+	//	zap.L().Error("获取用户信息失败", zap.Error(err))
+	//	response.FailWithMessage("服务繁忙", c)
+	//	return
+	//}
 	var tasks []dingding2.Task
-	err := global.GLOAB_DB.Model(&tasks).Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
+	err := global.GLOAB_DB.Model(&tasks).Where("user_id", user_id).Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
 	if err != nil {
 		zap.L().Error("获取所有定时任务失败", zap.Error(err))
 		response.FailWithMessage("服务繁忙", c)

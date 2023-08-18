@@ -97,6 +97,9 @@ func AddRobot(c *gin.Context) {
 	}
 	// 2.逻辑处理
 	err = dingRobot.CreateOrUpdateRobot()
+	//更新完之后，去修改定时任务里面的机器人名字
+	var task *dingding.Task
+	err = global.GLOAB_DB.Model(&task).Where("robot_id", p.RobotId).Update("robot_name", p.Name).Error
 	if err != nil {
 		response.FailWithMessage("添加机器人失败", c)
 	} else {

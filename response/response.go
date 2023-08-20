@@ -16,12 +16,6 @@ type Response struct {
 	Msg  string      `json:"msg"`
 }
 
-type ResponseData struct {
-	Code ResCode     `json:"code"`
-	Msg  interface{} `json:"msg"`
-	Data interface{} `json:"data,omitempty"`
-}
-
 func FailWithMessage(message string, c *gin.Context) {
 	Result(ERROR, map[string]interface{}{}, message, c)
 }

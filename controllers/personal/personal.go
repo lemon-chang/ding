@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"ding/global"
-	"ding/logic"
 	"ding/model"
 	"ding/response"
 	"encoding/json"
@@ -52,7 +51,7 @@ func Jk(c *gin.Context) {
 	//	response.ResponseErrorWithMsg(c, response.CodeInvalidParam, RemoveTopStruct(errs.Translate(Trans)))
 	//	return
 	//}
-	err = logic.Jk(c, &p)
+	err = model.JkFunc(c, &p)
 	if err != nil {
 		fmt.Println(err)
 	}

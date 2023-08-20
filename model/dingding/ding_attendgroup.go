@@ -3,8 +3,8 @@ package dingding
 import (
 	"context"
 	"crypto/tls"
-	"ding/dao/redis"
 	"ding/global"
+	"ding/initialize/redis"
 	"ding/model/classCourse"
 	"ding/model/common"
 	"ding/model/common/localTime"
@@ -586,7 +586,6 @@ func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int
 func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
-	fmt.Println("access_token:", token)
 	if err != nil || token == "" {
 		zap.L().Error("从redis中取出token失败", zap.Error(err))
 		return
@@ -758,7 +757,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			}
 			zap.L().Info("没有考勤数据的同学已经处理完成")
 			//一个部门的考勤结束了，开始封装信息，发送考勤消息
-			fmt.Println(result)
 
 			message := MessageHandle(curTime, DeptDetail, result)
 
@@ -1065,7 +1063,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
 			}
-			fmt.Println(late)
+
 			//late1 := make([]string, 0)
 			//late1 = append(late1, "43605942651709855765")
 			//late1 = append(late1, "01145213476838013811")

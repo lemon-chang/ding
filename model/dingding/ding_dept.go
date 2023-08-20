@@ -3,8 +3,8 @@ package dingding
 import (
 	"context"
 	"crypto/tls"
-	"ding/dao/redis"
 	"ding/global"
+	"ding/initialize/redis"
 	"ding/model/common"
 	"ding/model/common/localTime"
 	"ding/model/params"

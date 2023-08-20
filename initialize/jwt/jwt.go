@@ -1,8 +1,8 @@
 package jwt
 
 import (
+	"ding/initialize/viper"
 	"ding/model/dingding"
-	"ding/settings"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -22,7 +22,7 @@ type MyClaims struct {
 
 // GenToken 生成JWT
 func GenToken(c *gin.Context, user *dingding.DingUser) (string, error) {
-	fmt.Println(settings.Conf.Auth.Jwt_Expire)
+	fmt.Println(viper.Conf.Auth.Jwt_Expire)
 	// 创建一个我们自己的声明
 	m := MyClaims{
 		user.UserId, // 自定义字段
@@ -30,7 +30,7 @@ func GenToken(c *gin.Context, user *dingding.DingUser) (string, error) {
 		user.AuthorityId,
 		jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(
-				time.Duration(settings.Conf.Auth.Jwt_Expire) * time.Hour).Unix(), // 过期时间8760
+				time.Duration(viper.Conf.Auth.Jwt_Expire) * time.Hour).Unix(), // 过期时间8760
 			Issuer: "yjp", // 签发人
 		},
 	}

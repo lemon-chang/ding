@@ -16,21 +16,21 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 		// 这里的具体实现方式要依据你的实际业务情况决定
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
-			response.ResponseError(c, response.CodeNeedLogin)
+			response.FailWithMessage("需要登录", c)
 			c.Abort()
 			return
 		}
 		// 按空格分割
 		parts := strings.SplitN(authHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			response.ResponseError(c, response.CodeInvalidToken)
+			response.FailWithMessage("无效的token", c)
 			c.Abort()
 			return
 		}
 		// parts[1]是获取到的tokenString，我们使用之前定义好的解析JWT的函数来解析它
 		mc, err := (&jwt.MyClaims{}).ParseToken(parts[1])
 		if err != nil {
-			response.ResponseError(c, response.CodeInvalidToken)
+			response.FailWithMessage("无效的token", c)
 			c.Abort()
 			return
 		}

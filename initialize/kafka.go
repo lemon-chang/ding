@@ -2,7 +2,7 @@ package initialize
 
 import (
 	"ding/global"
-	"ding/settings"
+	"ding/initialize/viper"
 	"fmt"
 	"github.com/Shopify/sarama"
 )
@@ -19,7 +19,7 @@ func KafkaInit() (err error) {
 	// 用于指示生产者在成功发送消息后是否返回成功的响应。
 	config.Producer.Return.Successes = true
 	// Kafka集群的地址
-	brokers := []string{settings.Conf.KafkaConfig.Address}
+	brokers := []string{viper.Conf.KafkaConfig.Address}
 	client, err := sarama.NewClient(brokers, config)
 	if err != nil {
 		fmt.Println(err)

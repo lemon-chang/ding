@@ -114,7 +114,6 @@ func (d *DingUser) GetConsecutiveSignNum(year, uporDown, startWeek, weekDay, MNE
 	}
 	// 此处获得的值是经过二进制转化过来的，总共有21个字节，如果长度是21个字节的话，可能会非常的大，我们如何处理非常大的值呢？
 	//具体思路可以使用位运算，具体博客链接
-
 	v := list[0]
 	for i := weekDay; i > 0; i-- {
 		for j := 0; j < 3; j++ {

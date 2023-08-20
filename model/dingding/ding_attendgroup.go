@@ -617,7 +617,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := ""
 	if runtime.GOOS == "windows" {
-		spec = "00 13,54,18 8,14,20 * * ?"
+		spec = "00 02,11,11 9,14,20 * * ?"
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + min + " " + hour + " * * ?"
 	}

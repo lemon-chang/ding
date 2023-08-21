@@ -497,7 +497,6 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 		return
 	}
 	//取差集查看一下那些部门已经不在来了，进行软删除
-
 	err = global.GLOAB_DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "dept_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"name", "parent_id"}),

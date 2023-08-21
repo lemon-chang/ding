@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"ding/settings"
+	"ding/initialize/viper"
 	"github.com/gin-gonic/gin"
 	"github.com/natefinch/lumberjack"
 	"go.uber.org/zap"
@@ -18,7 +18,7 @@ import (
 var Logger *zap.Logger
 
 // Init 初始化Logger
-func Init(cfg *settings.LogConfig, mode string) (err error) {
+func Init(cfg *viper.LogConfig, mode string) (err error) {
 	writeSyncer := getLogWriter(
 		cfg.Filename,
 		cfg.MaxSize,

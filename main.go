@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"ding/initialize/cron"
-	"ding/initialize/gxp"
 	"ding/initialize/logger"
 	"ding/initialize/mysql"
 	"ding/initialize/redis"
@@ -47,20 +46,18 @@ func main() {
 		return
 	}
 	zap.L().Debug("mysql init success...")
-
 	//初始化corn定时器
 	if err = cron.InitCorn(); err != nil {
 		zap.L().Error(fmt.Sprintf("init cron failed ,err:%v\n", err))
 	}
 
 	//将通信201的数据存入数据库
-	if err = gxp.Init(); err != nil {
-		fmt.Printf("init gxpmysql failed ,err:%v\n", err)
-		zap.L().Error(fmt.Sprintf("init gxpmysql failed ,err:%v\n", err))
-		return
-	}
+	//if err = gxp.Init(); err != nil {
+	//	fmt.Printf("init gxpmysql failed ,err:%v\n", err)
+	//	zap.L().Error(fmt.Sprintf("init gxpmysql failed ,err:%v\n", err))
+	//	return
+	//}
 	r := routers.Setup(viper.Conf.Mode)
-
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", viper.Conf.App.Port),
 		Handler: r,

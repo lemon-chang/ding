@@ -32,16 +32,7 @@ import (
 )
 
 var (
-	ErrorUserExist             = errors.New("用户已经存在")
-	ErrorUserNotExist          = errors.New("用户不存在")
-	ErrorInvalidPassword       = errors.New("用户密码错误")
-	ErrorInvalidID             = errors.New("无效的ID")
-	ErrorRobotExist            = errors.New("该机器人ID已经存在或者在您的账户机器人昵称重复")
-	ErrorRobotNotExist         = errors.New("在当前用户下机器人不存在,无法删除")
-	ErrorTeleOrPersonNameExist = errors.New("在该机器人中此电话号码或者姓名已经存在")
-	ErrorNotHasRobot           = errors.New("该用户未拥有该机器人")
-	ErrorNotHasTask            = errors.New("未拥有该任务")
-	ErrorSpecInvalid           = errors.New("定时规则可能不合法")
+	ErrorSpecInvalid = errors.New("定时规则可能不合法")
 )
 
 type DingRobot struct {
@@ -64,10 +55,6 @@ type DingRobot struct {
 
 func (r *DingRobot) GetSharedRobot() (Robots []DingRobot, err error) {
 	err = global.GLOAB_DB.Where("is_shared = ?", 1).Find(&Robots).Error
-	return
-}
-func (r *DingRobot) InsertRobot() (err error) {
-	err = global.GLOAB_DB.Create(r).Error
 	return
 }
 func (r *DingRobot) PingRobot() (err error) {
@@ -100,7 +87,6 @@ func (r *DingRobot) AddDingRobot() (err error) {
 	return
 }
 func (r *DingRobot) RemoveRobot() (err error) {
-
 	err = global.GLOAB_DB.Delete(r).Error
 	return
 }
@@ -754,17 +740,6 @@ func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 				"content": utils.TypingInviationSucc + ": " + code,
 			},
 		}
-
-	} else if strings.Contains(p.Text.Content, "加密机器人ID") {
-		msg = map[string]interface{}{
-			"msgtype": "text",
-			"text": map[string]string{
-				"content": "获取成功：" + p.ChatbotUserId + "\n" + "登录机器人后台，更新机器人填写此字段后即可查看该机器人考勤记录",
-			},
-		}
-		msg["at"] = map[string][]string{
-			"atUserIds": []string{p.SenderStaffId},
-		}
 	}
 
 	b, err := json.Marshal(msg)
@@ -1333,138 +1308,7 @@ func (t *DingRobot) RobotSendInviteCode(resp *RobotAtResp) error {
 	}
 	return nil
 }
-func (t *DingRobot) RobotSendWater(resp *RobotAtResp) error {
-	param := &ParamChat{
-		MsgKey:    "sampleText",
-		MsgParam:  "送水师傅电话: 15236463964",
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
-	err := t.ChatSendMessage(param)
-	if err != nil {
-		zap.L().Error("发送送水师傅电话失败" + err.Error())
-		return err
-	}
-	return nil
-}
-func (t *DingRobot) RobotSendPrivateMessage(resp *RobotAtResp) (err error) {
-	val, err := global.GLOBAL_REDIS.Get(context.Background(), "userPrivate:"+resp.SenderStaffId).Result()
-	if len(val) == 0 {
-		val = fmt.Sprintf("未检测到存储的信息,请先存储\n存储格式为:\n保存个人信息：xxx")
-		param := &ParamChat{
-			MsgKey:    "sampleText",
-			MsgParam:  val,
-			RobotCode: "dingepndjqy7etanalhi",
-			UserIds:   []string{resp.SenderStaffId},
-		}
-		err = t.ChatSendMessage(param)
-		if err != nil {
-			zap.L().Error("发送存储信息失败" + err.Error())
-			return err
-		}
-		return nil
-	}
-	param := &ParamChat{
-		MsgKey:    "sampleText",
-		MsgParam:  fmt.Sprintf("您的个人信息为：%s\n如需更改请发送更改个人信息：xxx 进行更改", val),
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
-	err = t.ChatSendMessage(param)
-	if err != nil {
-		zap.L().Error("发送存储信息失败" + err.Error())
-		return err
-	}
-	return nil
-}
-func (t *DingRobot) RobotSavePrivateMessage(resp *RobotAtResp) (err error) {
-	val := strings.Split(strings.TrimSpace(resp.Text["content"].(string)), "：")[1]
-	err = global.GLOBAL_REDIS.Set(context.Background(), "userPrivate:"+resp.SenderStaffId, val, 0).Err()
-	content := "存储成功，可通过查看命令进行查看"
-	if err != nil {
-		content = "存储失败"
-	}
-	param := &ParamChat{
-		MsgKey:    "sampleText",
-		MsgParam:  content,
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
-	err = t.ChatSendMessage(param)
-	if err != nil {
-		zap.L().Error("发送存储成功失败" + err.Error())
-		return err
-	}
-	return nil
-}
-func (t *DingRobot) RobotPutPrivateMessage(resp *RobotAtResp) (err error) {
-	val, err := global.GLOBAL_REDIS.Get(context.Background(), "userPrivate:"+resp.SenderStaffId).Result()
-	if len(val) == 0 {
-		val = fmt.Sprintf("请先保存个人信息\n保存格式为:\n保存个人信息:xxx")
-		param := &ParamChat{
-			MsgKey:    "sampleText",
-			MsgParam:  val,
-			RobotCode: "dingepndjqy7etanalhi",
-			UserIds:   []string{resp.SenderStaffId},
-		}
-		err = t.ChatSendMessage(param)
-		if err != nil {
-			zap.L().Error("发送存储成功失败" + err.Error())
-			return err
-		}
-		return nil
 
-	}
-	val = strings.Split(strings.TrimSpace(resp.Text["content"].(string)), "：")[1]
-	err = global.GLOBAL_REDIS.Set(context.Background(), "userPrivate:"+resp.SenderStaffId, val, 0).Err()
-	content := "更改个人信息成功，可通过查看命令进行查看"
-	if err != nil {
-		content = "更改个人信息失败"
-	}
-	param := &ParamChat{
-		MsgKey:    "sampleText",
-		MsgParam:  content,
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
-	err = t.ChatSendMessage(param)
-	if err != nil {
-		zap.L().Error("发送存储成功失败" + err.Error())
-		return err
-	}
-	return nil
-}
-func (t *DingRobot) RobotSendHelpCard(resp *RobotAtResp) error {
-	param := &ParamChat{
-		MsgKey: "sampleActionCard4",
-		MsgParam: "{\n" +
-			"        \"title\": \"帮助\",\n" +
-			"        \"text\": \"请问你是否在查找以下功能\",\n" +
-			"        \"actionTitle1\": \"送水电话号码\",\n" +
-			fmt.Sprintf("'actionURL1':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("送水电话号码")) +
-			"        \"actionTitle2\": \"打字邀请码\",\n" +
-			fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
-			"        \"actionTitle3\": \"获取个人信息\",\n" +
-			fmt.Sprintf("'actionURL3':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("获取个人信息")) +
-			"        \"actionTitle4\": \"学习资源\",\n" +
-			fmt.Sprintf("'actionURL4':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("学习资源")) +
-			//"        \"actionTitle5\": \"部门资源\",\n" +
-			//fmt.Sprintf("'actionURL5':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("部门资源")) +
-			//"        \"actionTitle6\": \"公共资源\",\n" +
-			//fmt.Sprintf("'actionURL6':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("公共资源")) +
-			//"        \"actionTitle7\": \"搜索资源\",\n" +
-			//fmt.Sprintf("'actionURL7':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("搜索资源")) +
-			"    }",
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
-	err := t.ChatSendMessage(param)
-	if err != nil {
-		zap.L().Error("发送chatSendMessage错误" + err.Error())
-		return err
-	}
-	return nil
-}
 func (t *DingRobot) RobotSendGroupInviteCode(resp *RobotAtResp) (res map[string]interface{}, err error) {
 	code, expire, err := t.GetInviteCode()
 	if err != nil {

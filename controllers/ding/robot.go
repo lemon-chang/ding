@@ -625,7 +625,8 @@ func RobotAt(c *gin.Context) {
 				staus++
 			}
 		}
-		if staus != len(dataByStr) && len(dataByStr) != 1 {
+		//if staus != len(dataByStr) && len(dataByStr) != 1 {
+		if staus != len(dataByStr) {
 			//发送卡片信息
 			fmt.Println("卡片")
 			err := dingRobot.RobotSendCardToPerson(resp, dataByStr)

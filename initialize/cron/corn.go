@@ -2,6 +2,7 @@ package cron
 
 import (
 	"ding/global"
+	"ding/model/dingding"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -35,6 +36,11 @@ func InitCorn() (err error) {
 	err = SendLeetCode()
 	if err != nil {
 		zap.L().Error("SendLeetCode init fail...")
+	}
+	//重启考勤周报
+	err = dingding.AttendWeeklyNewsPaper()
+	if err != nil {
+		zap.L().Error("AttendWeeklyNewsPaper init fail...")
 	}
 	return err
 }

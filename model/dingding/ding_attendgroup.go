@@ -778,6 +778,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				continue
 			}
 			//在此处使用bitmap来实现存储功能
+			err, week := GetWeek()
 			err = BitMapHandle(result, curTime, startWeek, week)
 			if err != nil {
 				zap.L().Error("使用bitmap存储每个人的记录失败", zap.Error(err))

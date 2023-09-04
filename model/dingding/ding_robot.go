@@ -1375,7 +1375,7 @@ type Result struct {
 	DataLink string `json:"data_link"`
 }
 
-//机器人问答发送卡片给个人
+//机器人问答发送卡片给个人https://open.dingtalk.com/document/isvapp/the-internal-robot-of-the-enterprise-realizes-the-interaction-in
 func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result) (err error) {
 	cardLen := len(dataByStr)
 	if cardLen <= 5 {
@@ -1383,21 +1383,48 @@ func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result)
 		cardLen = 5
 	}
 	action := ""
-	for i, data := range dataByStr {
-		action += "        \"actionTitle" + strconv.Itoa(i+1) + "\": \"" + data.DataName + "\",\n" +
-			fmt.Sprintf("'actionURL%d':'dtmd://dingtalkclient/sendMessage?content=%s',\n", i+1, url.QueryEscape(data.DataName))
+	var param *ParamChat
+	if cardLen == 1 {
+		//for i, data := range dataByStr {
+		//	action += "        \"actionTitle" + strconv.Itoa(i+1) + "\": \"" + data.DataName + "\",\n" +
+		//		fmt.Sprintf("'actionURL%d':'dtmd://dingtalkclient/sendMessage?content=%s',\n", i+1, url.QueryEscape(data.DataName))
+		//}
+
+		//action = fmt.Sprintf("\"singleTitle\": \"%s\",\n     \"singleURL\": \"%s\"", dataByStr[0].DataName, dataByStr[0].DataLink)
+		for _, data := range dataByStr {
+			action += "        \"singleTitle" + "\": \"" + data.DataName + "\",\n" +
+				fmt.Sprintf("'singleURL':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape(data.DataName))
+		}
+		param = &ParamChat{
+			MsgKey: "sampleActionCard",
+			MsgParam: "{\n" +
+				"        \"title\": \"资料\",\n" +
+				"        \"text\": \"请问你是否在查找以下资料\",\n" +
+				action +
+				"    }",
+			RobotCode: "dingepndjqy7etanalhi",
+			UserIds:   []string{resp.SenderStaffId},
+		}
+
+	} else {
+		for i, data := range dataByStr {
+			action += "        \"actionTitle" + strconv.Itoa(i+1) + "\": \"" + data.DataName + "\",\n" +
+				fmt.Sprintf("'actionURL%d':'dtmd://dingtalkclient/sendMessage?content=%s',\n", i+1, url.QueryEscape(data.DataName))
+		}
+		param = &ParamChat{
+			MsgKey: "sampleActionCard" + strconv.Itoa(cardLen),
+			MsgParam: "{\n" +
+				"        \"title\": \"资料\",\n" +
+				"        \"text\": \"请问你是否在查找以下资料\",\n" +
+				action +
+				"    }",
+			RobotCode: "dingepndjqy7etanalhi",
+			UserIds:   []string{resp.SenderStaffId},
+		}
 	}
+
 	fmt.Println(action)
-	param := &ParamChat{
-		MsgKey: "sampleActionCard" + strconv.Itoa(cardLen),
-		MsgParam: "{\n" +
-			"        \"title\": \"资料\",\n" +
-			"        \"text\": \"请问你是否在查找以下资料\",\n" +
-			action +
-			"    }",
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
+
 	err = t.ChatSendMessage(param)
 	if err != nil {
 		zap.L().Error("发送chatSendCardToPerson错误" + err.Error())

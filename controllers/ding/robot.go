@@ -697,9 +697,19 @@ func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, e
 	}
 
 	//查询此人所有部门内的所有资源
-	deptList := dingding.GetDeptByUserId(userId).DeptList
-	for _, dept := range deptList {
-		redisRoad = "learningData:dept:" + strconv.Itoa(dept.DeptId) + ":*"
+	//deptList := dingding.GetDeptByUserId(userId).DeptList
+	token, _ := (&dingding.DingToken{}).GetAccessToken()
+	DetailUser, err := (&dingding.DingUser{UserId: userId, DingToken: dingding.DingToken{Token: token}}).GetUserDetailByUserId()
+	if err != nil {
+		return
+	}
+	if DetailUser.Admin {
+		var deptids []int
+		global.GLOAB_DB.Model(dingding.DingDept{}).Select("dept_id").Scan(&deptids)
+		DetailUser.DeptIdList = deptids
+	}
+	for _, dept := range DetailUser.DeptIdList {
+		redisRoad = "learningData:dept:" + strconv.Itoa(dept) + ":*"
 		allRedisRoad, err := global.GLOBAL_REDIS.Keys(context.Background(), redisRoad).Result()
 		if err != nil {
 			zap.L().Error("从redis读取公共数据失败", zap.Error(err))

@@ -69,6 +69,7 @@ type DingUser struct {
 	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
 	BlogArticleURL      Strs `gorm:"type:longtext" json:"blog_article_url"`
 	IsExcellentJianBlog bool `json:"is_excellentBlogJian" `
+	Admin               bool `json:"admin"`
 }
 
 //用户签到
@@ -288,6 +289,7 @@ func encryptPassword(oPassword string) string {
 	return hex.EncodeToString(h.Sum([]byte(oPassword)))
 }
 
+//https://open.dingtalk.com/document/isvapp/query-user-details
 func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 	var client *http.Client
 	var request *http.Request

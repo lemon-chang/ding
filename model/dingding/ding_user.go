@@ -69,6 +69,7 @@ type DingUser struct {
 	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
 	BlogArticleURL      Strs `gorm:"type:longtext" json:"blog_article_url"`
 	IsExcellentJianBlog bool `json:"is_excellentBlogJian" `
+	Admin               bool `json:"admin"`
 }
 
 //用户签到
@@ -288,6 +289,7 @@ func encryptPassword(oPassword string) string {
 	return hex.EncodeToString(h.Sum([]byte(oPassword)))
 }
 
+//https://open.dingtalk.com/document/isvapp/query-user-details
 func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 	var client *http.Client
 	var request *http.Request
@@ -677,7 +679,7 @@ func (d *DingUser) UpdateDingUserBlog(blogs Strs, id string) (err error) {
 }
 
 // 获取二维码buf，chatId, title
-func (u *DingUser) GetQRCode(c *gin.Context) (buf []byte, chatId, title string, err error) {
+func (u *DingUser) GetQRCodeInWindows(c *gin.Context) (buf []byte, chatId, title string, err error) {
 	zap.L().Info("进入到了chromedp")
 	d := data{}
 	opts := append(
@@ -845,13 +847,12 @@ func GetChromeCtx(focus bool) context.Context {
 	}
 	return ChromeCtx
 }
-func (u *DingUser) GetQRCode1(c *gin.Context) (buf []byte, chatId, title string, err error) {
-
+func (u *DingUser) GetQRCodeInLinux(c *gin.Context) (buf []byte, chatId, title string, err error) {
 	timeCtx, cancel := context.WithTimeout(GetChromeCtx(false), 5*time.Minute)
 	defer cancel()
 	d := data{}
 	var html string
-	fmt.Println("开始运行chromedp")
+	zap.L().Info("开始运行chromedp")
 	err = chromedp.Run(timeCtx,
 		//打开网页
 		chromedp.Navigate(`https://open-dev.dingtalk.com/apiExplorer?spm=ding_open_doc.document.0.0.20bf4063FEGqWg#/jsapi?api=biz.chat.chooseConversationByCorpId`),

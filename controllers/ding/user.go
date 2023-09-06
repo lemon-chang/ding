@@ -2,6 +2,7 @@ package ding
 
 import (
 	"crypto/tls"
+	"runtime"
 
 	"ding/global"
 	"ding/initialize/jwt"
@@ -174,7 +175,14 @@ func LoginHandlerByToken(c *gin.Context) {
 
 }
 func GetQRCode(c *gin.Context) {
-	buf, ChatID, title, err := (&dingding.DingUser{}).GetQRCode1(c)
+	var buf []byte
+	var ChatID, title string
+	var err error
+	if runtime.GOOS == "linux" {
+		buf, ChatID, title, err = (&dingding.DingUser{}).GetQRCodeInLinux(c)
+	} else if runtime.GOOS == "windows" {
+		buf, ChatID, title, err = (&dingding.DingUser{}).GetQRCodeInWindows(c)
+	}
 	if err != nil {
 		zap.L().Error("截取二维码和获取群聊基本错误", zap.Error(err))
 		response.FailWithMessage("截取二维码和获取群聊基本错误", c)

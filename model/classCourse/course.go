@@ -29,7 +29,7 @@ func GetIsHasCourse(lesson int, startWeek int, userType int, useridList []string
 		useridListString += userid + ","
 	}
 	useridListString = useridListString[:len(useridListString)-1]
-	URL := fmt.Sprintf("http://8.130.137.7/course/findUserByClass?lesson=%v&page=0&startWeek=%v&userType=%v&useridList=%v&week=%v&pageSize=100", lesson, startWeek, userType, useridListString, week)
+	URL := fmt.Sprintf("http://8.130.137.7:20080/course/findUserByClass?lesson=%v&page=0&startWeek=%v&userType=%v&useridList=%v&week=%v&pageSize=100", lesson, startWeek, userType, useridListString, week)
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

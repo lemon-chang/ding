@@ -460,7 +460,8 @@ func SubscribeTo(c *gin.Context) {
 	zap.L().Info(fmt.Sprintf("encrypt: %v", m))
 
 	// 2. 参数解密
-	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	//测试回调的时候使用
+	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "S6z2bKrf9WL3sPhnuUd5d5O3TvDntntnklpa4e6jJSt", "dinglyjekzn80ebnlyge")
 	//解密后的数据是一个json字符串
 	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
 	// 3. 反序列化回调事件json数据

@@ -1065,9 +1065,6 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
 			}
 
-			//late1 := make([]string, 0)
-			//late1 = append(late1, "43605942651709855765")
-			//late1 = append(late1, "01145213476838013811")
 			zap.L().Info("没有考勤数据的同学已经处理完成")
 			//将考勤数据发给部门负责人以及管理人员
 			p := &ParamChat{

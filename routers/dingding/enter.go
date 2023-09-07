@@ -36,7 +36,7 @@ func SetupDing(System *gin.RouterGroup) {
 	User := System.Group("/user")
 	{
 		User.GET("/getUserInfo", ding2.GetUserInfo)
-		//User.POST("ImportDingUserData", ding.ImportDingUserData) //将钉钉用户导入到数据库中
+		User.POST("ImportDingUserData", ding2.ImportDingUserData)  //将钉钉用户导入到数据库中
 		User.POST("/UpdateDingUserAddr", ding2.UpdateDingUserAddr) // 更新用户的博客和简书地址
 		User.GET("/GetAllUsers", ding2.SelectAllUsers)             // 查询所有用户信息
 		User.GET("/GetAllJinAndBlog", ding2.FindAllJinAndBlog)

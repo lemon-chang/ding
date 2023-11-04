@@ -74,27 +74,28 @@ type DingAttendanceGroupMemberList struct {
 	MemberID string `json:"member_id"`
 }
 
-//通过考勤组id获取休息时间
-//func (DingAttendGroup *DingAttendGroup) GetRestTimes(weekDay int) (RestTimes []RestTime) {
-//	//err := global.GLOAB_DB.Model(&DingAttendGroup).Preload("RestTimes").Find(&RestTimes).Error
-//	//if err != nil {
-//	//	zap.L().Error("")
-//	//}
+// 通过考勤组id获取休息时间
 //
-//	//err := global.GLOAB_DB.Model(&DingAttendGroup).Association("RestTimes").Find(&RestTimes).Error
-//	//if err != nil {
-//	//	zap.L().Error("")
-//	//}
-//	//return RestTimes
+//	func (DingAttendGroup *DingAttendGroup) GetRestTimes(weekDay int) (RestTimes []RestTime) {
+//		//err := global.GLOAB_DB.Model(&DingAttendGroup).Preload("RestTimes").Find(&RestTimes).Error
+//		//if err != nil {
+//		//	zap.L().Error("")
+//		//}
 //
-//	err := global.GLOAB_DB.Preload("RestTimes").First(DingAttendGroup)
-//	if err != nil {
-//		zap.L().Error("")
+//		//err := global.GLOAB_DB.Model(&DingAttendGroup).Association("RestTimes").Find(&RestTimes).Error
+//		//if err != nil {
+//		//	zap.L().Error("")
+//		//}
+//		//return RestTimes
+//
+//		err := global.GLOAB_DB.Preload("RestTimes").First(DingAttendGroup)
+//		if err != nil {
+//			zap.L().Error("")
+//		}
+//		RestTimes = make([]RestTime, len(DingAttendGroup.RestTimes))
+//		RestTimes = DingAttendGroup.RestTimes
+//		return RestTimes
 //	}
-//	RestTimes = make([]RestTime, len(DingAttendGroup.RestTimes))
-//	RestTimes = DingAttendGroup.RestTimes
-//	return RestTimes
-//}
 func (DingAttendGroup *DingAttendGroup) BeforeCreate(tx *gorm.DB) (err error) {
 	DingAttendGroup.CreatedAt = time.Now()
 	return
@@ -175,6 +176,7 @@ func (a *DingAttendGroup) GetAttendancesGroups(offset int, size int) (groups []D
 // 获取一天的上下班时间
 // map["OnDuty"] map["OffDuty"]
 func (a *DingAttendGroup) GetCommutingTime() (FromTo map[string][]string, err error) {
+
 	FromTo = make(map[string][]string, 2)
 	timeNowYMD := time.Now().Format("2006-01-02")
 	attendancesGroupsDetail, err := a.GetAttendancesGroupById()
@@ -202,7 +204,7 @@ func (a *DingAttendGroup) GetCommutingTime() (FromTo map[string][]string, err er
 	return
 }
 
-//用于打卡提醒获取上班时间段
+// 用于打卡提醒获取上班时间段
 func (a *DingAttendGroup) GetCommutingTime1() (FromTo map[string][]string, err error) {
 	FromTo = make(map[string][]string, 2)
 	timeNowYMD := time.Now().Format("2006-01-02")
@@ -500,7 +502,7 @@ func (a *DingAttendGroup) GetAttendanceGroupListFromMysql(info *request.PageInfo
 	return DingAttendGroupList, err
 }
 
-//判断是否在正确的执行时间
+// 判断是否在正确的执行时间
 func CronHandle(spec string, curTime localTime.MySelfTime) (Ok bool) {
 	s := strings.Split(spec, " ")
 	min := strings.Split(s[1], ",")
@@ -544,7 +546,7 @@ func CronHandle(spec string, curTime localTime.MySelfTime) (Ok bool) {
 	return OK
 }
 
-//处理日期
+// 处理日期
 func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int, err error) {
 
 	m1 := map[string]int{"Sunday": 7, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
@@ -558,7 +560,6 @@ func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int
 		zap.L().Error("通过课表小程序获取当前第几周失败", zap.Error(err))
 		//return 20, 0, 0, err
 	}
-	startWeek = 20
 	//获取当前是第几节课
 	if curTime.Duration == 1 {
 		if curTime.ClassNumber == 1 {
@@ -617,7 +618,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := ""
 	if runtime.GOOS == "windows" {
-		spec = "00 02,11,11 9,14,20 * * ?"
+		spec = "00 20,44,11 9,16,20 * * ?"
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + min + " " + hour + " * * ?"
 	}
@@ -742,7 +743,8 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				//调用课表小程序接口，判断没有考勤数据的人是否请假了
 				//需要参数：当前周、周几、第几节课，NotRecordUserIdList
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
-				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
+				handle := HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
+				NotRecordUserIdList = handle
 			}
 
 			//if (week == restTime[0].WeekDay && curTime.Duration == restTime[0].MAE) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
@@ -892,7 +894,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	return result, taskID, err
 }
 
-//提醒未打卡的同学考勤
+// 提醒未打卡的同学考勤
 func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
@@ -1225,7 +1227,7 @@ func LeaveLateHandle(NotRecordUserIdList []string, token string, result map[stri
 	return
 }
 
-func HasCourseHandle(NotRecordUserIdList []string, CourseNumber int, startWeek int, weekday int, result map[string][]DingAttendance) {
+func HasCourseHandle(NotRecordUserIdList []string, CourseNumber int, startWeek int, weekday int, result map[string][]DingAttendance) []string {
 	if len(NotRecordUserIdList) > 0 {
 		ByClass, err := classCourse.GetIsHasCourse(CourseNumber, startWeek, 0, NotRecordUserIdList, weekday)
 		if err != nil {
@@ -1245,6 +1247,7 @@ func HasCourseHandle(NotRecordUserIdList []string, CourseNumber int, startWeek i
 	} else {
 		zap.L().Info("该部门全部出勤，不再判断是否有课")
 	}
+	return NotRecordUserIdList
 }
 
 // SundayAfternoonExec 此函数周日下午执行

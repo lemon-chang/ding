@@ -45,12 +45,12 @@ type UserDept struct {
 	Deleted        gorm.DeletedAt
 }
 
-//自定义表名建表
+// 自定义表名建表
 func (UserDept) user_dept() string {
 	return "user_dept"
 }
 
-//获取用户的考勤信息
+// 获取用户的考勤信息
 func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string) (attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
 	attendanceList = make([]DingAttendance, 0)
 	a := DingAttendance{DingToken: DingToken{Token: d.Token}}
@@ -300,7 +300,7 @@ func (d *DingDept) GetAllJinAndBlog() (result []JinAndBlogClassify, err error) {
 
 }
 
-//通过部门id获取部门用户详情 https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
+// 通过部门id获取部门用户详情 https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
 func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingUser, hasMore bool, err error) {
 	var client *http.Client
 	var request *http.Request
@@ -363,7 +363,7 @@ func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingU
 	return r.Result.List, r.Result.HasMore, nil
 }
 
-//两个数组取差集
+// 两个数组取差集
 func DiffArray(a []DingDept, b []DingDept) []DingDept {
 	var diffArray []DingDept
 	temp := map[int]struct{}{}
@@ -419,7 +419,7 @@ func DiffSilceUser(a []DingUser, b []DingUser) []DingUser {
 	return diffArray
 }
 
-//递归查询部门并存储到数据库中
+// 递归查询部门并存储到数据库中
 func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 	var oldDept []DingDept
 	err = global.GLOAB_DB.Find(&oldDept).Error
@@ -505,7 +505,7 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 	Deleted := DiffSilceDept(oldDept, DepartmentList)
 	err = global.GLOAB_DB.Select(clause.Associations).Delete(&Deleted).Error
 	//根据部门id存储一下部门用户
-	for i := 0; i < len(DepartmentList); i++ {
+	for i := 34; i < len(DepartmentList); i++ {
 		UserList := make([]DingUser, 0)
 		//调用钉钉接口，获取部门中的成员，然后存储进来
 		hasMore := true
@@ -537,7 +537,7 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 	return
 }
 
-//根据id获取子部门列表详情
+// 根据id获取子部门列表详情
 func (d *DingDept) GetDepartmentListByID() (subDepartments []DingDept, err error) {
 	var client *http.Client
 	var request *http.Request
@@ -593,7 +593,7 @@ func (d *DingDept) GetDepartmentListByID() (subDepartments []DingDept, err error
 	return subDepartments, nil
 }
 
-//根据id获取子部门列表详情（从数据库查）
+// 根据id获取子部门列表详情（从数据库查）
 func (d *DingDept) GetDepartmentListByID2() (subDepartments []DingDept, err error) {
 	err = global.GLOAB_DB.Where("parent_id = ?", d.DeptId).Find(&subDepartments).Error
 	return
@@ -616,13 +616,13 @@ func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (
 	return
 }
 
-//查看部门推送情况开启推送情况
+// 查看部门推送情况开启推送情况
 func (d *DingDept) SendFirstPerson(cursor, size int) {
 	var depts []DingDept
 	global.GLOAB_DB.Select("Name").Find(&depts)
 }
 
-//通过部门id获取部门详细信息（取钉钉接口）  https://open.dingtalk.com/document/isvapp-server/industry-address-book-api-for-obtaining-department-information
+// 通过部门id获取部门详细信息（取钉钉接口）  https://open.dingtalk.com/document/isvapp-server/industry-address-book-api-for-obtaining-department-information
 func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
 	var client *http.Client
 	var request *http.Request
@@ -677,7 +677,7 @@ func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
 	return r.Dept, nil
 }
 
-//更新部门信息
+// 更新部门信息
 func (d *DingDept) UpdateDept(p *ding.ParamUpdateDeptToCron) (err error) {
 	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog}
 	err = global.GLOAB_DB.Preload("ResponsibleUsers").Updates(dept).Error

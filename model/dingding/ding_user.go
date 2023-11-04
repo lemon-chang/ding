@@ -69,13 +69,30 @@ type DingUser struct {
 	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
 	BlogArticleURL      Strs `gorm:"type:longtext" json:"blog_article_url"`
 	IsExcellentJianBlog bool `json:"is_excellentBlogJian" `
-	Admin               bool `json:"admin"`
+	Admin               bool `json:"admin" gorm:"-"`
+}
+type JianShu struct {
+	gorm.Model
+	UserName           string `json:"user_name"`
+	JianShuArticleName string `json:"jian_shu_article_name"`
+	JianShuArticleURL  string `json:"jian_shu_article_url"`
+	IsExcellentJian    bool   `json:"is_excellent_jian"`
+	//UserList           []DingUser `gorm:"many2many:user_list"`
 }
 
-//用户签到
-//如果dateStr没有传，那就是签到，如果传了特定日期，可以进行补签
-//返回连续签到的次数
-//用户签到
+type Blog struct {
+	gorm.Model
+	UserName        string `json:"user_name"`
+	BlogArticleName string `json:"blog_article_name"`
+	BlogArticleURL  string `json:"blog_article_url"`
+	IsExcellentBlog bool   `json:"is_excellent_blog"`
+	//UserList        []DingUser `gorm:"many2many:user_list"`
+}
+
+// 用户签到
+// 如果dateStr没有传，那就是签到，如果传了特定日期，可以进行补签
+// 返回连续签到的次数
+// 用户签到
 func (d *DingUser) Sign(year, uporDown, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
 	//MNE 是上午下午晚上 1 2 3
 	//构建redis中的key //singKey  user:sign:5:2023:1:19周        用户5在2023上半年第19周签到的记录
@@ -101,7 +118,7 @@ func (d *DingUser) Sign(year, uporDown, startWeek, weekDay, MNE int) (Consecutiv
 	return
 }
 
-//统计用户在当前周连续签到的次数
+// 统计用户在当前周连续签到的次数
 func (d *DingUser) GetConsecutiveSignNum(year, uporDown, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
 	if startWeek == 0 {
 		startWeek = 7
@@ -141,7 +158,7 @@ type days struct {
 	night   bool
 }
 
-//统计用户当前周签到的详情情况
+// 统计用户当前周签到的详情情况
 func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[int][]bool, err error) {
 	result = make(map[int][]bool, 0)
 	//if year == 0 || uporDown == 0 || startWeek == 0 {
@@ -185,7 +202,7 @@ func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[
 	return
 }
 
-//统计用户一周的签到次数（非连续）
+// 统计用户一周的签到次数（非连续）
 func (d *DingUser) GetWeekSignNum(year, uporDown, startWeek int) (WeekSignNum int64, err error) {
 	//需要使用redis中的bitmap中bigcount方法来统计
 	//构建key
@@ -203,7 +220,7 @@ func (d *DingUser) GetWeekSignNum(year, uporDown, startWeek int) (WeekSignNum in
 	return
 }
 
-//通过userid查询部门id
+// 通过userid查询部门id
 func GetDeptByUserId(UserId string) (user *DingUser) {
 	err := global.GLOAB_DB.Where("user_id = ?", UserId).Preload("DeptList").First(&user).Error
 	if err != nil {
@@ -289,7 +306,7 @@ func encryptPassword(oPassword string) string {
 	return hex.EncodeToString(h.Sum([]byte(oPassword)))
 }
 
-//https://open.dingtalk.com/document/isvapp/query-user-details
+// https://open.dingtalk.com/document/isvapp/query-user-details
 func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 	var client *http.Client
 	var request *http.Request

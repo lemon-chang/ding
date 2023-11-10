@@ -14,13 +14,13 @@ import (
 	"time"
 )
 
-//获取到考勤部门
+// 获取到考勤部门
 func GetAttendGroup() (err error, groupList []DingAttendGroup) {
 	err = global.GLOAB_DB.Find(&groupList).Error
 	return
 }
 
-//考勤周报
+// 考勤周报
 func AttendWeeklyNewsPaper() (err error) {
 	//获取考勤组列表
 	err, groupList := GetAttendGroup()
@@ -44,7 +44,7 @@ func AttendWeeklyNewsPaper() (err error) {
 	return err
 }
 
-//开始统计周报
+// 开始统计周报
 func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err error) {
 	//使用定时器,定时什么时候发送,每周的周日发
 	spec := ""
@@ -94,7 +94,7 @@ func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err
 			//定义一个排名用于记录该用户排名
 			ranking := 1
 			for _, n := range sortnum {
-				var ids []string
+				var ids = make([]string, 10)
 				ids[0] = n.UserId
 				//封装要发送的消息
 				message := EditMessage(ranking, n.WeekSignNum)
@@ -126,7 +126,7 @@ func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err
 	return err
 }
 
-//编辑发送的消息
+// 编辑发送的消息
 func EditMessage(ranking int, num int64) (message string) {
 	message = "本周打卡记录：" + "\n" +
 		"打卡次数：" + strconv.Itoa(int(num)) + "\n" +
@@ -140,7 +140,7 @@ type WeeklyNewPaper struct {
 	WeekSignNum int64
 }
 
-//排序
+// 排序
 func SortResult(num map[string]int64) (WeeklyNewPapers []WeeklyNewPaper) {
 	for k, v := range num {
 		WeeklyNewPapers = append(WeeklyNewPapers, WeeklyNewPaper{k, v})
@@ -153,14 +153,14 @@ func SortResult(num map[string]int64) (WeeklyNewPapers []WeeklyNewPaper) {
 	return
 }
 
-//向redis里面添加周
+// 向redis里面添加周
 func Week(week int) (err error) {
 	//设置一年的过期时间
 	err = global.GLOBAL_REDIS.SetNX(context.Background(), "Week", week, 3600*time.Second*24*365).Err()
 	return
 }
 
-//获取当前周
+// 获取当前周
 func GetWeek() (err error, week int) {
 	str, err := global.GLOBAL_REDIS.Get(context.Background(), "Week").Result()
 	week, err = strconv.Atoi(str)

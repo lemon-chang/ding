@@ -11,7 +11,7 @@ import (
 	"strconv"
 )
 
-//递归获取部门列表（官方接口）
+// 递归获取部门列表（官方接口）
 func ImportDeptData(c *gin.Context) {
 	var d dingding2.DingDept
 	t := dingding2.DingToken{}
@@ -25,7 +25,7 @@ func ImportDeptData(c *gin.Context) {
 	response.OkWithDetailed(departmentList, "导入部门数据成功", c)
 }
 
-//获取考勤组列表 （官方接口）
+// 获取考勤组列表 （官方接口）
 func GetAttendancesGroups(c *gin.Context) {
 	var p params.ParamGetAttendanceGroups
 	if err := c.ShouldBindJSON(&p); err != nil {
@@ -42,7 +42,7 @@ func GetAttendancesGroups(c *gin.Context) {
 	response.OkWithDetailed(AttendancesGroups, "获取考勤组成功", c)
 }
 
-//获取子部门通过id （官方接口）
+// 获取子部门通过id （官方接口）
 func GetSubDepartmentListByID(c *gin.Context) {
 	var p params.ParamGetDepartmentListByID
 	if err := c.ShouldBindQuery(&p); err != nil {
@@ -61,7 +61,7 @@ func GetSubDepartmentListByID(c *gin.Context) {
 	response.OkWithDetailed(subDepartments, "获取子部门信息成功", c)
 }
 
-//获取子部门通过id （mysql）
+// 获取子部门通过id （mysql）
 func GetSubDepartmentListByID2(c *gin.Context) {
 	var p params.ParamGetDepartmentListByID2
 	if err := c.ShouldBindQuery(&p); err != nil {
@@ -116,11 +116,12 @@ func GetDeptListFromMysql(c *gin.Context) {
 	response.OkWithDetailed(DepartmentList, "获取部门信息成功", c)
 }
 
-//更新部门信息
+// 更新部门信息
 func UpdateDept(c *gin.Context) {
 	var p ding.ParamUpdateDeptToCron
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("UpdateDept invaild param", zap.Error(err))
+
 		response.FailWithMessage("参数错误", c)
 		return
 	}
@@ -146,7 +147,7 @@ func UpdateDept(c *gin.Context) {
 	response.OkWithMessage("更新部门信息成功！", c)
 }
 
-//更新部门是否在校信息
+// 更新部门是否在校信息
 func UpdateSchool(c *gin.Context) {
 	var s ding.ParameIsInSchool
 	if err := c.ShouldBindJSON(&s); err != nil {
@@ -175,7 +176,7 @@ type ParamSetDeptManager struct {
 	Is_responsible bool     `json:"is_responsible"`
 }
 
-//设置或修改部门负责人
+// 设置或修改部门负责人
 func SetDeptManager(c *gin.Context) {
 	//给我一个用户id和该用户所在的部门id，存到user_dept表中，在每次查考勤的时候就会抄送给部门负责人一份
 	var p *ParamSetDeptManager

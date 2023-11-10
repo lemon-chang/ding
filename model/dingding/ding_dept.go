@@ -1,6 +1,7 @@
 package dingding
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"ding/global"
@@ -9,6 +10,7 @@ import (
 	"ding/model/common/localTime"
 	"ding/model/params"
 	"ding/model/params/ding"
+	"ding/model/params/ding/leave"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +19,7 @@ import (
 	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -220,6 +223,170 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
 	return nil
 }
+
+// GetLeaveStatus 获取部门请假状态
+func GetLeaveStatus(lea leave.RequestDingLeave) ([]leave.DingLeaveStatus, error) {
+	var res []leave.DingLeaveStatus
+	// 将json数据编码为字节数组
+	var send func(lea leave.RequestDingLeave) error
+	send = func(lea leave.RequestDingLeave) error {
+		jsonLeave, err := json.Marshal(lea)
+		if err != nil {
+			fmt.Println("json.Marshal(response) failed:", err)
+			return err
+		}
+		url := fmt.Sprintf("https://oapi.dingtalk.com/topapi/attendance/getleavestatus?%s", "access_token=a9450b2c107d3c67938367cd28dd8825")
+		buffer := bytes.NewBuffer(jsonLeave)
+		response, err := http.Post(url, "application/json", buffer)
+		if err != nil {
+			fmt.Println("http.Post(\"https://oapi.dingtalk.com/topapi/attendance/getleavestatus\", \"application/json\", buffer) failed:", err)
+			return err
+		}
+		var dingResp leave.DingResponse
+		err = json.NewDecoder(response.Body).Decode(&dingResp)
+		if err != nil {
+			return err
+		}
+		res = append(res, *dingResp.Result.LeaveStatus...)
+		if dingResp.Result.HasMore {
+			lea.Offset += lea.Size
+			send(lea)
+		}
+		return nil
+	}
+	err := send(lea)
+	return res, err
+}
+
+// GetDeptLeave 获取部门请假
+func (d *DingDept) GetDeptLeave() (map[string]int, map[string]string) {
+	userList := make([]string, 0)
+	userMap := make(map[string]string, len(d.UserList)) // map[id]姓名 返回消息时要用
+	for i, _ := range d.UserList {                      // 拿到部门所有用户id
+		userList = append(userList, d.UserList[i].UserId)
+		userMap[d.UserList[i].UserId] = d.UserList[i].Name
+	}
+	// 获取当前时间
+	now := time.Now()
+	monday := now.AddDate(0, 0, -int(now.Weekday())+1)
+	sunday := now.AddDate(0, 0, -int(now.Weekday())+7)
+	startTime := time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, time.Local).UnixMilli() // 获取本周一00：00:00的时间戳
+	endTime := time.Date(sunday.Year(), sunday.Month(), sunday.Day(), 18, 0, 0, 0, time.Local).UnixMilli()  // 获取本周日18：00:00的时间戳
+	lea := leave.RequestDingLeave{
+		UseridList: strings.Join(userList, ","),
+		StartTime:  startTime,
+		EndTime:    endTime,
+		Offset:     0,
+		Size:       20,
+	}
+	data, err := GetLeaveStatus(lea)
+	if err != nil {
+		zap.L().Error("GetLeaveStatus(lea) failed", zap.Error(err))
+	}
+	code := map[string]string{"个人事假": "d4edf257-e581-45f9-b9b9-35755b598952"}
+	resMap := map[string]int{} // map[id]个人假次数
+	// 统计个人事假请假次数
+	for i, _ := range data {
+		if data[i].LeaveCode == code["个人事假"] {
+			resMap[data[i].UserID]++
+		}
+	}
+	return resMap, userMap
+}
+
+// SendFrequencyPrivateLeave 发送个人假次数
+func (d *DingDept) SendFrequencyPrivateLeave(startWeek int) error {
+
+	resMap, userMap := d.GetDeptLeave()
+	// 从大到小进行排序
+	res := []leave.DingUser{}
+	for k, v := range resMap {
+		tmp := leave.DingUser{
+			Id:   k,
+			Name: userMap[k],
+			Type: map[string]int{"个人事假": v},
+		}
+		res = append(res, tmp)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Type["个人事假"] > res[j].Type["个人事假"]
+	})
+
+	// 发送消息
+	msg := d.Name + "第" + strconv.Itoa(startWeek) + "周" + "个人事假统计如下[算账] ：\n"
+	for i := 0; i < len(res); i++ {
+		msg += res[i].Name + "请假次数：" + strconv.Itoa(res[i].Type["个人事假"]) + "\n"
+	}
+
+	p := &ParamCronTask{
+		MsgText: &common.MsgText{
+			Msgtype: "text",
+			Text:    common.Text{Content: msg},
+		},
+		RepeatTime: "立即发送",
+	}
+	(&DingRobot{RobotId: "b3f1d24e063f36955259456d3f958703c88656c662503954bdd7bd7a9961f551"}).CronSend(nil, p)
+	return nil
+}
+
+// SendSubSectorPrivateLeave 发送子部门个人请假次数
+func (d *DingDept) SendSubSectorPrivateLeave(startWeek int) error {
+
+	dataMap, _ := d.GetDeptLeave()
+
+	deptList, err := d.GetDepartmentListByID()
+	if err != nil {
+		zap.L().Error(" d.GetDepartmentListByID() failed", zap.Error(err))
+	}
+	deptLen := map[string]int{}  // 部门人员数
+	deptName := map[int]string{} // 子部门id：部门名字
+	for i, _ := range deptList {
+		deptName[deptList[i].DeptId] = deptList[i].Name
+		deptLen[deptName[deptList[i].DeptId]] = 0
+	}
+	for _, user := range d.UserList {
+		for _, v := range user.DeptIdList {
+			if _, exit := deptName[v]; exit {
+				deptLen[deptName[v]]++
+			}
+		}
+	}
+
+	resMap := map[string]int{} // 子部门请假次数
+	for _, user := range d.UserList {
+		for _, deptId := range user.DeptIdList { // 遍历用户部门列表
+			if _, exit := deptName[deptId]; exit { // 新生只有二个部门
+				resMap[deptName[deptId]] += dataMap[user.UserId]
+			}
+		}
+	}
+	// 排序 将子部门看成一个用户
+	res := []leave.DingUser{}
+	for name, count := range resMap {
+		tmp := leave.DingUser{Name: name, Type: map[string]int{"请假总次数": count}, AverageLeave: float64(count) / float64(deptLen[name])}
+		res = append(res, tmp)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].AverageLeave > res[j].AverageLeave
+	})
+
+	// 发送消息
+	msg := d.Name + "第" + strconv.Itoa(startWeek) + "周" + "各组统计如下[算账] ：\n"
+	for i := 0; i < len(res); i++ {
+		msg += fmt.Sprintf("  %s请假总次数为：%d，平均请假次数为：%.2f \n", res[i].Name, res[i].Type["请假总次数"], res[i].AverageLeave)
+	}
+
+	p := &ParamCronTask{
+		MsgText: &common.MsgText{
+			Msgtype: "text",
+			Text:    common.Text{Content: msg},
+		},
+		RepeatTime: "立即发送",
+	}
+	(&DingRobot{RobotId: "b3f1d24e063f36955259456d3f958703c88656c662503954bdd7bd7a9961f551"}).CronSend(nil, p)
+	return nil
+}
+
 func (d *DingDept) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) (err error) {
 	//我们取到所有请假的同学，然后进行登记
 	for i := 0; i < len(result["Leave"]); i++ {

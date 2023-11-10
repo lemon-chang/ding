@@ -28,7 +28,7 @@ func SetupDing(System *gin.RouterGroup) {
 		AttendanceGroup.PUT("/updateAttendanceGroup", ding2.UpdateAttendanceGroup)            //考勤组开关
 		AttendanceGroup.GET("/GetAttendanceGroupList", ding2.GetAttendanceGroupListFromMysql) //批量获取考勤组
 	}
-	LeaveGroup := System.Group("/leave")
+	LeaveGroup := System.Group("/response")
 	{
 		LeaveGroup.POST("/SubscribeToSomeone", ding2.SubscribeToSomeone) //订阅某人考勤情况
 		LeaveGroup.DELETE("/Unsubscribe", ding2.Unsubscribe)             //取消订阅

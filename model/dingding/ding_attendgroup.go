@@ -618,7 +618,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := ""
 	if runtime.GOOS == "windows" {
-		spec = "00 20,44,11 9,16,20 * * ?"
+		spec = "00 14,44,47 16,16,22 * * ?"
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + min + " " + hour + " * * ?"
 	}
@@ -774,11 +774,20 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-			if err != nil {
-				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-				continue
+			if runtime.GOOS == "linux" {
+				err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+				if err != nil {
+					zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+					continue
+				}
 			}
+			/*
+				err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+				if err != nil {
+					zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+					continue
+				}
+			*/
 			//在此处使用bitmap来实现存储功能
 			err, week := GetWeek()
 			err = BitMapHandle(result, curTime, startWeek, week)
@@ -843,6 +852,13 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			pipeline.Close()
 			//发送部门排行榜请假情况
 			DeptDetail.SendFrequencyLeave(startWeek)
+			// 发送各部门个人事假次数排行榜
+			DeptDetail.UserList = deptAttendanceUser[DeptId]
+
+			if DeptDetail.Name == "十一期强化班" && int(time.Now().Weekday()) == 7 && curTime.Duration == 2 { // 周日下午考勤自动发
+				DeptDetail.SendFrequencyPrivateLeave(startWeek)
+				DeptDetail.SendSubSectorPrivateLeave(startWeek)
+			}
 
 			// 以下是对迟到Zset的操作
 			pipeline = global.GLOBAL_REDIS.TxPipeline()

@@ -259,16 +259,16 @@ func GetLeaveStatus(lea leave.RequestDingLeave) ([]leave.DingLeaveStatus, error)
 }
 
 // GetDeptLeave 获取部门请假
-func (d *DingDept) GetDeptLeave() (map[string]int, map[string]string) {
+func (d *DingDept) GetDeptLeave() (map[string]int, map[string]string) { // 周日调用此函数
 	userList := make([]string, 0)
 	userMap := make(map[string]string, len(d.UserList)) // map[id]姓名 返回消息时要用
 	for i, _ := range d.UserList {                      // 拿到部门所有用户id
 		userList = append(userList, d.UserList[i].UserId)
 		userMap[d.UserList[i].UserId] = d.UserList[i].Name
 	}
-	// 获取当前时间
+	// 获取当前时间  0 表示周日
 	now := time.Now()
-	monday := now.AddDate(0, 0, -int(now.Weekday())+1)
+	monday := now.AddDate(0, 0, -int(now.Weekday())+1-7) // 本周一
 	sunday := now.AddDate(0, 0, -int(now.Weekday())+7)
 	startTime := time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, time.Local).UnixMilli() // 获取本周一00：00:00的时间戳
 	endTime := time.Date(sunday.Year(), sunday.Month(), sunday.Day(), 18, 0, 0, 0, time.Local).UnixMilli()  // 获取本周日18：00:00的时间戳

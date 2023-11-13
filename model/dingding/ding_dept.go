@@ -268,8 +268,8 @@ func (d *DingDept) GetDeptLeave() (map[string]int, map[string]string) { // 周�
 	}
 	// 获取当前时间  0 表示周日
 	now := time.Now()
-	monday := now.AddDate(0, 0, -int(now.Weekday())+1-7) // 本周一
-	sunday := now.AddDate(0, 0, -int(now.Weekday())+7)
+	monday := now.AddDate(0, 0, -int(now.Weekday())+1-7)                                                    // 本周一
+	sunday := now.AddDate(0, 0, -int(now.Weekday()))                                                        // 周日调用
 	startTime := time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, time.Local).UnixMilli() // 获取本周一00：00:00的时间戳
 	endTime := time.Date(sunday.Year(), sunday.Month(), sunday.Day(), 18, 0, 0, 0, time.Local).UnixMilli()  // 获取本周日18：00:00的时间戳
 	lea := leave.RequestDingLeave{
@@ -325,7 +325,7 @@ func (d *DingDept) SendFrequencyPrivateLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "b3f1d24e063f36955259456d3f958703c88656c662503954bdd7bd7a9961f551"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "4e1aecbc81c1d673a3817001b960a898e4b4efa61d1080757eb1d683685f0e8e"}).CronSend(nil, p)
 	return nil
 }
 

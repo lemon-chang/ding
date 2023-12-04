@@ -618,7 +618,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	min = min[:len(min)-1]
 	spec := ""
 	if runtime.GOOS == "windows" {
-		spec = "00 14,44,47 16,16,22 * * ?"
+		spec = "00 07,24,47 15,17,22 * * ?"
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + min + " " + hour + " * * ?"
 	}
@@ -855,7 +855,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			// 发送各部门个人事假次数排行榜
 			DeptDetail.UserList = deptAttendanceUser[DeptId]
 
-			if DeptDetail.Name == "十一期强化班" && int(time.Now().Weekday()) == 7 && curTime.Duration == 2 { // 周日下午考勤自动发
+			if int(time.Now().Weekday()) == 0 && curTime.Duration == 2 { // 周日下午考勤自动发
 				DeptDetail.SendFrequencyPrivateLeave(startWeek)
 				DeptDetail.SendSubSectorPrivateLeave(startWeek)
 			}

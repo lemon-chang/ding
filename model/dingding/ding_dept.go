@@ -383,7 +383,7 @@ func (d *DingDept) SendSubSectorPrivateLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "b3f1d24e063f36955259456d3f958703c88656c662503954bdd7bd7a9961f551"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "4e1aecbc81c1d673a3817001b960a898e4b4efa61d1080757eb1d683685f0e8e"}).CronSend(nil, p)
 	return nil
 }
 

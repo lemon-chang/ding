@@ -8,7 +8,6 @@ import (
 	"ding/response"
 	"encoding/json"
 	"fmt"
-	"github.com/Shopify/sarama"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"net/http"
@@ -57,16 +56,18 @@ func AddRobot(c *gin.Context) {
 	var p *dingding.ParamAddRobot
 	err := c.ShouldBindJSON(&p)
 	if err != nil {
-		zap.L().Error("Add Robot invaild param", zap.Error(err))
-		response.FailWithMessage("参数有误", c)
+		zap.L().Error("Add Robot invalid param", zap.Error(err))
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	err = global.GLOAB_VALIDATOR.Struct(p)
+	if err != nil {
+		zap.L().Error("Add Robot invalid param", zap.Error(err))
+		response.FailWithMessage(err.Error(), c)
 		return
 	}
 	UserId, _ := global.GetCurrentUserId(c)
-	user, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
-	if err != nil {
-		response.FailWithMessage("缺少登录凭证", c)
-		return
-	}
+	user, _ := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
 	//说明插入的内部机器人
 	dingRobot := &dingding.DingRobot{
 		Type:       p.Type,
@@ -80,8 +81,6 @@ func AddRobot(c *gin.Context) {
 	// 2.逻辑处理
 	err = dingRobot.CreateOrUpdateRobot()
 	//更新完之后，去修改定时任务里面的机器人名字
-	var task *dingding.Task
-	err = global.GLOAB_DB.Model(&task).Where("robot_id", p.RobotId).Update("robot_name", p.Name).Error
 	if err != nil {
 		response.FailWithMessage("添加机器人失败", c)
 	} else {
@@ -146,35 +145,11 @@ func RemoveRobot(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-
-	go func() {
-		consumerMsgs, err := global.GLOBAL_Kafka_Cons.ConsumePartition("delete-topic", 1, sarama.OffsetNewest)
-		if err != nil {
-			fmt.Println(err)
-			zap.L().Error("kafka consumer msg failed ...")
-			return
-		}
-		for msg := range consumerMsgs.Messages() {
-			id := msg.Value
-			err = (&dingding.DingRobot{RobotId: string(id)}).RemoveRobot()
-			if err != nil {
-				break
-			}
-		}
-		if err != nil {
-			response.FailWithMessage("移除机器人失败 kafka消息消费失败", c)
-		} else {
-			response.OkWithMessage("移除机器人成功 kafka消息消费失败", c)
-		}
-	}()
-
-	for i := 0; i < len(p.RobotIds); i++ {
-		if _, _, err := global.GLOBAL_Kafka_Prod.SendMessage(global.KafMsg("delete-topic", p.RobotIds[i], 1)); err != nil {
-			zap.L().Error("kafka produce msg failed ... ")
-			return
-		}
+	robots := make([]dingding.DingRobot, len(p.RobotIds))
+	for i := 0; i < len(robots); i++ {
+		robots[i].RobotId = p.RobotIds[i]
 	}
-
+	err = (&dingding.DingRobot{}).RemoveRobots(robots)
 	if err != nil {
 		response.FailWithMessage("移除机器人失败", c)
 	} else {
@@ -377,7 +352,7 @@ func UpdateMobile(c *gin.Context) {
 	response.OkWithMessage("更新成功", c)
 }
 
-//修改定时任务的内容
+// 修改定时任务的内容
 func EditTaskContent(c *gin.Context) {
 	var r *dingding.EditTaskContentParam
 	err := c.ShouldBindJSON(&r)
@@ -529,76 +504,76 @@ func UpdateLeetCode(c *gin.Context) {
 	response.OkWithMessage("更新成功", c)
 }
 
-//func RobotAt(c *gin.Context) {
-//	var resp *dingding.RobotAtResp
-//	if err := c.ShouldBindJSON(&resp); err != nil {
-//		zap.L().Error("RobotAtResp", zap.Error(err))
-//		response.FailWithMessage("参数错误", c)
-//	}
-//	fmt.Println("内容为:", resp.Text)
-//	//userId := resp.SenderStaffId
-//	conversationType := resp.ConversationType               //聊天类型
-//	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
-//	dingRobot := &dingding.DingRobot{}
-//	//单聊
-//	if conversationType == "1" {
-//		if str == "打字邀请码" {
-//			err := dingRobot.RobotSendInviteCode(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if str == "送水电话号码" {
-//			err := dingRobot.RobotSendWater(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if str == "获取个人信息" {
-//			err := dingRobot.RobotSendPrivateMessage(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if strings.Contains(str, "保存个人信息") {
-//			err := dingRobot.RobotSavePrivateMessage(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if strings.Contains(str, "更改个人信息") {
-//			err := dingRobot.RobotPutPrivateMessage(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if str == "学习资源" {
+//	func RobotAt(c *gin.Context) {
+//		var resp *dingding.RobotAtResp
+//		if err := c.ShouldBindJSON(&resp); err != nil {
+//			zap.L().Error("RobotAtResp", zap.Error(err))
+//			response.FailWithMessage("参数错误", c)
+//		}
+//		fmt.Println("内容为:", resp.Text)
+//		//userId := resp.SenderStaffId
+//		conversationType := resp.ConversationType               //聊天类型
+//		str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
+//		dingRobot := &dingding.DingRobot{}
+//		//单聊
+//		if conversationType == "1" {
+//			if str == "打字邀请码" {
+//				err := dingRobot.RobotSendInviteCode(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if str == "送水电话号码" {
+//				err := dingRobot.RobotSendWater(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if str == "获取个人信息" {
+//				err := dingRobot.RobotSendPrivateMessage(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if strings.Contains(str, "保存个人信息") {
+//				err := dingRobot.RobotSavePrivateMessage(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if strings.Contains(str, "更改个人信息") {
+//				err := dingRobot.RobotPutPrivateMessage(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if str == "学习资源" {
 //
-//		} else {
-//			err := dingRobot.RobotSendHelpCard(resp)
-//			if err != nil {
-//				return
+//			} else {
+//				err := dingRobot.RobotSendHelpCard(resp)
+//				if err != nil {
+//					return
+//				}
+//			}
+//			//群聊
+//		} else if conversationType == "2" {
+//			if str == "打字邀请码" {
+//				//_ 代表res["processQueryKey"]可以查看已读状态
+//				_, err := dingRobot.RobotSendGroupInviteCode(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if str == "送水电话号码" {
+//				//_ 代表res["processQueryKey"]可以查看已读状态
+//				_, err := dingRobot.RobotSendGroupWater(resp)
+//				if err != nil {
+//					return
+//				}
+//			} else if str == "帮助" {
+//				//_ 代表res["processQueryKey"]可以查看已读状态
+//				_, err := dingRobot.RobotSendGroupCard(resp)
+//				if err != nil {
+//					return
+//				}
 //			}
 //		}
-//		//群聊
-//	} else if conversationType == "2" {
-//		if str == "打字邀请码" {
-//			//_ 代表res["processQueryKey"]可以查看已读状态
-//			_, err := dingRobot.RobotSendGroupInviteCode(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if str == "送水电话号码" {
-//			//_ 代表res["processQueryKey"]可以查看已读状态
-//			_, err := dingRobot.RobotSendGroupWater(resp)
-//			if err != nil {
-//				return
-//			}
-//		} else if str == "帮助" {
-//			//_ 代表res["processQueryKey"]可以查看已读状态
-//			_, err := dingRobot.RobotSendGroupCard(resp)
-//			if err != nil {
-//				return
-//			}
-//		}
+//		response.ResponseSuccess(c, "成功")
 //	}
-//	response.ResponseSuccess(c, "成功")
-//}
 func RobotAt(c *gin.Context) {
 	var resp *dingding.RobotAtResp
 	if err := c.ShouldBindJSON(&resp); err != nil {

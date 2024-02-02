@@ -98,6 +98,14 @@ func (r *DingRobot) CreateOrUpdateRobot() (err error) {
 	err = global.GLOAB_DB.Clauses(clause.OnConflict{
 		UpdateAll: true,
 	}).Create(r).Error
+	if err != nil {
+		return
+	}
+	var task *Task
+	err = global.GLOAB_DB.Model(&task).Where("robot_id", r.RobotId).Update("robot_name", r.Name).Error
+	if err != nil {
+		return
+	}
 	return
 }
 func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
@@ -1375,7 +1383,7 @@ type Result struct {
 	DataLink string `json:"data_link"`
 }
 
-//机器人问答发送卡片给个人https://open.dingtalk.com/document/isvapp/the-internal-robot-of-the-enterprise-realizes-the-interaction-in
+// 机器人问答发送卡片给个人https://open.dingtalk.com/document/isvapp/the-internal-robot-of-the-enterprise-realizes-the-interaction-in
 func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result) (err error) {
 	cardLen := len(dataByStr)
 	if cardLen <= 5 {
@@ -1432,7 +1440,7 @@ func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result)
 	return
 }
 
-//机器人问答发送信息给个人
+// 机器人问答发送信息给个人
 func (t *DingRobot) RobotSendMessageToPerson(resp *RobotAtResp, dataByStr []Result) (err error) {
 	msg := ""
 	if len(dataByStr) == 0 {

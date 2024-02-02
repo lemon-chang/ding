@@ -6,6 +6,7 @@ import (
 	"ding/initialize/logger"
 	"ding/initialize/mysql"
 	"ding/initialize/redis"
+	"ding/initialize/validator"
 	"ding/initialize/viper"
 	"ding/routers"
 	"fmt"
@@ -25,6 +26,9 @@ func main() {
 		return
 	}
 	zap.L().Debug("viper init success...")
+	validator.Init()
+	zap.L().Debug("validator init success...")
+
 	//初始化Zap
 	if err = logger.Init(viper.Conf.LogConfig, viper.Conf.Mode); err != nil {
 		zap.L().Error(fmt.Sprintf("init logger failed ,err:%v\n", err))
@@ -34,7 +38,6 @@ func main() {
 	zap.L().Debug("zap init success...")
 	//初始化连接飞书
 	//global.InitFeishu()
-	zap.L().Debug("cron init success...")
 	//初始化链接mysql,刚好使用一下gorm，没有用到连表查询，所以比较简单
 	if err = mysql.Init(viper.Conf.MySQLConfig); err != nil {
 		zap.L().Error(fmt.Sprintf("init mysql failed ,err:%v\n", err))
@@ -47,9 +50,8 @@ func main() {
 	}
 	zap.L().Debug("mysql init success...")
 	//初始化corn定时器
-	if err = cron.InitCorn(); err != nil {
-		zap.L().Error(fmt.Sprintf("init cron failed ,err:%v\n", err))
-	}
+	cron.InitCorn()
+	//初始化Validator
 
 	//将通信201的数据存入数据库
 	//if err = gxp.Init(); err != nil {

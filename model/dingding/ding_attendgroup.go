@@ -607,22 +607,25 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		return
 	}
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
-	min := ""
+	minute := ""
 	hour := ""
 	for i := 0; i < len(OnDutyTimeList); i++ {
 		s := strings.Split(strings.Split(OnDutyTimeList[i], " ")[1], ":")
 		hour += s[0] + ","
-		min += s[1] + ","
+		minute += s[1] + ","
 	}
 	hour = hour[:len(hour)-1]
-	min = min[:len(min)-1]
+	minute = minute[:len(minute)-1]
 	spec := ""
+	fmt.Println(runtime.GOOS)
 	if runtime.GOOS == "windows" {
 		spec = "00 07,24,47 15,17,22 * * ?"
 	} else if runtime.GOOS == "linux" {
-		spec = "00 " + min + " " + hour + " * * ?"
+		spec = "00 " + minute + " " + hour + " * * ?"
+	} else if runtime.GOOS == "darwin" {
+		spec = "00 07,24,47 15,17,22 * * ?"
 	}
-	zap.L().Info(spec)
+	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", spec))
 	task := func() {
 		token, err = (&DingToken{}).GetAccessToken()
 		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
@@ -910,8 +913,8 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	return result, taskID, err
 }
 
-// 提醒未打卡的同学考勤
-func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
+// AlerdAttent 提醒未打卡的同学考勤
+func (a *DingAttendGroup) AlertAttend(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	if err != nil || token == "" {
@@ -927,7 +930,7 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 	//获取到上班时间
 	OnDutyTimeList := commutingTime["OnDuty"]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
-	min := ""
+	minute := ""
 	hour := ""
 	for i := 0; i < len(OnDutyTimeList); i++ {
 		s := strings.Split(strings.Split(OnDutyTimeList[i], " ")[1], ":")
@@ -938,15 +941,15 @@ func (a *DingAttendGroup) AlertAttent(p *params.ParamAllDepartAttendByRobot) (re
 		i2 := h*60 + m
 		m = (i2 - time) % 60
 		h = (i2 - time) / 60
-		minute := strconv.Itoa(m)
+		minuteute := strconv.Itoa(m)
 		hours := strconv.Itoa(h)
 		hour += hours + ","
-		min += minute + ","
+		minute += minuteute + ","
 	}
 	hour = hour[:len(hour)-1]
-	min = min[:len(min)-1]
+	minute = minute[:len(minute)-1]
 	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
-	spec := "00 " + min + " " + hour + " * * ?"
+	spec := "00 " + minute + " " + hour + " * * ?"
 	//spec = "00 55,25,55 7,14,19 * * ?"
 	zap.L().Info(spec)
 	task := func() {

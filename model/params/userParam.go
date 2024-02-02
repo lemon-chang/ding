@@ -12,6 +12,9 @@ type ParamLogin struct {
 	Mobile   string `json:"mobile" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
+type ParamLoginByDingDing struct {
+	AuthCode string `json:"authCode" validate:"required,len=32"`
+}
 type ParamLoginByToken struct {
 	Token string `json:"token"`
 }

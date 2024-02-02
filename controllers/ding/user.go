@@ -85,7 +85,7 @@ func FindAllJinAndBlog(c *gin.Context) {
 	response.OkWithDetailed(list, "查询简书或者博客成功", c)
 }
 
-//LoginHandler 处理登录请求的函数
+// LoginHandler 处理登录请求的函数
 func LoginHandler(c *gin.Context) {
 	//1.获取请求参数及参数校验
 	var p params.ParamLogin
@@ -104,7 +104,8 @@ func LoginHandler(c *gin.Context) {
 	// 生成JWT
 	token, err := jwt.GenToken(c, user)
 	if err != nil {
-		zap.L().Debug("JWT生成错误")
+		response.FailWithMessage("用户登录失败", c)
+		zap.L().Error("JWT生成错误", zap.Error(err))
 		return
 	}
 	user.AuthToken = token
@@ -113,6 +114,40 @@ func LoginHandler(c *gin.Context) {
 	} else {
 		response.OkWithDetailed(user, "用户登录成功", c)
 	}
+}
+func LoginByDingDing(c *gin.Context) {
+	var p params.ParamLoginByDingDing
+	if err := c.ShouldBindJSON(&p); err != nil { //这个地方只能判断是不是json格式的数据
+		zap.L().Error("Login with invalid param", zap.Error(err))
+		response.FailWithMessage("参数有误", c)
+		return
+	}
+	err := global.GLOAB_VALIDATOR.Struct(p)
+	if err != nil {
+		zap.L().Error("validator with invalid param", zap.Error(err))
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	user, err := (&dingding.Code{AuthCode: p.AuthCode}).SweepLogin(c)
+	if err != nil {
+		response.FailWithMessage("扫码登陆有误", c)
+		zap.L().Error("扫码登陆有误", zap.Error(err))
+		return
+	}
+	// 生成JWT
+	token, err := jwt.GenToken(c, &user)
+	if err != nil {
+		response.FailWithMessage("用户登录失败", c)
+		zap.L().Error("JWT生成错误", zap.Error(err))
+		return
+	}
+	user.AuthToken = token
+	if err != nil {
+		response.FailWithMessage("登陆失败", c)
+	} else {
+		response.OkWithDetailed(user, "用户登录成功", c)
+	}
+
 }
 func LoginHandlerByToken(c *gin.Context) {
 	//1.获取请求参数及参数校验
@@ -172,7 +207,6 @@ func LoginHandlerByToken(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(r, "登录成功", c)
-
 }
 func GetQRCode(c *gin.Context) {
 	var buf []byte
@@ -208,7 +242,7 @@ func GetQRCode(c *gin.Context) {
 	response.OkWithDetailed(result, "获取二维码成功", c)
 }
 
-//获取所有任务列表,包括已暂停的任务
+// 获取所有任务列表,包括已暂停的任务
 func GetAllTask(c *gin.Context) {
 	var tasks []dingding.Task
 	user_id, _ := global.GetCurrentUserId(c)
@@ -289,7 +323,7 @@ func GetWeekSignDetail(c *gin.Context) {
 	response.OkWithDetailed(WeekSignNum, "获取用户一周的签到详情成功", c)
 }
 
-//通过userid查询部门id
+// 通过userid查询部门id
 func GetDeptByUserId(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {

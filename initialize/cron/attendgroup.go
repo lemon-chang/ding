@@ -24,7 +24,7 @@ func AttendanceByRobot() (err error) {
 				return err
 			}
 			//提醒没有打开的人考勤
-			group.AlertAttent(p)
+			group.AlertAttend(p)
 			err = global.GLOAB_DB.Model(&group).Update("robot_attend_task_id", int(taskID)).Error
 			if err != nil {
 				return err
@@ -43,7 +43,7 @@ func AttendanceByRobot() (err error) {
 			//(&dingding.DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).
 			//	SendMessage(d)
 		} else {
-			zap.L().Warn(fmt.Sprintf("考勤组：%v 开启未机器人考勤", group.GroupName))
+			zap.L().Warn(fmt.Sprintf("考勤组：%v 未开启机器人考勤", group.GroupName))
 		}
 	}
 	return err

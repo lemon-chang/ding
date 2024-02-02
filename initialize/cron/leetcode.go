@@ -72,7 +72,6 @@ func SendLeetCode() (err error) {
 			zap.L().Info(fmt.Sprintf("%s开启了查询力扣题目，部门id:%d", dept.Name, dept.DeptId))
 			//遍历某部门的同学，拿到力扣主页地址题目数据
 			userList := dept.UserList
-			errChan = make(chan CrawlResult, len(userList)) // 错误channel
 			resultChan = make(chan CrawlResult, len(userList))
 			weekDay := fmt.Sprintf("第%d周(%s)", week, time.Now().Format("2006-01-02"))
 			oldDay := fmt.Sprintf("第%d周(%s)", week-1, time.Now().AddDate(0, 0, -7).Format("2006-01-02"))
@@ -84,7 +83,7 @@ func SendLeetCode() (err error) {
 				wg.Add(1)
 				CurrentDateDeptKey := fmt.Sprintf("%s%s:%s(%d):", redis.LeetCode, weekDay, dept.Name, dept.DeptId)
 				// 爬取本周数据，并存储
-				go getLeetCodeNum(user.LeetCodeAddr, CurrentDateDeptKey, user.Name, errChan, resultChan, &wg)
+				go getLeetCodeNum(user.LeetCodeAddr, CurrentDateDeptKey, user.Name, resultChan, &wg)
 				// 等待所有goroutine完成
 			}
 			go func() {
@@ -95,10 +94,11 @@ func SendLeetCode() (err error) {
 			}()
 
 			// 处理错误信息
-			for errResult := range errChan {
-				zap.L().Error(fmt.Sprintf("爬去leetcode出错，错误人:%v", errResult.UserName), zap.Error(errResult.Error))
-			}
 			for NormalResult := range resultChan {
+				if NormalResult.Error != nil {
+					zap.L().Error(fmt.Sprintf("爬去leetcode出错，错误人:%v", NormalResult.UserName), zap.Error(NormalResult.Error))
+					continue
+				}
 				username := NormalResult.UserName
 				newTotal := NormalResult.Num
 				zap.L().Info(fmt.Sprintf("爬取成功:%v total:%v", username, newTotal))
@@ -213,7 +213,7 @@ func getLeetCodeNumRaw(leetCodeAddress string) (count int, err error) {
 	count = easy + medium + hard
 	return
 }
-func getLeetCodeNum(leetCodeAddress string, deptKey string, username string, errChan chan<- CrawlResult, resultChan chan<- CrawlResult, wg *sync.WaitGroup) {
+func getLeetCodeNum(leetCodeAddress string, deptKey string, username string, resultChan chan<- CrawlResult, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var count int
 	var err error
@@ -247,26 +247,26 @@ func getLeetCodeNum(leetCodeAddress string, deptKey string, username string, err
 	req.Header.Add("Host", "leetcode.cn")
 	res, err := client.Do(req)
 	if err != nil {
-		errChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
+		resultChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
 		return
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		errChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
+		resultChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
 		return
 	}
 	var userProfile Datas
 	err = json.Unmarshal([]byte(string(body)), &userProfile)
 	if err != nil {
-		errChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
+		resultChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
 		return
 	}
 	zap.L().Info(fmt.Sprintf("正在爬取：%v数据", username))
 	if len(userProfile.Data.UserProfileUserQuestionProgress.NumAcceptedQuestions) == 0 {
 		count = 0
 		err = errors.New("leetcode地址无效")
-		errChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
+		resultChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
 		return
 	}
 
@@ -277,7 +277,7 @@ func getLeetCodeNum(leetCodeAddress string, deptKey string, username string, err
 	count = easy + medium + hard
 	err = global.GLOBAL_REDIS.ZAdd(context.Background(), deptKey, &redis2.Z{Score: float64(count), Member: username}).Err()
 	if err != nil {
-		errChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
+		resultChan <- CrawlResult{Error: err, UserName: username, Num: -1} //把错误放入通道中
 		return
 	} else {
 		resultChan <- CrawlResult{Error: nil, UserName: username, Num: count}

@@ -51,6 +51,7 @@ func Setup(mode string) *gin.Engine {
 	{
 		//无需token验证
 		Ding.POST("login", ding2.LoginHandler)
+		Ding.POST("loginByDingDing", ding2.LoginByDingDing)
 		Ding.POST("subscribeTo", ding2.SubscribeTo) //钉钉订阅事件路由
 	}
 	Ding.Use(middlewares.JWTAuthMiddleware())

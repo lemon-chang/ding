@@ -49,11 +49,11 @@ func GxpRobot(c *gin.Context) {
 }
 
 // addRobot 添加机器人
-// 思路如下：
+// 思路如下
 // 当前登录的用户添加了一个属于自己的机器人
 func AddRobot(c *gin.Context) {
 	//1.获取参数和参数校验
-	var p *dingding.ParamAddRobot
+	var p dingding.ParamAddRobot
 	err := c.ShouldBindJSON(&p)
 	if err != nil {
 		zap.L().Error("Add Robot invalid param", zap.Error(err))

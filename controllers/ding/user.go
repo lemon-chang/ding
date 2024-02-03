@@ -2,6 +2,8 @@ package ding
 
 import (
 	"crypto/tls"
+	"ding/model/common/request"
+	response2 "ding/model/common/response"
 	"runtime"
 
 	"ding/global"
@@ -37,15 +39,26 @@ func ImportDingUserData(c *gin.Context) {
 
 // SelectAllUsers 查询所有用户
 func SelectAllUsers(c *gin.Context) {
+	var pageInfo request.PageInfo
+	err := c.ShouldBindQuery(&pageInfo)
+	if err != nil {
+		response.FailWithMessage("分页参数有误", c)
+		return
+	}
 	name := c.Query("name")
 	mobile := c.Query("mobile")
 	var DingUser dingding.DingUser
-	us, err := DingUser.FindDingUsersInfo(name, mobile, c)
+	list, total, err := DingUser.FindDingUsersInfo(name, mobile, pageInfo, c)
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return
 	}
-	response.OkWithDetailed(us, "查询所有用户成功", c)
+	response.OkWithDetailed(response2.PageResult{
+		List:     list,
+		Total:    total,
+		Page:     pageInfo.Page,
+		PageSize: pageInfo.PageSize,
+	}, "查询所有用户成功", c)
 }
 
 func GetUserInfoDetailByToken(c *gin.Context) {

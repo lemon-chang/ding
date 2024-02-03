@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"ding/global"
+	"ding/model/common/request"
 	"ding/model/system"
 	"encoding/json"
 	"errors"
@@ -199,8 +200,15 @@ func (d *DingUser) ImportUserToMysql() error {
 
 }
 
-func (d *DingUser) FindDingUsersInfo(name, mobile string, c *gin.Context) (us []DingUser, err error) {
-	db := global.GLOAB_DB.Model(&DingUser{})
+func (d *DingUser) FindDingUsersInfo(name, mobile string, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+
+	db := global.GLOAB_DB.Model(&DingUser{}).Limit(limit).Offset(offset)
+	err = db.Count(&total).Error
+	if err != nil {
+		return
+	}
 	if name != "" {
 		db = db.Where("name LIKE ?", "%"+name+"%")
 	}

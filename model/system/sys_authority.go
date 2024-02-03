@@ -109,7 +109,7 @@ func (sysAuthority *SysAuthority) GetAuthorityInfoList(info modelRequest.PageInf
 	limit := info.PageSize
 	offset := info.PageSize * (info.Page - 1)
 	db := global.GLOAB_DB.Model(&SysAuthority{})
-	if err = db.Where("parent_id = ?", "0").Count(&total).Error; total == 0 || err != nil {
+	if err = db.Count(&total).Error; total == 0 || err != nil {
 		return
 	}
 	var authority []SysAuthority

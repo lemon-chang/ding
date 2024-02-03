@@ -2,24 +2,25 @@ package system
 
 import (
 	"ding/global"
+	"errors"
 	"gorm.io/gorm"
 	"strconv"
 )
 
 type SysBaseMenu struct {
 	gorm.Model
-	MenuLevel     uint                                       `json:"-"`
-	ParentId      string                                     `json:"parentId" gorm:"comment:父菜单ID"`     // 父菜单ID
-	Path          string                                     `json:"path" gorm:"comment:路由path"`        // 路由path
-	Name          string                                     `json:"name" gorm:"comment:路由name"`        // 路由name
-	Hidden        bool                                       `json:"hidden" gorm:"comment:是否在列表隐藏"`     // 是否在列表隐藏
-	Component     string                                     `json:"component" gorm:"comment:对应前端文件路径"` // 对应前端文件路径
-	Sort          int                                        `json:"sort" gorm:"comment:排序标记"`          // 排序标记
-	Meta          `json:"meta" gorm:"embedded;comment:附加属性"` // 附加属性
-	SysAuthoritys []SysAuthority                             `json:"authoritys" gorm:"many2many:sys_authority_menus;"`
-	Children      []SysBaseMenu                              `json:"children" gorm:"-"`
-	Parameters    []SysBaseMenuParameter                     `json:"parameters"`
-	MenuBtn       []SysBaseMenuBtn                           `json:"menuBtn"`
+	MenuLevel      uint                                       `json:"-"`
+	ParentId       string                                     `json:"parentId" gorm:"comment:父菜单ID"`     // 父菜单ID
+	Path           string                                     `json:"path" gorm:"comment:路由path"`        // 路由path
+	Name           string                                     `json:"name" gorm:"comment:路由name"`        // 路由name
+	Hidden         bool                                       `json:"hidden" gorm:"comment:是否在列表隐藏"`     // 是否在列表隐藏
+	Component      string                                     `json:"component" gorm:"comment:对应前端文件路径"` // 对应前端文件路径
+	Sort           int                                        `json:"sort" gorm:"comment:排序标记"`          // 排序标记
+	Meta           `json:"meta" gorm:"embedded;comment:附加属性"` // 附加属性
+	SysAuthorities []SysAuthority                             `json:"SysAuthorities" gorm:"many2many:sys_authority_menus;"`
+	Children       []SysBaseMenu                              `json:"children" gorm:"-"`
+	Parameters     []SysBaseMenuParameter                     `json:"parameters"`
+	MenuBtn        []SysBaseMenuBtn                           `json:"menuBtn"`
 }
 type Meta struct {
 	ActiveName  string `json:"activeName" gorm:"comment:高亮菜单"`
@@ -100,4 +101,26 @@ func (m *SysBaseMenu) getMenuTreeMap(authorityId uint) (treeMap map[string][]Sys
 		treeMap[v.ParentId] = append(treeMap[v.ParentId], v)
 	}
 	return treeMap, err
+}
+
+func (m *SysBaseMenu) AddBaseMenu(menu SysBaseMenu) error {
+	if !errors.Is(global.GLOAB_DB.Where("name = ?", menu.Name).First(&SysBaseMenu{}).Error, gorm.ErrRecordNotFound) {
+		return errors.New("存在重复name，请修改name")
+	}
+	err := global.GLOAB_DB.Create(&menu).Error
+	if err != nil {
+		return err
+	}
+	err = m.AddMenuAuthority([]SysBaseMenu{menu}, 888)
+	return err
+}
+
+func (m *SysBaseMenu) AddMenuAuthority(menus []SysBaseMenu, authorityId uint) (err error) {
+	var auth SysAuthority
+	auth.AuthorityId = authorityId
+	auth.SysBaseMenus = menus
+	var s SysAuthority
+	global.GLOAB_DB.Preload("SysBaseMenus").First(&s, "authority_id = ?", auth.AuthorityId)
+	err = global.GLOAB_DB.Model(&s).Association("SysBaseMenus").Replace(&auth.SysBaseMenus)
+	return err
 }

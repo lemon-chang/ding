@@ -15,7 +15,7 @@ import (
 )
 
 type DingToken struct {
-	Token string `json:"token"`
+	Token string `json:"token,omitempty"`
 }
 
 func (t *DingToken) IsLegal() bool {

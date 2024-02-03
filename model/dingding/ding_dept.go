@@ -447,26 +447,6 @@ type JinAndBlogClassify struct {
 	Data   []JinAndBlog `json:"data" gorm:"many2many:user_dept"`
 }
 
-func (d *DingDept) GetAllJinAndBlog() (result []JinAndBlogClassify, err error) {
-
-	var DeptList []DingDept
-	err = global.GLOAB_DB.Model(&DingDept{}).Where("is_jianshu_or_blog = 1").Select("dept_id", "name").Preload("UserList").Find(&DeptList).Error
-	result = make([]JinAndBlogClassify, len(DeptList))
-	for i := 0; i < len(DeptList); i++ {
-		result[i].Name = DeptList[i].Name
-		result[i].DeptId = DeptList[i].DeptId
-		result[i].Data = make([]JinAndBlog, len(DeptList[i].UserList))
-		for j := 0; j < len(DeptList[i].UserList); j++ {
-			result[i].Data[j].Name = DeptList[i].UserList[j].Name
-			result[i].Data[j].UserId = DeptList[i].UserList[j].UserId
-			result[i].Data[j].JianShuArticleURL = DeptList[i].UserList[j].JianShuArticleURL
-			result[i].Data[j].BlogArticleURL = DeptList[i].UserList[j].BlogArticleURL
-		}
-	}
-	return
-
-}
-
 // 通过部门id获取部门用户详情 https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
 func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingUser, hasMore bool, err error) {
 	var client *http.Client

@@ -41,7 +41,7 @@ package utils
 //		return waitUse.UserId
 //	}
 //}
-//func GetUserInfo(c *gin.Context) *jwt.MyClaims {
+//func GetUserInfoDetail(c *gin.Context) *jwt.MyClaims {
 //	if claims, exists := c.Get("claims"); !exists {
 //		if cl, err := GetClaims(c); err != nil {
 //			return nil

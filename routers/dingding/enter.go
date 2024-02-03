@@ -35,11 +35,11 @@ func SetupDing(System *gin.RouterGroup) {
 	}
 	User := System.Group("/user")
 	{
-		User.GET("/getUserInfo", ding2.GetUserInfo)
-		User.POST("ImportDingUserData", ding2.ImportDingUserData)  //将钉钉用户导入到数据库中
-		User.POST("/UpdateDingUserAddr", ding2.UpdateDingUserAddr) // 更新用户的博客和简书地址
-		User.GET("/GetAllUsers", ding2.SelectAllUsers)             // 查询所有用户信息
-		User.GET("/GetAllJinAndBlog", ding2.FindAllJinAndBlog)
+		User.GET("/getUserInfoDetailByToken", ding2.GetUserInfoDetailByToken)
+		User.POST("/ImportDingUserData", ding2.ImportDingUserData) //将钉钉用户导入到数据库中
+		User.POST("/setUserInfo", ding2.SetUserInfo)               // 更新用户信息，是钉钉数据
+		User.GET("/FindDingUsersInfo", ding2.SelectAllUsers)       // 查询所有用户基本信息
+		User.GET("/FindDingUsersInfoDetail", ding2.SelectAllUsers) //查询用户详细信息
 		User.GET("/showQRCode", func(c *gin.Context) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))

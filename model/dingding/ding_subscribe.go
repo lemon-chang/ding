@@ -77,7 +77,7 @@ func (s *DingSubscribe) Leave(result map[string]interface{}) {
 	//c.Get(global.CtxUserIDKey)
 	userid, _ := result["staffId"].(string)
 	//获取请假人姓名
-	user, _ := (&DingUser{UserId: userid}).GetUserByUserId()
+	user, _ := (&DingUser{UserId: userid}).GetUserInfo()
 	//获取请假时间
 	//useridlist := []string{userid}
 	//now := time.Now()
@@ -129,7 +129,7 @@ func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
 	//根据官方接口查询用户详细信息
 	detailDingUser, err := dingUser.GetUserDetailByUserId()
 	if err != nil {
-		zap.L().Error("dingUser.GetUserByUserId() failed,err: ", zap.Error(err))
+		zap.L().Error("dingUser.GetUserInfo() failed,err: ", zap.Error(err))
 	}
 	fmt.Printf("detailDingUser: %v\n", detailDingUser)
 }
@@ -154,7 +154,7 @@ func (s *DingSubscribe) UserLeaveOrg(c *gin.Context) {
 	//根据官方接口查询用户详细信息
 	detailDingUser, err := dingUser.GetUserDetailByUserId()
 	if err != nil {
-		zap.L().Error("dingUser.GetUserByUserId() failed,err: ", zap.Error(err))
+		zap.L().Error("dingUser.GetUserInfo() failed,err: ", zap.Error(err))
 	}
 	fmt.Printf("detailDingUser: %v\n", detailDingUser)
 }

@@ -2,7 +2,6 @@ package validator
 
 import (
 	"ding/global"
-	"fmt"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -12,7 +11,6 @@ func Init() {
 
 }
 func secretRequiredIfType2(fl validator.FieldLevel) bool {
-	fmt.Println("进入validator")
 	typeField := fl.Parent().FieldByName("Type")
 	secretField := fl.Field().String()
 

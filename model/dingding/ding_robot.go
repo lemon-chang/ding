@@ -356,7 +356,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 	if err != nil {
 		UserId = ""
 	}
-	CurrentUser, err := (&DingUser{UserId: UserId}).GetUserByUserId()
+	CurrentUser, err := (&DingUser{UserId: UserId}).GetUserInfo()
 	if err != nil {
 		CurrentUser = DingUser{}
 	}
@@ -1462,6 +1462,42 @@ func (t *DingRobot) RobotSendMessageToPerson(resp *RobotAtResp, dataByStr []Resu
 	err = t.ChatSendMessage(param)
 	if err != nil {
 		zap.L().Error("发送chatSendMessageToPerson错误" + err.Error())
+	}
+	return
+}
+func (u *DingRobot) GetOpenConversationId(access_token, chatId string) (openConversationId string, _err error) {
+	client, _err := createClient()
+	if _err != nil {
+		return
+	}
+
+	chatIdToOpenConversationIdHeaders := &dingtalkim_1_0.ChatIdToOpenConversationIdHeaders{}
+	chatIdToOpenConversationIdHeaders.XAcsDingtalkAccessToken = tea.String(access_token)
+	tryErr := func() (_e error) {
+		defer func() {
+			if r := tea.Recover(recover()); r != nil {
+				_e = r
+			}
+		}()
+		result, _err := client.ChatIdToOpenConversationIdWithOptions(tea.String(chatId), chatIdToOpenConversationIdHeaders, &util.RuntimeOptions{})
+		if _err != nil {
+			return _err
+		}
+		openConversationId = *(result.Body.OpenConversationId)
+		return nil
+	}()
+
+	if tryErr != nil {
+		var err = &tea.SDKError{}
+		if _t, ok := tryErr.(*tea.SDKError); ok {
+			err = _t
+		} else {
+			err.Message = tea.String(tryErr.Error())
+		}
+		if !tea.BoolValue(util.Empty(err.Code)) && !tea.BoolValue(util.Empty(err.Message)) {
+			// err 中含有 code 和 message 属性，可帮助开发定位问题
+		}
+
 	}
 	return
 }

@@ -67,7 +67,7 @@ func AddRobot(c *gin.Context) {
 		return
 	}
 	UserId, _ := global.GetCurrentUserId(c)
-	user, _ := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	user, _ := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	//说明插入的内部机器人
 	dingRobot := &dingding.DingRobot{
 		Type:       p.Type,
@@ -200,7 +200,7 @@ func CronTask(c *gin.Context) {
 	if err != nil {
 		UserId = ""
 	}
-	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	if err != nil {
 		CurrentUser = dingding.DingUser{}
 	}
@@ -233,7 +233,7 @@ func PingRobot(c *gin.Context) {
 	if err != nil {
 		UserId = ""
 	}
-	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	if err != nil {
 		CurrentUser = dingding.DingUser{}
 	}
@@ -260,7 +260,7 @@ func StopTask(c *gin.Context) {
 	if err != nil {
 		UserId = ""
 	}
-	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	if err != nil {
 		CurrentUser = dingding.DingUser{}
 	}
@@ -283,7 +283,7 @@ func GetTaskList(c *gin.Context) {
 	//if err != nil {
 	//	UserId = ""
 	//}
-	//CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	//CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	//if err != nil {
 	//	CurrentUser = dingding.DingUser{}
 	//}
@@ -635,7 +635,7 @@ func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, e
 	if err != nil {
 		zap.L().Error("从redis读取失败", zap.Error(err))
 	}
-	user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+	user, err := (&dingding.DingUser{UserId: userId}).GetUserInfo()
 	if err != nil {
 		zap.L().Error("userid查询用户信息失败", zap.Error(err))
 	}
@@ -657,7 +657,7 @@ func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, e
 	for _, s := range allRedisRoad {
 		split := strings.Split(s, ":")
 		userId := split[len(split)-1-1]
-		user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+		user, err := (&dingding.DingUser{UserId: userId}).GetUserInfo()
 		AllPublicData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), s).Result()
 		if err != nil {
 			zap.L().Error("从redis读取失败", zap.Error(err))
@@ -693,7 +693,7 @@ func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, e
 		for _, s := range allRedisRoad {
 			split := strings.Split(s, ":")
 			userId := split[len(split)-1-1]
-			user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+			user, err := (&dingding.DingUser{UserId: userId}).GetUserInfo()
 			AllPublicData, err := global.GLOBAL_REDIS.HGetAll(context.Background(), s).Result()
 			if err != nil {
 				zap.L().Error("从redis读取失败", zap.Error(err))

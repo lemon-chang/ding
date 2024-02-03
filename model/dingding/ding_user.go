@@ -2,33 +2,23 @@ package dingding
 
 import (
 	"context"
-	"crypto/md5"
 	"crypto/tls"
 	"ding/global"
-	myselfRedis "ding/initialize/redis"
-	"ding/model/params/ding"
 	"ding/model/system"
-	"ding/utils"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	dingtalkim_1_0 "github.com/alibabacloud-go/dingtalk/im_1_0"
-	util "github.com/alibabacloud-go/tea-utils/v2/service"
-	"github.com/alibabacloud-go/tea/tea"
 	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
 	"io/ioutil"
 	"log"
 	"math"
 	"net"
 	"net/http"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,176 +40,32 @@ var jin *DingUser
 type Strs []string
 
 type DingUser struct {
-	UserId              string ` gorm:"primaryKey;foreignKey:UserId" json:"userid"`
-	DingRobots          []DingRobot
-	Deleted             gorm.DeletedAt
-	Name                string                `json:"name"`
-	Mobile              string                `json:"mobile"`
-	Password            string                `json:"password"`
-	DeptIdList          []int                 `json:"dept_id_list" gorm:"-"` //所属部门
-	DeptList            []DingDept            `json:"dept_list" gorm:"many2many:user_dept"`
-	AuthorityId         uint                  `json:"authorityId" gorm:"default:888;comment:用户角色ID"`
-	Authority           system.SysAuthority   `json:"authority" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
-	Authorities         []system.SysAuthority `json:"authorities" gorm:"many2many:sys_user_authority;"`
-	Title               string                `json:"title"` //职位
-	JianShuAddr         string                `json:"jianshu_addr"`
-	BlogAddr            string                `json:"blog_addr"`
-	LeetCodeAddr        string                `json:"leet_code_addr"`
-	AuthToken           string                `json:"auth_token" gorm:"-"`
-	DingToken           `json:"ding_token" gorm:"-"`
-	JianShuArticleURL   Strs `gorm:"type:longtext" json:"jian_shu_article_url"`
-	BlogArticleURL      Strs `gorm:"type:longtext" json:"blog_article_url"`
-	IsExcellentJianBlog bool `json:"is_excellentBlogJian" `
-	Admin               bool `json:"admin" gorm:"-"`
-}
-type JianShu struct {
-	gorm.Model
-	UserName           string `json:"user_name"`
-	JianShuArticleName string `json:"jian_shu_article_name"`
-	JianShuArticleURL  string `json:"jian_shu_article_url"`
-	IsExcellentJian    bool   `json:"is_excellent_jian"`
-	//UserList           []DingUser `gorm:"many2many:user_list"`
-}
-
-type Blog struct {
-	gorm.Model
-	UserName        string `json:"user_name"`
-	BlogArticleName string `json:"blog_article_name"`
-	BlogArticleURL  string `json:"blog_article_url"`
-	IsExcellentBlog bool   `json:"is_excellent_blog"`
-	//UserList        []DingUser `gorm:"many2many:user_list"`
+	UserId       string                ` gorm:"primaryKey;foreignKey:UserId" json:"userid"`
+	DingRobots   []DingRobot           `json:"omitempty"`
+	Deleted      gorm.DeletedAt        `json:"omitempty"`
+	Name         string                `json:"name,omitempty"`
+	Mobile       string                `json:"mobile,omitempty"`
+	Password     string                `json:"password,omitempty" `
+	DeptIdList   []int                 `json:"dept_id_list,omitempty" gorm:"-"` //所属部门
+	DeptList     []DingDept            `json:"dept_list,omitempty" gorm:"many2many:user_dept"`
+	AuthorityId  uint                  `json:"authorityId,omitempty" gorm:"default:888;comment:用户角色ID"`
+	Authority    system.SysAuthority   `json:"authority,omitempty" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
+	Authorities  []system.SysAuthority `json:"authorities,omitempty" gorm:"many2many:sys_user_authority;"`
+	Title        string                `json:"title,omitempty"` //职位
+	JianShuAddr  string                `json:"jianshu_addr,omitempty"`
+	BlogAddr     string                `json:"blog_addr,omitempty"`
+	LeetCodeAddr string                `json:"leet_code_addr,omitempty"`
+	AuthToken    string                `json:"auth_token,omitempty" gorm:"-"`
+	DingToken    `json:"ding_token,omitempty" gorm:"-"`
+	Admin        bool `json:"admin,omitempty" gorm:"-"`
 }
 
 // 用户签到
 // 如果dateStr没有传，那就是签到，如果传了特定日期，可以进行补签
 // 返回连续签到的次数
 // 用户签到
-func (d *DingUser) Sign(year, uporDown, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
-	//MNE 是上午下午晚上 1 2 3
-	//构建redis中的key //singKey  user:sign:5:2023:1:19周        用户5在2023上半年第19周签到的记录
-	//构建redis中的key //singKey  user:sign:5:2023:2:19周        用户5在2023下半年第19周签到的记录
-	if weekDay == 0 {
-		weekDay = 7
-	}
-	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v:%v", d.UserId, year, uporDown, startWeek)
-	//根据date能够判断出来，现在是第几周的上午下午晚上等
-	offset := int64((weekDay-1)*3 + MNE - 1)
-	IsSigned := global.GLOBAL_REDIS.GetBit(context.Background(), key, offset).Val()
-	if IsSigned == 1 {
-		ConsecutiveSignNum, _ = d.GetConsecutiveSignNum(year, uporDown, startWeek, weekDay, MNE)
-		return ConsecutiveSignNum, errors.New("当前日期已经打卡签到，无需再次打卡签到")
-	}
-	//用户没有签到，设置成签到即可
-	i, err := global.GLOBAL_REDIS.SetBit(context.Background(), key, offset, 1).Result()
-	if err != nil || i != 1 {
-		//此处返回的是设置前的值
-		zap.L().Error("签到时操作redis中的位图失败", zap.Error(err))
-	}
-	ConsecutiveSignNum, _ = d.GetConsecutiveSignNum(year, uporDown, startWeek, weekDay, MNE)
-	return
-}
 
 // 统计用户在当前周连续签到的次数
-func (d *DingUser) GetConsecutiveSignNum(year, uporDown, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
-	if startWeek == 0 {
-		startWeek = 7
-	}
-	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v:%v", d.UserId, year, uporDown, startWeek)
-	//bitfield可以操作多个位 bitfile user:sign:2023:1:19 u7 0  //从索引零开始，往后面统计7天的
-	//cmd := global.GLOBAL_REDIS.Do(context.Background(), "BITFIELD", key, "GET", "u"+strconv.Itoa(weekDay), "0").
-	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(weekDay), "0").Result()
-	if err != nil || list == nil || len(list) == 0 || list[0] == 0 {
-		return 0, nil
-	}
-	// 此处获得的值是经过二进制转化过来的，总共有21个字节，如果长度是21个字节的话，可能会非常的大，我们如何处理非常大的值呢？
-	//具体思路可以使用位运算，具体博客链接
-	v := list[0]
-	for i := weekDay; i > 0; i-- {
-		for j := 0; j < 3; j++ {
-			//如果这个很大的数字转化为二进制之后，左移动一位，右移动一位，如果还等于自己，说明最后一位是0，表示没有签到
-			if v>>1<<1 == v {
-				if !(i == weekDay && j == MNE) {
-					//低位为0 且 非当天早中晚应该签到的时间，签到中断
-					break
-				}
-			} else {
-				//说明签到了
-				ConsecutiveSignNum++
-			}
-		}
-		//将v右移一位，并重新复制，相当于最低位提前了一天
-		v = v >> 1
-	}
-	return
-}
-
-type days struct {
-	morning bool
-	midday  bool
-	night   bool
-}
-
-// 统计用户当前周签到的详情情况
-func (d *DingUser) GetWeekSignDetail(year, uporDown, startWeek int) (result map[int][]bool, err error) {
-	result = make(map[int][]bool, 0)
-	//if year == 0 || uporDown == 0 || startWeek == 0 {
-	//	curTime, _ := (&localTime.MySelfTime{}).GetCurTime(nil)
-	//
-	//}
-	//使用bitFiled来获取int64，然后使用位运算计算结果
-	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v:%v", d.UserId, year, uporDown, startWeek)
-	fmt.Println(key)
-	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(21), "0").Result()
-	if err != nil || list == nil || len(list) == 0 || list[0] == 0 {
-		zap.L().Error("使用redis中的bitmap失败", zap.Error(err))
-		return nil, errors.New("使用redis中的bitmap失败")
-	}
-	v := list[0]
-	//110001111111111101111000
-	//for i := 1; i <= 8; i++ {
-	//	if v>>1<<1 == v {
-	//		//说明没有签到
-	//		result[i] = append(result[i], false)
-	//	} else {
-	//		//说明签到了
-	//		result[i] = append(result[i], true)
-	//	}
-	//	v = v >> 1
-	//	x = x >> 1
-	//}
-	for i := 7; i > 0; i-- {
-		for j := 0; j < 3; j++ {
-			if v>>1<<1 == v {
-				//说明没有签到
-				result[i] = append(result[i], false)
-			} else {
-				//说明签到了
-				result[i] = append(result[i], true)
-				//result[i][j] = true
-			}
-			v = v >> 1
-		}
-	}
-	return
-}
-
-// 统计用户一周的签到次数（非连续）
-func (d *DingUser) GetWeekSignNum(year, uporDown, startWeek int) (WeekSignNum int64, err error) {
-	//需要使用redis中的bitmap中bigcount方法来统计
-	//构建key
-	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v:%v", d.UserId, year, uporDown, startWeek)
-
-	bitCount := &redis.BitCount{
-		Start: 0, //都设置成0就是涵盖整个bitmap
-		End:   0,
-	}
-	WeekSignNum, err = global.GLOBAL_REDIS.BitCount(context.Background(), key, bitCount).Result()
-	if err != nil {
-		zap.L().Error("使用redis的BitCount失败", zap.Error(err))
-		return
-	}
-	return
-}
 
 // 通过userid查询部门id
 func GetDeptByUserId(UserId string) (user *DingUser) {
@@ -230,14 +76,6 @@ func GetDeptByUserId(UserId string) (user *DingUser) {
 	}
 	return
 }
-func (d *DingUser) SendFrequencyLeave(start int) error {
-	fmt.Println("推送个人请假频率")
-	return nil
-}
-func (d *DingUser) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) error {
-	fmt.Println("存储个人请假频率")
-	return nil
-}
 
 type JinAndBlog struct {
 	UserId            string `gorm:"primary_key" json:"id"`
@@ -247,12 +85,12 @@ type JinAndBlog struct {
 	IsExcellent       bool   `json:"is_excellent"`
 }
 
-func (d *DingUser) GetUserByUserId() (user DingUser, err error) {
+func (d *DingUser) GetUserInfo() (user DingUser, err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).First(&user).Error
 	return
 }
-func (d *DingUser) GetUserInfo() (err error) {
-	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Preload("Authority").Preload("Authorities").First(&d).Error
+func (d *DingUser) GetUserInfoDetailByToken() (err error) {
+	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Preload("Authority").Preload("Authorities").Preload("DeptList").First(&d).Error
 	return
 }
 
@@ -267,171 +105,6 @@ func (m *DingUser) UserAuthorityDefaultRouter(user *DingUser) {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		user.Authority.DefaultRouter = "404"
 	}
-}
-func (d *DingUser) Login() (user *DingUser, err error) {
-	user = &DingUser{
-		Mobile:   d.Mobile,
-		Password: d.Password,
-	}
-	//判断该用户是否存在
-	err = global.GLOAB_DB.Model(DingUser{}).Where("mobile", d.Mobile).First(user).Error
-	if err != nil {
-		return nil, errors.New("用户不存在")
-	}
-	//判断密码是否正确
-	if user.Password != d.Password {
-		return nil, errors.New("密码错误")
-	}
-	//此处的Login函数传递的是一个指针类型的数据
-	opassword := user.Password //此处是用户输入的密码，不一定是对的
-	err = global.GLOAB_DB.Where(&DingUser{Mobile: user.Mobile}).Preload("Authorities").Preload("Authority").First(user).Error
-	if err != nil {
-		zap.L().Error("登录时查询数据库失败", zap.Error(err))
-		return
-	}
-	//如果到了这里还没有结束的话，那就说明该用户至少是存在的，于是我们解析一下密码
-	//password := encryptPassword(opassword)
-	password := opassword
-	//拿到解析后的密码，我们看看是否正确
-	if password != user.Password {
-		return nil, errors.New("密码错误")
-	}
-	d.UserAuthorityDefaultRouter(user)
-	//如果能到这里的话，那就登录成功了
-	return
-
-}
-func (d *DingUser) LoginByDingDing() {
-
-}
-
-type Code struct {
-	AuthCode string `json:"authCode"`
-}
-
-func (code *Code) SweepLogin(c *gin.Context) (user DingUser, err error) {
-	accessToken, err := GetAccessToken(code)
-	if err != nil {
-		return
-	}
-	var client *http.Client
-	var request *http.Request
-	var resp *http.Response
-	var body []byte
-	URL := "https://api.dingtalk.com/v1.0/contact/users/me"
-	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}, Timeout: time.Duration(time.Second * 5)}
-	request, err = http.NewRequest("GET", URL, nil)
-	if err != nil {
-		return
-	}
-	// Set the header parameter
-	request.Header.Set("x-acs-dingtalk-access-token", accessToken)
-	request.Header.Set("Content-Type", "application/json")
-	// Send the request
-	resp, err = client.Do(request)
-	if err != nil {
-		// Handle error
-	}
-	defer resp.Body.Close()
-	// Read the response body
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		// Handle error
-	}
-	r := struct {
-		AvatarURL string `json:"avatarUrl"`
-		Mobile    string `json:"mobile"`
-		Nick      string `json:"nick"`
-		OpenID    string `json:"openId"`
-		StateCode string `json:"stateCode"`
-		UnionID   string `json:"unionId"`
-	}{}
-	//把请求到的结构反序列化到专门接受返回值的对象上面
-	err = json.Unmarshal(body, &r)
-	if err != nil {
-		return
-	}
-	err = global.GLOAB_DB.Where("mobile = ?", r.Mobile).Preload("Authorities").Preload("Authority").First(&user).Error
-	if err != nil {
-		return
-	}
-	return
-}
-
-func GetAccessToken(code *Code) (accessToken string, err error) {
-	var client *http.Client
-	var request *http.Request
-	var resp *http.Response
-	var body []byte
-	URL := "https://api.dingtalk.com/v1.0/oauth2/userAccessToken"
-	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}, Timeout: time.Duration(time.Second * 5)}
-	//此处是post请求的请求题，我们先初始化一个对象
-	appKey, _ := global.GLOBAL_REDIS.Get(context.Background(), utils.AppKey).Result()
-	appSecret, _ := global.GLOBAL_REDIS.Get(context.Background(), utils.AppSecret).Result()
-	b := struct {
-		ClientID     string `json:"clientId"`
-		ClientSecret string `json:"clientSecret"`
-		Code         string `json:"code"`
-		GrantType    string `json:"grantType"`
-	}{
-		ClientID:     appKey,
-		ClientSecret: appSecret,
-		Code:         code.AuthCode,
-		GrantType:    "authorization_code",
-	}
-	//然后把结构体对象序列化一下
-	bodymarshal, err := json.Marshal(&b)
-	if err != nil {
-		return
-	}
-	//再处理一下
-	reqBody := strings.NewReader(string(bodymarshal))
-	//然后就可以放入具体的request中的
-	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
-	if err != nil {
-		return
-	}
-	request.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(request)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
-	if err != nil {
-		return
-	}
-	r := struct {
-		AccessToken  string `json:"accessToken"`
-		Code         string `json:"code"`
-		ExpireIn     int64  `json:"expireIn"`
-		Message      string `json:"message"`
-		RefreshToken string `json:"refreshToken"`
-		Requestid    string `json:"requestid"`
-	}{}
-	//把请求到的结构反序列化到专门接受返回值的对象上面
-	err = json.Unmarshal(body, &r)
-	if err != nil {
-		return
-	}
-	if r.Code != "" {
-		return "", errors.New(r.Message)
-	}
-	return r.AccessToken, nil
-}
-
-func encryptPassword(oPassword string) string {
-	h := md5.New()
-	h.Write([]byte(secret))
-	return hex.EncodeToString(h.Sum([]byte(oPassword)))
 }
 
 // https://open.dingtalk.com/document/isvapp/query-user-details
@@ -526,7 +199,7 @@ func (d *DingUser) ImportUserToMysql() error {
 
 }
 
-func (d *DingUser) FindDingUsers(name, mobile string) (us []DingUser, err error) {
+func (d *DingUser) FindDingUsersInfo(name, mobile string, c *gin.Context) (us []DingUser, err error) {
 	db := global.GLOAB_DB.Model(&DingUser{})
 	if name != "" {
 		db = db.Where("name LIKE ?", "%"+name+"%")
@@ -534,7 +207,12 @@ func (d *DingUser) FindDingUsers(name, mobile string) (us []DingUser, err error)
 	if mobile != "" {
 		db = db.Where("mobile like ?", "%"+mobile+"%")
 	}
-	err = db.Select("user_id", "name", "mobile").Find(&us).Error
+	if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfo" {
+		err = db.Select("user_id", "name", "mobile").Find(&us).Error
+	} else if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfoDetail" {
+		err = db.Omit("password").Preload(clause.Associations).Find(&us).Error
+	}
+
 	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()
 	//往redis中做一份缓存
 	//for i := 0; i < len(us); i++ {
@@ -548,15 +226,10 @@ func (d *DingUser) FindDingUsers(name, mobile string) (us []DingUser, err error)
 	return
 }
 
-// UpdateDingUserAddr 根据用户id修改其简书和博客地址
-func (d *DingUser) UpdateDingUserAddr(userParam ding.UserAndAddrParam) error {
-	return global.GLOAB_DB.Transaction(func(tx *gorm.DB) (err error) {
-		if err = tx.Model(&DingUser{}).Where("user_id = ?", userParam.UserId).Updates(DingUser{BlogAddr: userParam.BlogAddr, JianShuAddr: userParam.JianShuAddr}).Error; err != nil {
-			zap.L().Error("更新用户博客和简书地址失败", zap.Error(err))
-			return
-		}
-		return
-	})
+// SetUserInfo 更新用户信息
+func (d *DingUser) SetUserInfo(user DingUser) error {
+	//调用钉钉接口进行修改
+	return nil
 }
 
 func (d *DingUser) GoCrawlerDingUserJinAndBlog() (err error) {
@@ -670,7 +343,6 @@ func UpdateDingUserJianShu() {
 	wg.Done()
 }
 func UpdateDingUserBlog() {
-
 	urls, err := jin.FindDingUserAddr()
 	if err != nil {
 		zap.L().Error("获取简书链接错误", zap.Error(err))
@@ -1106,42 +778,5 @@ func checkChromePort() bool {
 func (u *DingUser) GetRobotList() (RobotList []DingRobot, err error) {
 	//err = global.GLOAB_DB.Where("ding_user_id = ?", u.UserId).Find(&RobotList).Error
 	err = global.GLOAB_DB.Model(u).Association("DingRobots").Find(&RobotList)
-	return
-}
-
-func (u *DingRobot) GetOpenConversationId(access_token, chatId string) (openConversationId string, _err error) {
-	client, _err := createClient()
-	if _err != nil {
-		return
-	}
-
-	chatIdToOpenConversationIdHeaders := &dingtalkim_1_0.ChatIdToOpenConversationIdHeaders{}
-	chatIdToOpenConversationIdHeaders.XAcsDingtalkAccessToken = tea.String(access_token)
-	tryErr := func() (_e error) {
-		defer func() {
-			if r := tea.Recover(recover()); r != nil {
-				_e = r
-			}
-		}()
-		result, _err := client.ChatIdToOpenConversationIdWithOptions(tea.String(chatId), chatIdToOpenConversationIdHeaders, &util.RuntimeOptions{})
-		if _err != nil {
-			return _err
-		}
-		openConversationId = *(result.Body.OpenConversationId)
-		return nil
-	}()
-
-	if tryErr != nil {
-		var err = &tea.SDKError{}
-		if _t, ok := tryErr.(*tea.SDKError); ok {
-			err = _t
-		} else {
-			err.Message = tea.String(tryErr.Error())
-		}
-		if !tea.BoolValue(util.Empty(err.Code)) && !tea.BoolValue(util.Empty(err.Message)) {
-			// err 中含有 code 和 message 属性，可帮助开发定位问题
-		}
-
-	}
 	return
 }

@@ -8,7 +8,6 @@ import (
 	"ding/initialize/jwt"
 	"ding/model/dingding"
 	"ding/model/params"
-	"ding/model/params/ding"
 	"ding/response"
 	"encoding/json"
 	"fmt"
@@ -41,18 +40,19 @@ func SelectAllUsers(c *gin.Context) {
 	name := c.Query("name")
 	mobile := c.Query("mobile")
 	var DingUser dingding.DingUser
-	us, err := DingUser.FindDingUsers(name, mobile)
+	us, err := DingUser.FindDingUsersInfo(name, mobile, c)
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return
 	}
 	response.OkWithDetailed(us, "查询所有用户成功", c)
 }
-func GetUserInfo(c *gin.Context) {
+
+func GetUserInfoDetailByToken(c *gin.Context) {
 	user_id, _ := c.Get(global.CtxUserIDKey)
 	DingUser := dingding.DingUser{}
 	DingUser.UserId = user_id.(string)
-	err := DingUser.GetUserInfo()
+	err := DingUser.GetUserInfoDetailByToken()
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return
@@ -60,29 +60,19 @@ func GetUserInfo(c *gin.Context) {
 	response.OkWithDetailed(DingUser, "查询所有用户成功", c)
 }
 
-// UpdateDingUserAddr 更新用户博客&简书地址
-func UpdateDingUserAddr(c *gin.Context) {
+// 设置用户信息，调用钉钉接口进行修改钉钉数据
+func SetUserInfo(c *gin.Context) {
 	var DingUser dingding.DingUser
-	var userParam ding.UserAndAddrParam
-	if err := c.ShouldBindJSON(&userParam); err != nil {
+	if err := c.ShouldBindJSON(&DingUser); err != nil {
 		response.FailWithMessage("参数错误", c)
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	if err := DingUser.UpdateDingUserAddr(userParam); err != nil {
+	if err := DingUser.SetUserInfo(DingUser); err != nil {
 		zap.L().Error("更新用户博客和简书地址失败", zap.Error(err))
 		response.FailWithMessage("更新用户博客&简书地址失败", c)
 	}
 	response.OkWithMessage("更新用户博客&简书地址成功", c)
-}
-func FindAllJinAndBlog(c *gin.Context) {
-	var DingDept dingding.DingDept
-	list, err := DingDept.GetAllJinAndBlog()
-	if err != nil {
-		response.FailWithMessage("查询简书或者博客失败", c)
-		return
-	}
-	response.OkWithDetailed(list, "查询简书或者博客成功", c)
 }
 
 // LoginHandler 处理登录请求的函数

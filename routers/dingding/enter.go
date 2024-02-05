@@ -20,6 +20,7 @@ func SetupDing(System *gin.RouterGroup) {
 		Dept.PUT("/updateSchool", ding2.UpdateSchool)                           //更新部门是否在校信息
 		Dept.PUT("/setDeptManager", ding2.SetDeptManager)                       //更新部门负责人
 		Dept.GET("/getUserByDeptid", ding2.GetUserByDeptId)                     //根据部门id查询用户信息
+		Dept.GET("/getDepartmentRecursively", ding2.GetDepartmentRecursively)
 	}
 
 	AttendanceGroup := System.Group("/attendanceGroup")

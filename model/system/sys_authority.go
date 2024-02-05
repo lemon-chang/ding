@@ -17,7 +17,7 @@ type SysAuthority struct {
 	AuthorityId   uint          `json:"authorityId" gorm:"not null;unique;primary_key;comment:角色ID;size:90"` // 角色ID
 	AuthorityName string        `json:"authorityName" gorm:"comment:角色名"`                                    // 角色名 	// 父角色ID
 	SysBaseMenus  []SysBaseMenu `json:"menus" gorm:"many2many:sys_authority_menus;"`
-	//DingUsers     []dingding.DingUser `json:"-" gorm:"many2many:sys_user_authority;"`
+	//DingUsers     []dingding.DingUser `json:"-" gorm:"many2many:sys_user_authority;"` // 包循环引用
 	DefaultRouter string `json:"defaultRouter" gorm:"comment:默认菜单;default:dashboard"` // 默认菜单(默认dashboard)
 }
 

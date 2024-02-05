@@ -219,3 +219,19 @@ func GetUserByDeptId(c *gin.Context) {
 	}
 	response.OkWithDetailed(p, "查询成功", c)
 }
+func GetDepartmentRecursively(c *gin.Context) {
+
+	list, total, err := (&dingding2.DingDept{}).GetDepartmentRecursively()
+	if err != nil {
+		zap.L().Error("获取失败！", zap.Error(err))
+		response.FailWithMessage("获取失败"+err.Error(), c)
+		return
+	}
+	response.OkWithDetailed(struct {
+		List  []dingding2.DingDept
+		Total int64
+	}{
+		List:  list,
+		Total: total,
+	}, "获取成功", c)
+}

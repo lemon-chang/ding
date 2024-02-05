@@ -200,12 +200,10 @@ func (d *DingUser) ImportUserToMysql() error {
 
 }
 
-func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
+func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, authorityId int, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
 	limit := p.PageSize
 	offset := p.PageSize * (p.Page - 1)
-
-	db := global.GLOAB_DB.Limit(limit).Offset(offset)
-
+	db := global.GLOAB_DB
 	if name != "" {
 		db = db.Where("name LIKE ?", "%"+name+"%")
 	}
@@ -214,25 +212,27 @@ func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, p request.
 	}
 	if deptId != 0 {
 		total = db.Model(&DingDept{DeptId: deptId}).Association("UserList").Count()
-		db.Model(&DingDept{DeptId: deptId}).Association("UserList").Find(&us)
+		err = db.Limit(limit).Offset(offset).Model(&DingDept{DeptId: deptId}).Association("UserList").Find(&us)
+		return
+	}
+	// 声明一个引用类型的变量，UserIds这个变量被分配内存了，但是其结构体底层指向数组的指针没有初始化,是nil
+	// 当你声明一个切片变量并将其初始化为 var UserIds []string 时，它的零值是 nil，表示切片不引用任何底层数组。当你打印一个 nil 切片时，输出的结果是 []，这是 Go 语言的约定
+	// UserIds这个变量被分配内存了，println(len(s))是0
+	var UserIds []string
+	if authorityId != 0 {
+		err = db.Table("sys_user_authority").Where("sys_authority_authority_id = ?", authorityId).Count(&total).Error
+		err = db.Limit(limit).Offset(offset).Table("sys_user_authority").Where("sys_authority_authority_id = ?", authorityId).Select("ding_user_user_id").Scan(&UserIds).Error
+		err = global.GLOAB_DB.Preload("DeptList").Preload("Authorities").Find(&us, UserIds).Error
 		return
 	}
 	if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfo" {
-		err = db.Select("user_id", "name", "mobile").Find(&us).Count(&total).Error
+		err = db.Model(&DingUser{}).Count(&total).Error
+		// Limit 和 Offset方法一定要放在最后一行查询的代码中执行，Count方法要单独起一行来绑定total
+		err = db.Limit(limit).Offset(offset).Select("user_id", "name", "mobile").Find(&us).Error
 	} else if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfoDetail" {
-		err = db.Omit("password").Preload(clause.Associations).Find(&us).Count(&total).Error
+		err = db.Model(&DingUser{}).Count(&total).Error
+		err = db.Limit(limit).Offset(offset).Omit("password").Preload(clause.Associations).Find(&us).Error
 	}
-
-	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()
-	//往redis中做一份缓存
-	//for i := 0; i < len(us); i++ {
-	//	batchData := make(map[string]interface{})
-	//	batchData["name"] = us[i].Name
-	//	_, err := global.GLOBAL_REDIS.HMSet(context.Background(), "user:"+us[i].UserId, batchData).Result()
-	//	if err != nil {
-	//		zap.L().Error("把数据缓存到redis中失败", zap.Error(err))
-	//	}
-	//}
 	return
 }
 

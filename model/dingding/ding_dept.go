@@ -40,6 +40,7 @@ type DingDept struct {
 	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 	IsLeetCode        int        `json:"is_leet_code"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
+	Children          []DingDept `gorm:"-"`
 }
 type UserDept struct {
 	DingUserUserID string
@@ -761,6 +762,32 @@ func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (
 		zap.L().Error("查询部门列表失败", zap.Error(err))
 	}
 	return
+}
+func (d *DingDept) GetDepartmentRecursively() (list []DingDept, total int64, err error) {
+
+	db := global.GLOAB_DB.Model(&DingDept{})
+	err = db.Where("parent_id = ?", 1).Count(&total).Error
+	var department []DingDept
+	err = db.Where("parent_id = ?", 1).Find(&department).Error
+
+	if len(department) > 0 {
+		for i := range department {
+			//err = global.GVA_REDIS.HSet("deptCache", strconv.Itoa(int(department[i].Children[i].ID)), "").Err()
+			err = d.findChildrenDepartment(&department[i])
+		}
+	}
+
+	return department, total, err
+}
+func (d *DingDept) findChildrenDepartment(department *DingDept) (err error) {
+	err = global.GLOAB_DB.Where("parent_id = ?", department.DeptId).Find(&department.Children).Order("sort").Error
+
+	if len(department.Children) > 0 {
+		for k := range department.Children {
+			err = d.findChildrenDepartment(&department.Children[k])
+		}
+	}
+	return err
 }
 
 // 查看部门推送情况开启推送情况

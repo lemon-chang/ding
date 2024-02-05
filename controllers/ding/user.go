@@ -49,8 +49,9 @@ func SelectAllUsers(c *gin.Context) {
 	name := c.Query("name")
 	mobile := c.Query("mobile")
 	deptId, _ := strconv.Atoi(c.Query("deptId"))
+	authorityId, _ := strconv.Atoi(c.Query("authorityId"))
 	var DingUser dingding.DingUser
-	list, total, err := DingUser.FindDingUsersInfo(name, mobile, deptId, pageInfo, c)
+	list, total, err := DingUser.FindDingUsersInfo(name, mobile, deptId, authorityId, pageInfo, c)
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return

@@ -200,25 +200,27 @@ func (d *DingUser) ImportUserToMysql() error {
 
 }
 
-func (d *DingUser) FindDingUsersInfo(name, mobile string, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
+func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
 	limit := p.PageSize
 	offset := p.PageSize * (p.Page - 1)
 
-	db := global.GLOAB_DB.Model(&DingUser{}).Limit(limit).Offset(offset)
-	err = db.Count(&total).Error
-	if err != nil {
-		return
-	}
+	db := global.GLOAB_DB.Limit(limit).Offset(offset)
+
 	if name != "" {
 		db = db.Where("name LIKE ?", "%"+name+"%")
 	}
 	if mobile != "" {
 		db = db.Where("mobile like ?", "%"+mobile+"%")
 	}
+	if deptId != 0 {
+		total = db.Model(&DingDept{DeptId: deptId}).Association("UserList").Count()
+		db.Model(&DingDept{DeptId: deptId}).Association("UserList").Find(&us)
+		return
+	}
 	if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfo" {
-		err = db.Select("user_id", "name", "mobile").Find(&us).Error
+		err = db.Select("user_id", "name", "mobile").Find(&us).Count(&total).Error
 	} else if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfoDetail" {
-		err = db.Omit("password").Preload(clause.Associations).Find(&us).Error
+		err = db.Omit("password").Preload(clause.Associations).Find(&us).Count(&total).Error
 	}
 
 	//keys, err := global.GLOBAL_REDIS.Keys(context.Background(), "user*").Result()

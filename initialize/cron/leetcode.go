@@ -35,7 +35,7 @@ type CrawlResult struct {
 
 func SendLeetCode() (err error) {
 	//每周一下午2点30运行
-	spec := "00 34 09 ? * 3 "
+	spec := "00 11 17 ? * 0 "
 	//spec := "10 33 14 ? * 3 "
 	//spec:="0 0 0 ? * * "
 	//开启定时器，定时周一晚上00：00(cron定时任务的创建)
@@ -52,22 +52,20 @@ func SendLeetCode() (err error) {
 			zap.L().Error("获取需要查询力扣的部门错误或者没有需要查leetcode的部门", zap.Error(err))
 			return
 		}
-		var errChan chan CrawlResult
 
 		var resultChan chan CrawlResult
-		fmt.Println(errChan, resultChan)
 		//遍历部门
-		for _, dept := range depts {
-			zap.L().Info(fmt.Sprintf("%s开启了查询力扣题目，部门id:%d", dept.Name, dept.DeptId))
-			//遍历某部门的同学，拿到力扣主页地址题目数据
-			userList := dept.UserList
-			startTime := time.Now()
-			for _, user := range userList {
-				count, err := getLeetCodeNumRaw(user.LeetCodeAddr)
-				zap.L().Info(fmt.Sprintf("name:%v count:%v err:%v", user.Name, count, err))
-			}
-			zap.L().Info(fmt.Sprintf("串行cost time:%v", time.Now().Sub(startTime)))
-		}
+		//for _, dept := range depts {
+		//	zap.L().Info(fmt.Sprintf("%s开启了查询力扣题目，部门id:%d", dept.Name, dept.DeptId))
+		//	//遍历某部门的同学，拿到力扣主页地址题目数据
+		//	userList := dept.UserList
+		//	startTime := time.Now()
+		//	for _, user := range userList {
+		//		count, err := getLeetCodeNumRaw(user.LeetCodeAddr)
+		//		zap.L().Info(fmt.Sprintf("name:%v count:%v err:%v", user.Name, count, err))
+		//	}
+		//	zap.L().Info(fmt.Sprintf("串行cost time:%v", time.Now().Sub(startTime)))
+		//}
 		for _, dept := range depts {
 			zap.L().Info(fmt.Sprintf("%s开启了查询力扣题目，部门id:%d", dept.Name, dept.DeptId))
 			//遍历某部门的同学，拿到力扣主页地址题目数据
@@ -85,12 +83,13 @@ func SendLeetCode() (err error) {
 				// 爬取本周数据，并存储
 				go getLeetCodeNum(user.LeetCodeAddr, CurrentDateDeptKey, user.Name, resultChan, &wg)
 				// 等待所有goroutine完成
+
 			}
 			go func() {
 				wg.Wait()
 				crawCostTime := time.Now().Sub(crawlStartTime)
 				zap.L().Info(fmt.Sprintf("并发爬虫total cost time:%v", crawCostTime))
-				close(errChan)
+				close(resultChan)
 			}()
 
 			// 处理错误信息

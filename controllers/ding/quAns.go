@@ -37,16 +37,16 @@ func GetRedisRoad(data *Data, UserId string) (redisRoad string) {
 
 // 上传资源
 func UpdateData(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
+	var data *Data
+	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		zap.L().Error("token获取userid失败", zap.Error(err))
+		zap.L().Error("JSON绑定错误", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-	var data *Data
-	err = c.ShouldBindJSON(&data)
+	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
-		zap.L().Error("JSON绑定错误", zap.Error(err))
+		zap.L().Error("token获取userid失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return
 	}
@@ -63,6 +63,7 @@ func UpdateData(c *gin.Context) {
 	if result {
 		zap.L().Info("已存在该文件名称")
 		response.FailWithMessage("已存在该文件名称", c)
+		return
 	} else {
 		err = global.GLOBAL_REDIS.HSet(ctx, redisRoad, data.DataName, data.DataLink).Err()
 		if err != nil {

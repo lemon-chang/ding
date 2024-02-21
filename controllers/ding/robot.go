@@ -726,4 +726,5 @@ type Data struct {
 	DataName    string `json:"data_name"`
 	DataLink    string `json:"data_link"`
 	UserName    string `json:"user_name"`
+	Url         string `json:"url"`
 }

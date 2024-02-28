@@ -35,18 +35,18 @@ func GetRedisRoad(data *Data, UserId string) (redisRoad string) {
 	return
 }
 
-//上传资源
+// 上传资源
 func UpdateData(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
+	var data *Data
+	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		zap.L().Error("token获取userid失败", zap.Error(err))
+		zap.L().Error("JSON绑定错误", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-	var data *Data
-	err = c.ShouldBindJSON(&data)
+	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
-		zap.L().Error("JSON绑定错误", zap.Error(err))
+		zap.L().Error("token获取userid失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return
 	}
@@ -63,6 +63,7 @@ func UpdateData(c *gin.Context) {
 	if result {
 		zap.L().Info("已存在该文件名称")
 		response.FailWithMessage("已存在该文件名称", c)
+		return
 	} else {
 		err = global.GLOBAL_REDIS.HSet(ctx, redisRoad, data.DataName, data.DataLink).Err()
 		if err != nil {
@@ -74,7 +75,7 @@ func UpdateData(c *gin.Context) {
 	response.OkWithMessage("上传成功", c)
 }
 
-//删除资源
+// 删除资源
 func DeleteData(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -107,7 +108,7 @@ func DeleteData(c *gin.Context) {
 			response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
 			return
 		}
-		user, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+		user, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 		if user.Name != data.UserName || !exist || data.DataLink != dataLink {
 			response.FailWithMessage("这不是您上传的资源，您没有权限删除", c)
 			return
@@ -122,7 +123,7 @@ func DeleteData(c *gin.Context) {
 	response.OkWithMessage("删除成功", c)
 }
 
-//修改资源
+// 修改资源
 func PutData(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -139,7 +140,7 @@ func PutData(c *gin.Context) {
 	}
 	ctx := context.Background()
 	redisRoad := GetRedisRoad(data, UserId)
-	user, err := (&dingding.DingUser{UserId: UserId}).GetUserByUserId()
+	user, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	//判断是否已存在该键
 	exist, err := global.GLOBAL_REDIS.HExists(ctx, redisRoad, data.OldDataName).Result()
 	if err != nil {
@@ -183,7 +184,7 @@ func PutData(c *gin.Context) {
 	response.OkWithMessage("成功", c)
 }
 
-//查询资源
+// 查询资源
 func GetData(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -220,7 +221,7 @@ func GetData(c *gin.Context) {
 	for _, s := range allRedisRoad {
 		split := strings.Split(s, ":")
 		userId := split[len(split)-1-1]
-		user, err := (&dingding.DingUser{UserId: userId}).GetUserByUserId()
+		user, err := (&dingding.DingUser{UserId: userId}).GetUserInfo()
 		AllData, err := global.GLOBAL_REDIS.HGetAll(ctx, s).Result()
 		if err != nil {
 			zap.L().Error("从redis读取失败", zap.Error(err))

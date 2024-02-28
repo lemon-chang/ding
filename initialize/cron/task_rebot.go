@@ -35,30 +35,23 @@ func Reboot() (err error) {
 			Secret:  task.Secret,
 		}
 		tasker = func() {
-			err := d.SendMessage(&p)
+			err = d.SendMessage(&p)
 			if err != nil {
-				//zap.L().Error(fmt.Sprintf("恢复任务失败！发送人:%s,对应机器人:%s", username, robotname), zap.Error(err))
 				return
-			} else {
-				//zap.L().Info(fmt.Sprintf("恢复任务成功！发送人:%s,对应机器人:%s", username, robotname))
 			}
 		}
 		//	// 添加定时任务
 		TaskID, err := global.GLOAB_CORN.AddFunc(task.Spec, tasker)
 		if err != nil {
-			//zap.L().Error("项目重启后恢复定时任务失败,失败原因：", zap.Error(err))
-			//zap.L().Error(fmt.Sprintf("该任务所属人：%s,所属机器人：%s,"+
-			//"人物名：%s,任务具体消息:%s,任务具体定时规则：%s", username, robotname, message, detailTimeForUser))
+			zap.L().Error(fmt.Sprintf("AddFunc task:%v,失败原因:%v", task, zap.Error(err)))
 			return err
 		}
 		tid = int(TaskID)
 		//oldId := task.TaskID
-		err = global.GLOAB_DB.Model(&task).Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Where("deleted_at is null").Update("task_id", tid).Error
+		err = global.GLOAB_DB.Model(&task).Where("deleted_at is null").Update("task_id", tid).Error
 		if err != nil {
-			//zap.L().Error("重启项目后更新任务id失败", zap.Error(err))
 			return err
 		}
-		//zap.L().Info("项目重启后恢复定时任务成功")
 		zap.L().Info(fmt.Sprintf("该任务所属人：%v,所属机器人：%v,"+
 			"任务名：%s,任务具体消息:%s,任务具体定时规则：%s", task.UserName, task.RobotName, task.TaskName, task.MsgText.Text.Content, task.DetailTimeForUser))
 	}

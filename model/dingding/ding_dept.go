@@ -40,6 +40,7 @@ type DingDept struct {
 	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 	IsLeetCode        int        `json:"is_leet_code"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
+	Children          []DingDept `gorm:"-"`
 }
 type UserDept struct {
 	DingUserUserID string
@@ -447,26 +448,6 @@ type JinAndBlogClassify struct {
 	Data   []JinAndBlog `json:"data" gorm:"many2many:user_dept"`
 }
 
-func (d *DingDept) GetAllJinAndBlog() (result []JinAndBlogClassify, err error) {
-
-	var DeptList []DingDept
-	err = global.GLOAB_DB.Model(&DingDept{}).Where("is_jianshu_or_blog = 1").Select("dept_id", "name").Preload("UserList").Find(&DeptList).Error
-	result = make([]JinAndBlogClassify, len(DeptList))
-	for i := 0; i < len(DeptList); i++ {
-		result[i].Name = DeptList[i].Name
-		result[i].DeptId = DeptList[i].DeptId
-		result[i].Data = make([]JinAndBlog, len(DeptList[i].UserList))
-		for j := 0; j < len(DeptList[i].UserList); j++ {
-			result[i].Data[j].Name = DeptList[i].UserList[j].Name
-			result[i].Data[j].UserId = DeptList[i].UserList[j].UserId
-			result[i].Data[j].JianShuArticleURL = DeptList[i].UserList[j].JianShuArticleURL
-			result[i].Data[j].BlogArticleURL = DeptList[i].UserList[j].BlogArticleURL
-		}
-	}
-	return
-
-}
-
 // 通过部门id获取部门用户详情 https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
 func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingUser, hasMore bool, err error) {
 	var client *http.Client
@@ -781,6 +762,32 @@ func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (
 		zap.L().Error("查询部门列表失败", zap.Error(err))
 	}
 	return
+}
+func (d *DingDept) GetDepartmentRecursively() (list []DingDept, total int64, err error) {
+
+	db := global.GLOAB_DB.Model(&DingDept{})
+	err = db.Where("parent_id = ?", 1).Count(&total).Error
+	var department []DingDept
+	err = db.Where("parent_id = ?", 1).Find(&department).Error
+
+	if len(department) > 0 {
+		for i := range department {
+			//err = global.GVA_REDIS.HSet("deptCache", strconv.Itoa(int(department[i].Children[i].ID)), "").Err()
+			err = d.findChildrenDepartment(&department[i])
+		}
+	}
+
+	return department, total, err
+}
+func (d *DingDept) findChildrenDepartment(department *DingDept) (err error) {
+	err = global.GLOAB_DB.Where("parent_id = ?", department.DeptId).Find(&department.Children).Order("sort").Error
+
+	if len(department.Children) > 0 {
+		for k := range department.Children {
+			err = d.findChildrenDepartment(&department.Children[k])
+		}
+	}
+	return err
 }
 
 // 查看部门推送情况开启推送情况

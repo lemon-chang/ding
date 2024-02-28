@@ -25,7 +25,7 @@ func RegularlySendCourses() (err error) {
 		for _, value := range sr {
 			var userids []string
 			userids = append(userids, value.Subscriber)
-			username, _ := (&dingding.DingUser{UserId: value.Subscribee}).GetUserByUserId()
+			username, _ := (&dingding.DingUser{UserId: value.Subscribee}).GetUserInfo()
 			p.UserIds = userids
 			p.MsgKey = "sampleText"
 			p.MsgParam = fmt.Sprintf("姓名:%v\n", username.Name)

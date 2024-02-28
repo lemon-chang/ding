@@ -2,13 +2,15 @@ package ding
 
 import (
 	"crypto/tls"
+	"ding/model/common/request"
+	response2 "ding/model/common/response"
 	"runtime"
+	"strconv"
 
 	"ding/global"
 	"ding/initialize/jwt"
 	"ding/model/dingding"
 	"ding/model/params"
-	"ding/model/params/ding"
 	"ding/response"
 	"encoding/json"
 	"fmt"
@@ -38,21 +40,35 @@ func ImportDingUserData(c *gin.Context) {
 
 // SelectAllUsers 查询所有用户
 func SelectAllUsers(c *gin.Context) {
+	var pageInfo request.PageInfo
+	err := c.ShouldBindQuery(&pageInfo)
+	if err != nil {
+		response.FailWithMessage("分页参数有误", c)
+		return
+	}
 	name := c.Query("name")
 	mobile := c.Query("mobile")
+	deptId, _ := strconv.Atoi(c.Query("deptId"))
+	authorityId, _ := strconv.Atoi(c.Query("authorityId"))
 	var DingUser dingding.DingUser
-	us, err := DingUser.FindDingUsers(name, mobile)
+	list, total, err := DingUser.FindDingUsersInfo(name, mobile, deptId, authorityId, pageInfo, c)
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return
 	}
-	response.OkWithDetailed(us, "查询所有用户成功", c)
+	response.OkWithDetailed(response2.PageResult{
+		List:     list,
+		Total:    total,
+		Page:     pageInfo.Page,
+		PageSize: pageInfo.PageSize,
+	}, "查询所有用户成功", c)
 }
-func GetUserInfo(c *gin.Context) {
+
+func GetUserInfoDetailByToken(c *gin.Context) {
 	user_id, _ := c.Get(global.CtxUserIDKey)
 	DingUser := dingding.DingUser{}
 	DingUser.UserId = user_id.(string)
-	err := DingUser.GetUserInfo()
+	err := DingUser.GetUserInfoDetailByToken()
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return
@@ -60,32 +76,22 @@ func GetUserInfo(c *gin.Context) {
 	response.OkWithDetailed(DingUser, "查询所有用户成功", c)
 }
 
-// UpdateDingUserAddr 更新用户博客&简书地址
-func UpdateDingUserAddr(c *gin.Context) {
+// 设置用户信息，调用钉钉接口进行修改钉钉数据
+func SetUserInfo(c *gin.Context) {
 	var DingUser dingding.DingUser
-	var userParam ding.UserAndAddrParam
-	if err := c.ShouldBindJSON(&userParam); err != nil {
+	if err := c.ShouldBindJSON(&DingUser); err != nil {
 		response.FailWithMessage("参数错误", c)
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	if err := DingUser.UpdateDingUserAddr(userParam); err != nil {
+	if err := DingUser.SetUserInfo(DingUser); err != nil {
 		zap.L().Error("更新用户博客和简书地址失败", zap.Error(err))
 		response.FailWithMessage("更新用户博客&简书地址失败", c)
 	}
 	response.OkWithMessage("更新用户博客&简书地址成功", c)
 }
-func FindAllJinAndBlog(c *gin.Context) {
-	var DingDept dingding.DingDept
-	list, err := DingDept.GetAllJinAndBlog()
-	if err != nil {
-		response.FailWithMessage("查询简书或者博客失败", c)
-		return
-	}
-	response.OkWithDetailed(list, "查询简书或者博客成功", c)
-}
 
-//LoginHandler 处理登录请求的函数
+// LoginHandler 处理登录请求的函数
 func LoginHandler(c *gin.Context) {
 	//1.获取请求参数及参数校验
 	var p params.ParamLogin
@@ -104,7 +110,8 @@ func LoginHandler(c *gin.Context) {
 	// 生成JWT
 	token, err := jwt.GenToken(c, user)
 	if err != nil {
-		zap.L().Debug("JWT生成错误")
+		response.FailWithMessage("用户登录失败", c)
+		zap.L().Error("JWT生成错误", zap.Error(err))
 		return
 	}
 	user.AuthToken = token
@@ -113,6 +120,40 @@ func LoginHandler(c *gin.Context) {
 	} else {
 		response.OkWithDetailed(user, "用户登录成功", c)
 	}
+}
+func LoginByDingDing(c *gin.Context) {
+	var p params.ParamLoginByDingDing
+	if err := c.ShouldBindJSON(&p); err != nil { //这个地方只能判断是不是json格式的数据
+		zap.L().Error("Login with invalid param", zap.Error(err))
+		response.FailWithMessage("参数有误", c)
+		return
+	}
+	err := global.GLOAB_VALIDATOR.Struct(p)
+	if err != nil {
+		zap.L().Error("validator with invalid param", zap.Error(err))
+		response.FailWithMessage(err.Error(), c)
+		return
+	}
+	user, err := (&dingding.Code{AuthCode: p.AuthCode}).SweepLogin(c)
+	if err != nil {
+		response.FailWithMessage("扫码登陆有误", c)
+		zap.L().Error("扫码登陆有误", zap.Error(err))
+		return
+	}
+	// 生成JWT
+	token, err := jwt.GenToken(c, &user)
+	if err != nil {
+		response.FailWithMessage("用户登录失败", c)
+		zap.L().Error("JWT生成错误", zap.Error(err))
+		return
+	}
+	user.AuthToken = token
+	if err != nil {
+		response.FailWithMessage("登陆失败", c)
+	} else {
+		response.OkWithDetailed(user, "用户登录成功", c)
+	}
+
 }
 func LoginHandlerByToken(c *gin.Context) {
 	//1.获取请求参数及参数校验
@@ -172,7 +213,6 @@ func LoginHandlerByToken(c *gin.Context) {
 		return
 	}
 	response.OkWithDetailed(r, "登录成功", c)
-
 }
 func GetQRCode(c *gin.Context) {
 	var buf []byte
@@ -208,7 +248,7 @@ func GetQRCode(c *gin.Context) {
 	response.OkWithDetailed(result, "获取二维码成功", c)
 }
 
-//获取所有任务列表,包括已暂停的任务
+// 获取所有任务列表,包括已暂停的任务
 func GetAllTask(c *gin.Context) {
 	var tasks []dingding.Task
 	user_id, _ := global.GetCurrentUserId(c)
@@ -289,7 +329,7 @@ func GetWeekSignDetail(c *gin.Context) {
 	response.OkWithDetailed(WeekSignNum, "获取用户一周的签到详情成功", c)
 }
 
-//通过userid查询部门id
+// 通过userid查询部门id
 func GetDeptByUserId(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {

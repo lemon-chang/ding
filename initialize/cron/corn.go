@@ -2,7 +2,6 @@ package cron
 
 import (
 	"ding/global"
-	"ding/model/dingding"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -31,21 +30,21 @@ func InitCorn() {
 		zap.L().Debug("AttendanceByRobot init success...")
 	}
 	//======重启订阅关系=======
-	if err := RegularlySendCourses(); err != nil {
-		zap.L().Error("RegularlySendCourses init fail", zap.Error(err))
-	} else {
-		zap.L().Debug("RegularlySendCourses init success...")
-	}
+	//if err := RegularlySendCourses(); err != nil {
+	//	zap.L().Error("RegularlySendCourses init fail", zap.Error(err))
+	//} else {
+	//	zap.L().Debug("RegularlySendCourses init success...")
+	//}
 
 	//======发送爬取力扣的题目数=======
-	err := SendLeetCode()
-	if err != nil {
-		zap.L().Error("SendLeetCode init fail", zap.Error(err))
-	}
-	//重启考勤周报
-	err = dingding.AttendWeeklyNewsPaper()
-	if err != nil {
-		zap.L().Error("AttendWeeklyNewsPaper init fail...")
-	}
-	return
+	//err := SendLeetCode()
+	//if err != nil {
+	//	zap.L().Error("SendLeetCode init fail", zap.Error(err))
+	//}
+	////重启考勤周报
+	//err = dingding.AttendWeeklyNewsPaper()
+	//if err != nil {
+	//	zap.L().Error("AttendWeeklyNewsPaper init fail...")
+	//}
+	//return
 }

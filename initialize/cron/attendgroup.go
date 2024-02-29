@@ -41,7 +41,7 @@ func AttendanceByRobot() (err error) {
 				},
 			}
 			zap.L().Info(fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName))
-			err = (&dingding.DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).SendMessage(d)
+			err = (&dingding.DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).SendMessage(d)
 			if err != nil {
 				zap.L().Error("发送错误", zap.Error(err))
 			}

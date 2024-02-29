@@ -2,6 +2,7 @@ package cron
 
 import (
 	"ding/global"
+	"ding/model/common"
 	"ding/model/dingding"
 	"ding/model/params"
 	"fmt"
@@ -30,18 +31,20 @@ func AttendanceByRobot() (err error) {
 				return err
 			}
 
-			//d := &dingding.ParamCronTask{
-			//	MsgText: &common.MsgText{
-			//		Msgtype: "text",
-			//		At:      common.At{AtMobiles: []common.AtMobile{{AtMobile: "18737480171"}}},
-			//		Text: common.Text{
-			//			Content: fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName),
-			//		},
-			//	},
-			//}
-			//zap.L().Info(fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName))
-			//(&dingding.DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).
-			//	SendMessage(d)
+			d := &dingding.ParamCronTask{
+				MsgText: &common.MsgText{
+					Msgtype: "text",
+					At:      common.At{AtMobiles: []common.AtMobile{{AtMobile: "18737480171"}}},
+					Text: common.Text{
+						Content: fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName),
+					},
+				},
+			}
+			zap.L().Info(fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName))
+			err = (&dingding.DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).SendMessage(d)
+			if err != nil {
+				zap.L().Error("发送错误", zap.Error(err))
+			}
 		} else {
 			zap.L().Warn(fmt.Sprintf("考勤组：%v 未开启机器人考勤", group.GroupName))
 		}

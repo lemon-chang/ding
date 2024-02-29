@@ -623,7 +623,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
-		spec = "00 07,24,47 15,17,22 * * ?"
+		spec = "00 07,24,28 15,17,22 * * ?"
 	}
 	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", spec))
 	task := func() {
@@ -801,7 +801,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			var userids []string
 			global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, DeptId).Select("ding_user_user_id").Find(&userids)
 			p := &ParamChat{
-				RobotCode: "dingepndjqy7etanalhi",
+				RobotCode: "dinglyjekzn80ebnlyge",
 				UserIds:   userids,
 				MsgKey:    "sampleText",
 				MsgParam:  message,

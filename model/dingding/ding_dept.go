@@ -55,7 +55,7 @@ func (UserDept) user_dept() string {
 }
 
 // 获取用户的考勤信息
-func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string) (attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string) (attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
 	attendanceList = make([]DingAttendance, 0)
 	a := DingAttendance{DingToken: DingToken{Token: d.Token}}
 	if userids != nil || len(userids) != 0 {
@@ -89,33 +89,6 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 					list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
 					if err != nil {
 						zap.L().Error(fmt.Sprintf("获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
-						continue
-					}
-				}
-
-				if len(list) == 0 {
-					zap.L().Error("第一次获取考勤数据长度为0，再获取一次")
-					if curTime.Duration == 1 {
-						list, err = a.GetAttendanceList(split, curTime.Format[:10]+" 00:00:00", OnDutyTime[0])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, curTime.Format[:10]+" 00:00:00", OnDutyTime[0]), zap.Error(err))
-							continue
-						}
-					} else if curTime.Duration == 2 {
-						list, err = a.GetAttendanceList(split, OffDutyTime[0], OnDutyTime[1])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[0], OnDutyTime[1]), zap.Error(err))
-							continue
-						}
-					} else if curTime.Duration == 3 {
-						list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
-							continue
-						}
-					}
-					if len(list) == 0 {
-						zap.L().Error("第二次获取考勤数据仍然为空")
 						continue
 					}
 				}
@@ -179,6 +152,7 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 			UserId: attendanceList[i].UserID,
 		}
 		user, err := u.GetUserDetailByUserId()
+		user, err = u.GetUserInfo()
 		if err != nil {
 			zap.L().Error(fmt.Sprintf("考勤数据中的成员id:%s 转化为详细信息失败", attendanceList[i].UserID), zap.Error(err))
 			continue

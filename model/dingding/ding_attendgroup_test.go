@@ -64,7 +64,7 @@ func TestDingAttendGroup_GetGroupDeptNumber(t *testing.T) {
 		// TODO: Add test cases.
 		{
 			name:   "测试",
-			fields: fields{GroupId: 952645016, DingToken: DingToken{Token: "c629a0352ef53cedaa7a8ee3f64a9540"}},
+			fields: fields{GroupId: 1082662924, DingToken: DingToken{Token: "92a18001ddbd3382aca786ead4bd6889"}},
 		},
 	}
 	for _, tt := range tests {

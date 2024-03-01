@@ -426,7 +426,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			err = (&task).InsertTask()
 			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
+				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因: %v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
 				return err, Task{}
 			}
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
@@ -497,7 +497,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			err = (&task).InsertTask()
 			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
+				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因:%v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
 				return err, Task{}
 			}
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
@@ -569,7 +569,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			err = (&task).InsertTask()
 			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
+				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因:%v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
 				return err, Task{}
 			}
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))

@@ -24,8 +24,8 @@ func AttendanceByRobot() (err error) {
 			if err != nil {
 				return err
 			}
-			//提醒没有打开的人考勤
-			group.AlertAttend(p)
+			//提醒没有打卡的人考勤
+			//group.AlertAttend(p)
 			err = global.GLOAB_DB.Model(&group).Update("robot_attend_task_id", int(taskID)).Error
 			if err != nil {
 				return err

@@ -623,7 +623,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
-		spec = "00 07,24,28 15,17,22 * * ?"
+		spec = "00 50,24,28 8,17,22 * * ?"
 	}
 	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", spec))
 	task := func() {
@@ -750,12 +750,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				NotRecordUserIdList = handle
 			}
 
-			//if (week == restTime[0].WeekDay && curTime.Duration == restTime[0].MAE) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
-			//	zap.L().Info("freetime跳过")
-			//	//直接所有部门都不再发送了
-			//	return
-			//}
-
 			err, _ = LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
@@ -784,13 +778,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 					continue
 				}
 			}
-			/*
-				err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-				if err != nil {
-					zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-					continue
-				}
-			*/
 			//在此处使用bitmap来实现存储功能
 			err, week := GetWeek()
 			err = BitMapHandle(result, curTime, startWeek, week)

@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"ding/global"
 	"ding/initialize/redis"
+	"ding/model/classCourse"
 	"ding/model/common"
 	"ding/model/common/localTime"
 	"ding/model/params"
@@ -41,6 +42,7 @@ type DingDept struct {
 	IsLeetCode        int        `json:"is_leet_code"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
 	Children          []DingDept `gorm:"-"`
+	NumberAttendUser  int        `gorm:"-"` // 该部门实际参与考勤人数
 }
 type UserDept struct {
 	DingUserUserID string
@@ -55,7 +57,8 @@ func (UserDept) user_dept() string {
 }
 
 // 获取用户的考勤信息
-func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string) (attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string, isInSchool bool) (result map[string][]DingAttendance, attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+	result = make(map[string][]DingAttendance, 0)
 	attendanceList = make([]DingAttendance, 0)
 	a := DingAttendance{DingToken: DingToken{Token: d.Token}}
 	if userids != nil || len(userids) != 0 {
@@ -167,6 +170,25 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelf
 		_, ok := HasAttendanceDateUser[UserId]
 		if !ok {
 			NotRecordUserIdList = append(NotRecordUserIdList, UserId)
+		}
+	}
+	for _, attendance := range attendanceList {
+		flag := false
+		//查一下课表，有课且打卡的话，判定为有课
+		if isInSchool {
+			course, _ := classCourse.GetIsHasCourse(curTime.ClassNumber, curTime.StartWeek, 0, []string{attendance.UserID}, curTime.Week)
+			for _, Byclass := range course {
+				if Byclass.Userid == attendance.UserID {
+					result["HasCourse"] = append(result["HasCourse"], attendance)
+					flag = true
+					break
+				}
+			}
+		}
+		if flag == false {
+			if attendance.TimeResult == "Normal" {
+				result["Normal"] = append(result["Normal"], attendance)
+			}
 		}
 	}
 	return
@@ -720,8 +742,8 @@ func (d *DingDept) GetDepartmentListByID2() (subDepartments []DingDept, err erro
 	err = global.GLOAB_DB.Where("parent_id = ?", d.DeptId).Find(&subDepartments).Error
 	return
 }
-func (d *DingDept) GetDeptByIDFromMysql() (dept DingDept, err error) {
-	err = global.GLOAB_DB.First(&dept, d.DeptId).Error
+func (d *DingDept) GetDeptByIDFromMysql() (err error) {
+	err = global.GLOAB_DB.First(d, d.DeptId).Error
 	return
 }
 func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (deptList []DingDept, total int64, err error) {

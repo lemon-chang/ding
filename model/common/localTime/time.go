@@ -44,7 +44,7 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
 	//字符串转成时间格式
 	CurTime, _ := time.Parse("2006-01-02 15:04:05", StringCurTime)
 	t.Time = CurTime
-	zap.L().Info(fmt.Sprintf("当前时间的时间戳：%v,time.Time：%v,字符串格式：%s", T.TimeStamp, T.Time, T.Format))
+	zap.L().Info(fmt.Sprintf("当前时间的时间戳：%v,time.Time：%v,字符串格式：%s", t.TimeStamp, t.Time, t.Format))
 	if commutingTime == nil || len(commutingTime) == 0 {
 		zap.L().Info("commutingTime为空")
 		AfternoonStart, _ := time.Parse("2006-01-02 15:04:05", StringCurTime[0:10]+" 12:00:00")

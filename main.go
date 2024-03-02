@@ -51,8 +51,6 @@ func main() {
 	zap.L().Debug("mysql init success...")
 	//初始化corn定时器
 	cron.InitCorn()
-	//初始化Validator
-
 	//将通信201的数据存入数据库
 	//if err = gxp.Init(); err != nil {
 	//	fmt.Printf("init gxpmysql failed ,err:%v\n", err)

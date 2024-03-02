@@ -22,7 +22,6 @@ type MySelfTime struct {
 
 // 根据考勤组判断当前时间（时间戳，字符串，time.Time,上午还是下午（根据考勤组规则制定））
 func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
-
 	m1 := map[string]int{"Sunday": 7, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
 	now := time.Now()
 	weekEnglish := t.GetWeek(&now)

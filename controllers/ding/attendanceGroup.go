@@ -42,7 +42,7 @@ func UpdateAttendanceGroup(c *gin.Context) {
 	var d dingding2.DingAttendGroup
 	d.DingToken.Token = token
 	d.GroupId = p.GroupId
-	err = d.UpdateAttendGroup(&p)
+	err = d.UpdateAttendGroup()
 	if err != nil {
 		response.FailWithMessage("更新考勤组信息失败！", c)
 		return

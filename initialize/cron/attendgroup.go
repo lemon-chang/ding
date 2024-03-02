@@ -6,6 +6,7 @@ import (
 	"ding/model/dingding"
 	"ding/model/params"
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
 
@@ -20,13 +21,19 @@ func AttendanceByRobot() (err error) {
 		if group.IsRobotAttendance {
 			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
 			//正常考勤
-			_, taskID, err := group.AllDepartAttendByRobot(p)
+			AttendTaskID, err := group.AllDepartAttendByRobot()
 			if err != nil {
 				return err
 			}
-			//提醒没有打卡的人考勤
-			//group.AlertAttend(p)
-			err = global.GLOAB_DB.Model(&group).Update("robot_attend_task_id", int(taskID)).Error
+			var AlertTaskID cron.EntryID
+			if group.IsAlert {
+				//提醒没有打卡的人考勤
+				AlertTaskID, err = group.AlertAttendByRobot(p)
+				if err != nil {
+					return err
+				}
+			}
+			err = global.GLOAB_DB.Model(&group).Updates(dingding.DingAttendGroup{RobotAttendTaskID: int(AttendTaskID), RobotAlterTaskID: int(AlertTaskID)}).Error
 			if err != nil {
 				return err
 			}

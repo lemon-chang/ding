@@ -20,15 +20,16 @@ func AttendanceByRobot() (err error) {
 		if group.IsRobotAttendance {
 			var AlertTaskID cron.EntryID
 			var AlertSpec, AttendSpec string
-			if group.IsAlert {
-				//提醒没有打卡的人考勤
-				AlertTaskID, AlertSpec, err = group.AlertAttendByRobot()
-				if err != nil {
-					return err
-				}
-			}
+			//if group.IsAlert {
+			//	//提醒没有打卡的人考勤
+			//	AlertTaskID, AlertSpec, err = group.AlertAttendByRobot()
+			//	if err != nil {
+			//		return err
+			//	}
+			//}
 			//正常考勤
-			AttendTaskID, AttendSpec, err := group.AllDepartAttendByRobot()
+
+			AttendTaskID, AttendSpec, err := group.AllDepartAttendByRobot(group.GroupId)
 			if err != nil {
 				return err
 			}

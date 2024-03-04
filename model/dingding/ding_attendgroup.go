@@ -225,7 +225,7 @@ func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime ma
 	} else if runtime.GOOS == "linux" {
 		AttendSpec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
-		AttendSpec = "00 38,42,28 8,16,22 * * ?"
+		AttendSpec = "00 56,42,59 8,16,21 * * ?"
 	}
 
 	minute = ""
@@ -462,7 +462,7 @@ func (a *DingAttendGroup) UpdateAttendGroup() (err error) {
 		if old.IsRobotAttendance == false && AttendGroup.IsRobotAttendance == true {
 			zap.L().Error("更新考勤组开启定时任务")
 			//开启定时任务
-			taskID, _, err := a.AllDepartAttendByRobot()
+			taskID, _, err := a.AllDepartAttendByRobot(a.GroupId)
 			if err != nil {
 				zap.L().Error("开启定时任务AllDepartAttendByRobot()失败", zap.Error(err))
 				return err
@@ -591,7 +591,10 @@ func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int
 }
 
 // 该考勤组进行机器人考勤
-func (g *DingAttendGroup) AllDepartAttendByRobot() (taskID cron.EntryID, AttendSpec string, err error) {
+func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.EntryID, AttendSpec string, err error) {
+	g := &DingAttendGroup{}
+	err = global.GLOAB_DB.First(g, groupid).Error
+
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	if err != nil || token == "" {
@@ -607,6 +610,7 @@ func (g *DingAttendGroup) AllDepartAttendByRobot() (taskID cron.EntryID, AttendS
 
 	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", AttendSpec))
 	AttendTask := func() {
+		zap.L().Info(fmt.Sprintf("进入定时任务，定时任务id:%v，对应考勤组:%v", taskID, g.GroupName))
 		if int(taskID) != 0 {
 			nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
 			g.NextTime = nextTime

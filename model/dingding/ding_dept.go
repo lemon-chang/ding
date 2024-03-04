@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"ding/global"
 	"ding/initialize/redis"
+	"ding/model/classCourse"
 	"ding/model/common"
 	"ding/model/common/localTime"
 	"ding/model/params"
@@ -41,6 +42,7 @@ type DingDept struct {
 	IsLeetCode        int        `json:"is_leet_code"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
 	Children          []DingDept `gorm:"-"`
+	NumberAttendUser  int        `gorm:"-"` // 该部门实际参与考勤人数
 }
 type UserDept struct {
 	DingUserUserID string
@@ -55,7 +57,8 @@ func (UserDept) user_dept() string {
 }
 
 // 获取用户的考勤信息
-func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string) (attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string, isInSchool bool) (result map[string][]DingAttendance, attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+	result = make(map[string][]DingAttendance, 0)
 	attendanceList = make([]DingAttendance, 0)
 	a := DingAttendance{DingToken: DingToken{Token: d.Token}}
 	if userids != nil || len(userids) != 0 {
@@ -68,7 +71,6 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 			}
 			var list []DingAttendance
 			zap.L().Info(fmt.Sprintf("接下来开始获取考勤数据，当前时间为：%v %s", curTime.Duration, curTime.Time))
-			fmt.Println("curTime.Duration = ", curTime.Duration)
 			if len(OnDutyTime) == 3 {
 				if curTime.Duration == 1 {
 					zap.L().Info(fmt.Sprintf("获取上午考勤数据,userIds:%v,开始时间%s,结束时间：%s", split, curTime.Format[:10]+" 00:00:00", OnDutyTime[0]))
@@ -89,33 +91,6 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 					list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
 					if err != nil {
 						zap.L().Error(fmt.Sprintf("获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
-						continue
-					}
-				}
-
-				if len(list) == 0 {
-					zap.L().Error("第一次获取考勤数据长度为0，再获取一次")
-					if curTime.Duration == 1 {
-						list, err = a.GetAttendanceList(split, curTime.Format[:10]+" 00:00:00", OnDutyTime[0])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, curTime.Format[:10]+" 00:00:00", OnDutyTime[0]), zap.Error(err))
-							continue
-						}
-					} else if curTime.Duration == 2 {
-						list, err = a.GetAttendanceList(split, OffDutyTime[0], OnDutyTime[1])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[0], OnDutyTime[1]), zap.Error(err))
-							continue
-						}
-					} else if curTime.Duration == 3 {
-						list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
-							continue
-						}
-					}
-					if len(list) == 0 {
-						zap.L().Error("第二次获取考勤数据仍然为空")
 						continue
 					}
 				}
@@ -179,6 +154,7 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 			UserId: attendanceList[i].UserID,
 		}
 		user, err := u.GetUserDetailByUserId()
+		user, err = u.GetUserInfo()
 		if err != nil {
 			zap.L().Error(fmt.Sprintf("考勤数据中的成员id:%s 转化为详细信息失败", attendanceList[i].UserID), zap.Error(err))
 			continue
@@ -186,13 +162,32 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 		attendanceList[i].UserName = user.Name //完善考勤记录
 		HasAttendanceDateUser[attendanceList[i].UserID] = attendanceList[i].UserCheckTime
 	}
-	zap.L().Info(fmt.Sprintf("打卡机数据获取完毕，完成数据如下：%v", attendanceList))
+	zap.L().Info(fmt.Sprintf("打卡机数据获取完毕，完整数据如下：%v", attendanceList))
 	NotRecordUserIdList = make([]string, 0)
 	for _, UserId := range userids {
 		//找到没有考勤记录的人
 		_, ok := HasAttendanceDateUser[UserId]
 		if !ok {
 			NotRecordUserIdList = append(NotRecordUserIdList, UserId)
+		}
+	}
+	for _, attendance := range attendanceList {
+		flag := false
+		//查一下课表，有课且打卡的话，判定为有课
+		if isInSchool {
+			course, _ := classCourse.GetIsHasCourse(curTime.ClassNumber, curTime.StartWeek, 0, []string{attendance.UserID}, curTime.Week)
+			for _, Byclass := range course {
+				if Byclass.Userid == attendance.UserID {
+					result["HasCourse"] = append(result["HasCourse"], attendance)
+					flag = true
+					break
+				}
+			}
+		}
+		if flag == false {
+			if attendance.TimeResult == "Normal" {
+				result["Normal"] = append(result["Normal"], attendance)
+			}
 		}
 	}
 	return
@@ -221,7 +216,7 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
 	return nil
 }
 
@@ -417,7 +412,7 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 		time := int(results[i].Score)
 		msg += name + "迟到次数：" + strconv.Itoa(time) + "\n"
 	}
-	fmt.Println("发送迟到频率了")
+	//fmt.Println("发送迟到频率了")
 	p := &ParamCronTask{
 		MsgText: &common.MsgText{
 			Msgtype: "text",
@@ -425,7 +420,7 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
 	return nil
 }
 func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAttendance) (err error) {
@@ -746,8 +741,8 @@ func (d *DingDept) GetDepartmentListByID2() (subDepartments []DingDept, err erro
 	err = global.GLOAB_DB.Where("parent_id = ?", d.DeptId).Find(&subDepartments).Error
 	return
 }
-func (d *DingDept) GetDeptByIDFromMysql() (dept DingDept, err error) {
-	err = global.GLOAB_DB.First(&dept, d.DeptId).Error
+func (d *DingDept) GetDeptByIDFromMysql() (err error) {
+	err = global.GLOAB_DB.First(d, d.DeptId).Error
 	return
 }
 func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (deptList []DingDept, total int64, err error) {

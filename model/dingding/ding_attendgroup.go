@@ -10,7 +10,6 @@ import (
 	"ding/model/common/localTime"
 	"ding/model/common/request"
 	"ding/model/params"
-	"ding/model/params/ding"
 	"ding/utils"
 	"encoding/json"
 	"errors"
@@ -52,12 +51,14 @@ type DingAttendGroup struct {
 		} `gorm:"-" json:"sections"`
 	} `gorm:"-" json:"selected_class"`
 	DingToken         `gorm:"-"`
-	IsRobotAttendance bool       `json:"is_robot_attendance"` //该考勤组是否开启机器人查考勤 （相当于是总开关）
-	RobotAttendTaskID int        `json:"robot_attend_task_id"`
+	IsRobotAttendance bool       `json:"is_robot_attendance"`  //该考勤组是否开启机器人查考勤 （相当于是总开关）
+	RobotAttendTaskID int        `json:"robot_attend_task_id"` // 考勤组对应的task_id
+	RobotAlterTaskID  int        `json:"robot_alter_task_id"`  // 考勤组提醒对应的task_id
 	IsSendFirstPerson int        `json:"is_send_first_person"` //该考勤组是否开启推送每个部门第一位打卡人员 （总开关）
 	IsInSchool        bool       `json:"is_in_school"`         //是否在学校，如果在学校，开启判断是否有课
-	IsReady           int        `json:"is_ready"`             //是否预备
-	ReadyTime         int        `json:"ready_time"`           //如果预备了，提前几分钟
+	IsAlert           bool       `json:"is_alert"`             //是否预备
+	AlertTime         int        `json:"alert_time"`           //如果预备了，提前几分钟
+	DelayTime         int        `json:"delay_time"`           //推迟多少分钟
 	NextTime          string     `json:"next_time"`            //下次执行时间
 	IsSecondClass     int        `json:"is_second_class"`      //是否开启第二节课考勤
 	RestTimes         []RestTime `json:"rest_times" gorm:"foreignKey:AttendGroupID;references:group_id"`
@@ -74,28 +75,6 @@ type DingAttendanceGroupMemberList struct {
 	MemberID string `json:"member_id"`
 }
 
-// 通过考勤组id获取休息时间
-//
-//	func (DingAttendGroup *DingAttendGroup) GetRestTimes(weekDay int) (RestTimes []RestTime) {
-//		//err := global.GLOAB_DB.Model(&DingAttendGroup).Preload("RestTimes").Find(&RestTimes).Error
-//		//if err != nil {
-//		//	zap.L().Error("")
-//		//}
-//
-//		//err := global.GLOAB_DB.Model(&DingAttendGroup).Association("RestTimes").Find(&RestTimes).Error
-//		//if err != nil {
-//		//	zap.L().Error("")
-//		//}
-//		//return RestTimes
-//
-//		err := global.GLOAB_DB.Preload("RestTimes").First(DingAttendGroup)
-//		if err != nil {
-//			zap.L().Error("")
-//		}
-//		RestTimes = make([]RestTime, len(DingAttendGroup.RestTimes))
-//		RestTimes = DingAttendGroup.RestTimes
-//		return RestTimes
-//	}
 func (DingAttendGroup *DingAttendGroup) BeforeCreate(tx *gorm.DB) (err error) {
 	DingAttendGroup.CreatedAt = time.Now()
 	return
@@ -175,95 +154,127 @@ func (a *DingAttendGroup) GetAttendancesGroups(offset int, size int) (groups []D
 
 // 获取一天的上下班时间
 // map["OnDuty"] map["OffDuty"]
-func (a *DingAttendGroup) GetCommutingTime() (FromTo map[string][]string, err error) {
-
-	FromTo = make(map[string][]string, 2)
+func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime map[string][]string, AttendSpec string, AlertSpec string, restTime []RestTime, isInSchool bool, err error) {
+	commutingTime, AlterTime = make(map[string][]string, 2), make(map[string][]string, 2)
 	timeNowYMD := time.Now().Format("2006-01-02")
-	attendancesGroupsDetail, err := a.GetAttendancesGroupById()
+	err = a.GetAttendancesGroupById()
 	if err != nil {
 		return
 	}
-	Sections := attendancesGroupsDetail.SelectedClass[0].Sections //上午中午下午三个模块
-	OnDutyTime := make([]string, 0)
-	OffDutyTime := make([]string, 0)
-	for _, section := range Sections {
+	commutingOnDutyTime := make([]string, 0)
+	commutingOffDutyTime := make([]string, 0)
+	AlterOnDutyTime := make([]string, 0)
+	AlterOffDutyTime := make([]string, 0)
+	for _, section := range a.SelectedClass[0].Sections {
 		for _, time := range section.Times {
-			l := len(time.CheckTime)
-			b := []byte(time.CheckTime[l-8:])
+			b := []byte(time.CheckTime[len(time.CheckTime)-8:])
 			if time.CheckType == "OnDuty" {
-				b[4] = utils.Delay
-				OnDutyTime = append(OnDutyTime, timeNowYMD+" "+string(b))
-			} else {
-				//OffDutyTime = append(OffDutyTime, timeNowYMD+" "+time.CheckTime[l-8:])
-				OffDutyTime = append(OffDutyTime, timeNowYMD+" "+string(b))
-			}
-			FromTo["OnDuty"] = OnDutyTime
-			FromTo["OffDuty"] = OffDutyTime
-		}
-	}
-	return
-}
-
-// 用于打卡提醒获取上班时间段
-func (a *DingAttendGroup) GetCommutingTime1() (FromTo map[string][]string, err error) {
-	FromTo = make(map[string][]string, 2)
-	timeNowYMD := time.Now().Format("2006-01-02")
-	attendancesGroupsDetail, err := a.GetAttendancesGroupById()
-	if err != nil {
-		return
-	}
-	Sections := attendancesGroupsDetail.SelectedClass[0].Sections //上午中午下午三个模块
-	OnDutyTime := make([]string, 0)
-	OffDutyTime := make([]string, 0)
-	for _, section := range Sections {
-		for _, time := range section.Times {
-			l := len(time.CheckTime)
-			b := []byte(time.CheckTime[l-8:])
-			str := string(b)
-			if time.CheckType == "OnDuty" {
-				s := strings.Split(str, ":")
+				s := strings.Split(string(b), ":")
 				h, _ := strconv.Atoi(s[0])
 				m, _ := strconv.Atoi(s[1])
-				//先转化成分钟
-				i2 := h*60 + m
-				m = (i2 - 5) % 60
-				h = (i2 - 5) / 60
-				minute := strconv.Itoa(m)
-				hours := strconv.Itoa(h)
-				hour := hours + ":"
-				min := minute + ":"
-				second := "00"
-				times := hour + min + second
-				OnDutyTime = append(OnDutyTime, timeNowYMD+" "+times)
+				totalMin := h*60 + m //先转化成分钟
+				// 拼装alert 对应的上下班时间
+				m, h = (totalMin-a.AlertTime)%60, (totalMin-a.AlertTime)/60
+				minute, hour, second := strconv.Itoa(m)+":", strconv.Itoa(h)+":", "00"
+				times := hour + minute + second
+				AlterOnDutyTime = append(AlterOnDutyTime, timeNowYMD+" "+times)
+
+				// 拼装考勤上下班时间
+				m, h = (totalMin+a.DelayTime)%60, (totalMin+a.DelayTime)/60
+				if m < 10 && h < 10 {
+					minute, hour, second = "0"+strconv.Itoa(m)+":", "0"+strconv.Itoa(h)+":", "00"
+				} else if h < 10 {
+					minute, hour, second = strconv.Itoa(m)+":", "0"+strconv.Itoa(h)+":", "00"
+				} else if m < 10 {
+					minute, hour, second = "0"+strconv.Itoa(m)+":", strconv.Itoa(h)+":", "00"
+				} else {
+					minute, hour, second = strconv.Itoa(m)+":", strconv.Itoa(h)+":", "00"
+				}
+				times = hour + minute + second
+
+				commutingOnDutyTime = append(commutingOnDutyTime, timeNowYMD+" "+times)
 			} else {
 				//OffDutyTime = append(OffDutyTime, timeNowYMD+" "+time.CheckTime[l-8:])
-				OffDutyTime = append(OffDutyTime, timeNowYMD+" "+string(b))
+				commutingOffDutyTime = append(commutingOffDutyTime, timeNowYMD+" "+string(b))
+				AlterOffDutyTime = append(AlterOffDutyTime, timeNowYMD+" "+string(b))
 			}
-			FromTo["OnDuty"] = OnDutyTime
-			FromTo["OffDuty"] = OffDutyTime
+
 		}
 	}
-	return
-}
-
-func (a *DingAttendGroup) GetWorkDayList() ([]string, error) {
-	attendancesGroupsDetail, err := a.GetAttendancesGroupById()
+	commutingTime["OnDuty"], commutingTime["OffDuty"] = commutingOnDutyTime, commutingOffDutyTime
+	AlterTime["OnDuty"], AlterTime["OffDuty"] = AlterOnDutyTime, AlterOffDutyTime
+	//获取到上班时间和提醒打卡时间
+	OnDutyTimeList, AlterTimeList := commutingTime["OnDuty"], AlterTime["OnDuty"]
+	//获取到不考勤时间
+	err = global.GLOAB_DB.Where("attend_group_id", a.GroupId).Find(&restTime).Error
 	if err != nil {
-		return attendancesGroupsDetail.ClassesList, err
+		zap.L().Error("根据考勤组获取休息时间失败", zap.Error(err))
+		return
+	}
+	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
+	minute, hour := "", ""
+	for i := 0; i < len(OnDutyTimeList); i++ {
+		s := strings.Split(strings.Split(OnDutyTimeList[i], " ")[1], ":")
+		hour += s[0] + ","
+		minute += s[1] + ","
+	}
+	hour = hour[:len(hour)-1]
+	minute = minute[:len(minute)-1]
+	if runtime.GOOS == "windows" {
+		AttendSpec = "00 07,24,47 15,17,22 * * ?"
+	} else if runtime.GOOS == "linux" {
+		AttendSpec = "00 " + minute + " " + hour + " * * ?"
+	} else if runtime.GOOS == "darwin" {
+		AttendSpec = "00 38,42,28 8,16,22 * * ?"
 	}
 
-	return attendancesGroupsDetail.ClassesList, err
+	minute = ""
+	hour = ""
+
+	for i := 0; i < len(AlterTimeList); i++ {
+		s := strings.Split(strings.Split(AlterTimeList[i], " ")[1], ":")
+		hour += s[0] + ","
+		minute += s[1] + ","
+	}
+	hour = hour[:len(hour)-1]
+	minute = minute[:len(minute)-1]
+	if runtime.GOOS == "windows" {
+		AlertSpec = "00 07,24,47 15,17,22 * * ?"
+	} else if runtime.GOOS == "linux" {
+		AlertSpec = "00 " + minute + " " + hour + " * * ?"
+	} else if runtime.GOOS == "darwin" {
+		AlertSpec = "00 " + minute + " " + hour + " * * ?"
+		AlertSpec = "00 32,00,28 8,17,22 * * ?"
+	}
+	err = global.GLOAB_DB.Model(&a).Select("is_in_school").Scan(&isInSchool).Error
+	if err != nil {
+		zap.L().Error("通过考勤组判断是否在学校（加入课表小程序数据失败）", zap.Error(err))
+		isInSchool = false
+	}
+	return
 }
 
 // 根据id获取详细的考勤组
-func (a *DingAttendGroup) GetAttendancesGroupById() (group DingAttendGroup, err error) {
+// https://open.dingtalk.com/document/orgapp-server/queries-attendance-group-list-details
+func (a *DingAttendGroup) GetAttendancesGroupById() (err error) {
 	groups, err := a.GetAttendancesGroups(0, 50)
 	if err != nil {
 		return
 	}
 	for _, attendGroup := range groups {
 		if strconv.Itoa(attendGroup.GroupId) == strconv.Itoa(a.GroupId) {
-			group = attendGroup
+			a.SelectedClass = make([]struct {
+				Setting struct {
+					PermitLateMinutes int `json:"permit_late_minutes"`
+				} `gorm:"-" json:"setting"`
+				Sections []struct {
+					Times []struct {
+						CheckTime string `json:"check_time"`
+						CheckType string `json:"check_type"`
+					} `gorm:"-" json:"times"`
+				} `gorm:"-" json:"sections"`
+			}, 1)
+			a.SelectedClass[0].Sections = attendGroup.SelectedClass[0].Sections
 			break
 		}
 	}
@@ -436,14 +447,14 @@ func (a *DingAttendGroup) GetUserListByDepartmentID(token string, deptId, cursor
 }
 
 // 更新数据库考勤组
-func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceGroup) (err error) {
+func (a *DingAttendGroup) UpdateAttendGroup() (err error) {
 	return global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
 		var old DingAttendGroup
-		err = tx.First(&old, p.GroupId).Error
+		err = tx.First(&old, a.GroupId).Error
 		if err != nil {
 			return err
 		}
-		AttendGroup := &DingAttendGroup{GroupId: p.GroupId, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, IsReady: p.IsReady, ReadyTime: p.ReadyTime}
+		AttendGroup := &DingAttendGroup{GroupId: a.GroupId, IsSendFirstPerson: a.IsSendFirstPerson, IsRobotAttendance: a.IsRobotAttendance, IsAlert: a.IsAlert, AlertTime: a.AlertTime}
 		//err = tx.Updates(AttendGroup).Error
 		//if err != nil {
 		//	return err
@@ -451,10 +462,7 @@ func (a *DingAttendGroup) UpdateAttendGroup(p *ding.ParamUpdateUpdateAttendanceG
 		if old.IsRobotAttendance == false && AttendGroup.IsRobotAttendance == true {
 			zap.L().Error("更新考勤组开启定时任务")
 			//开启定时任务
-			P := &params.ParamAllDepartAttendByRobot{
-				GroupId: p.GroupId,
-			}
-			_, taskID, err := a.AllDepartAttendByRobot(P)
+			taskID, _, err := a.AllDepartAttendByRobot()
 			if err != nil {
 				zap.L().Error("开启定时任务AllDepartAttendByRobot()失败", zap.Error(err))
 				return err
@@ -503,7 +511,7 @@ func (a *DingAttendGroup) GetAttendanceGroupListFromMysql(info *request.PageInfo
 }
 
 // 判断是否在正确的执行时间
-func CronHandle(spec string, curTime localTime.MySelfTime) (Ok bool) {
+func CronHandle(spec string, curTime *localTime.MySelfTime) (Ok bool) {
 	s := strings.Split(spec, " ")
 	min := strings.Split(s[1], ",")
 	hour := strings.Split(s[2], ",")
@@ -548,18 +556,17 @@ func CronHandle(spec string, curTime localTime.MySelfTime) (Ok bool) {
 
 // 处理日期
 func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int, err error) {
-
+	startWeek, err = (&classCourse.Calendar{}).GetWeek()
+	if err != nil {
+		zap.L().Error("通过课表小程序获取当前第几周失败", zap.Error(err))
+	}
 	m1 := map[string]int{"Sunday": 7, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
 	now := time.Now()
 	weekEnglish := (&localTime.MySelfTime{}).GetWeek(&now)
 	//周几
 	week = m1[weekEnglish]
 	//第几周
-	startWeek, err = (&classCourse.Calendar{}).GetWeek()
-	if err != nil {
-		zap.L().Error("通过课表小程序获取当前第几周失败", zap.Error(err))
-		//return 20, 0, 0, err
-	}
+
 	//获取当前是第几节课
 	if curTime.Duration == 1 {
 		if curTime.ClassNumber == 1 {
@@ -584,113 +591,73 @@ func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int
 }
 
 // 该考勤组进行机器人考勤
-func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
+func (g *DingAttendGroup) AllDepartAttendByRobot() (taskID cron.EntryID, AttendSpec string, err error) {
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	if err != nil || token == "" {
 		zap.L().Error("从redis中取出token失败", zap.Error(err))
 		return
 	}
-	g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
-	commutingTime, err := g.GetCommutingTime()
+	g.Token = token
+	_, _, AttendSpec, _, _, _, err = g.GetCommutingTimeAndSpec()
 	if err != nil {
 		zap.L().Error("根据考勤组获取上下班时间失败", zap.Error(err))
 		return
 	}
-	//获取到上班时间
-	OnDutyTimeList := commutingTime["OnDuty"]
-	//获取到不考勤时间
-	var restTime []RestTime
-	err = global.GLOAB_DB.Where("attend_group_id", a.GroupId).Find(&restTime).Error
-	if err != nil {
-		zap.L().Error("根据考勤组获取休息时间失败", zap.Error(err))
-		return
-	}
-	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
-	minute := ""
-	hour := ""
-	for i := 0; i < len(OnDutyTimeList); i++ {
-		s := strings.Split(strings.Split(OnDutyTimeList[i], " ")[1], ":")
-		hour += s[0] + ","
-		minute += s[1] + ","
-	}
-	hour = hour[:len(hour)-1]
-	minute = minute[:len(minute)-1]
-	spec := ""
-	fmt.Println(runtime.GOOS)
-	if runtime.GOOS == "windows" {
-		spec = "30 36,46,47 20,17,22 * * ?"
-	} else if runtime.GOOS == "linux" {
-		spec = "00 " + minute + " " + hour + " * * ?"
-	} else if runtime.GOOS == "darwin" {
-		spec = "00 50,24,28 8,17,22 * * ?"
-	}
-	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", spec))
-	task := func() {
-		token, err = (&DingToken{}).GetAccessToken()
-		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
 
-		//a := DingAttendance{DingToken: DingToken{Token: token}}
+	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", AttendSpec))
+	AttendTask := func() {
+		if int(taskID) != 0 {
+			nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
+			g.NextTime = nextTime
+			err = global.GLOAB_DB.Updates(&g).Error
+			if err != nil {
+				zap.L().Error("获取定时任务下一次执行时间有误", zap.Error(err))
+				return
+			}
+		}
+
+		token, err = (&DingToken{}).GetAccessToken()
+		g.Token = token
 		//获取一天上下班的时间
-		commutingTimes, err := g.GetCommutingTime()
+		commutingTimes, _, _, _, restTime, isInSchool, err := g.GetCommutingTimeAndSpec()
 		if err != nil {
 			zap.L().Error("根据考勤组id获取一天上下班失败失败", zap.Error(err))
 			return
 		}
-		//获取上班时间、//获取下班时间
-		OnDutyTime := commutingTimes["OnDuty"]
-		OffDutyTime := commutingTimes["OffDuty"]
-		zap.L().Info(fmt.Sprintf("上班时间：%v", OnDutyTime))
-		zap.L().Info(fmt.Sprintf("下班时间：%v", OffDutyTime))
+		zap.L().Info(fmt.Sprintf("上班时间：%v", commutingTimes["OnDuty"]) + fmt.Sprintf("下班时间：%v", commutingTimes["OffDuty"]))
 		//获取当前时间，curTime是自己封装的时间类型，有各种格式的时间
-		curTime, err := (&localTime.MySelfTime{}).GetCurTime(commutingTimes)
+		curTime := &localTime.MySelfTime{}
+		err = curTime.GetCurTime(commutingTimes)
 		if err != nil {
 			zap.L().Error("获取当前时间失败", zap.Error(err))
 			return
 		}
 		//判断当前时间是否需要运行，我们使用的是cron定时器，corn定时器不支持一些不规则的定时，我们此处做一些判断，跳过一些不合法的时间
-		ok := CronHandle(spec, curTime)
-		if ok == false {
+		if CronHandle(AttendSpec, curTime) == false {
 			zap.L().Info("当前时间cron执行，但是不是我们想要的时间，跳过执行")
 			return
 		}
-		//获取考勤组部门成员，已经筛掉了不参与考勤的个人
+		//获取考勤组部门成员，已经筛掉了不参与考勤的个人，每个部门都要设置无需考勤的，同一个人如果需要的话，需要在每个考勤组里面设置多次
 		//注意一定要放在task里面，这样当纪检部更新了考勤组之后，每次加载人员都是最新的
 		deptAttendanceUser, err := g.GetGroupDeptNumber()
 		if err != nil {
 			zap.L().Error("获取考勤组部门成员(已经筛掉了不参与考勤的个人)失败", zap.Error(err))
 			return
 		}
-		zap.L().Info(fmt.Sprintf("考勤规则：%v，考勤人员详情：%v", spec, deptAttendanceUser))
-		//判断该考勤组是否在校，在校的话，需要判定有课无课情况，如果不在校，则统一按照无课处理
-		var isInSchool bool
-		err = global.GLOAB_DB.Model(&DingAttendGroup{GroupId: p.GroupId}).Select("is_in_school").Scan(&isInSchool).Error
-		if err != nil {
-			zap.L().Error("通过考勤组判断是否在学校（加入课表小程序数据失败）", zap.Error(err))
-			isInSchool = false
-		}
-		token, err := (&DingToken{}).GetAccessToken()
-		if err != nil {
-			zap.L().Error("从redis中取出token失败", zap.Error(err))
-			return
-		}
-		Len := len(deptAttendanceUser)
-		Count := 0
-		startWeek, week, CourseNumber, err := DateHandle(curTime)
 		//判断是不是freetime时间
 		for _, rest := range restTime {
-			if week == rest.WeekDay && curTime.Duration == rest.MAE {
-				zap.L().Info("freetime跳过")
-				//直接所有部门都不再发送了
+			if curTime.Week == rest.WeekDay && curTime.Duration == rest.MAE {
+				zap.L().Info("本考勤组freetime不再执行考勤")
 				return
 			}
 		}
-		for DeptId, _ := range deptAttendanceUser { //
-			Count++
+		for DeptId, _ := range deptAttendanceUser {
 			atoi, _ := strconv.Atoi(DeptId)
-			//DeptDetail, err := d.GetDeptByIDFromMysql()
-			DeptDetail, err := (&DingDept{DingToken: DingToken{Token: token}, DeptId: atoi}).GetDeptByIDFromMysql()
-			DeptDetail.DingToken.Token = token
+			DeptDetail := &DingDept{DeptId: atoi}
+			DeptDetail.NumberAttendUser = len(deptAttendanceUser[DeptId])
+			err := DeptDetail.GetDeptByIDFromMysql()
+			DeptDetail.Token = token
 			if err != nil {
 				zap.L().Error(fmt.Sprintf("通过部门id：%s获取部门详情失败，继续执行下一轮循环", DeptId), zap.Error(err))
 				continue
@@ -701,41 +668,12 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				continue
 			}
 			zap.L().Info(fmt.Sprintf("该部门:%s开启考勤,机器人robotToken:%s", DeptDetail.Name, DeptDetail.RobotToken))
-			result = make(map[string][]DingAttendance, 0)
-			result["Normal"] = make([]DingAttendance, 0)
-			result["Late"] = make([]DingAttendance, 0)
-			result["Leave"] = make([]DingAttendance, 0)
-			result["HasCourse"] = make([]DingAttendance, 0)
-			//获取了一个部门所有参与考勤的用户id
-			DeptAttendanceUserIdList := GetUserIdListByUserList(deptAttendanceUser[DeptId])
 			//根据用户id获取用户打卡情况，同时返回了没有考勤数据的同学
-			attendanceList, NotRecordUserIdList, err := DeptDetail.GetAttendanceData(DeptAttendanceUserIdList, curTime, OnDutyTime, OffDutyTime)
+			result, _, NotRecordUserIdList, err := DeptDetail.GetAttendanceData(GetUserIdListByUserList(deptAttendanceUser[DeptId]), curTime, commutingTimes["OnDuty"], commutingTimes["OffDuty"], isInSchool)
 			if err != nil {
 				zap.L().Error("根据部门用户id列表获取用户打卡情况失败", zap.Error(err))
 			}
-			//遍历考勤数据,有课的优先级高于考勤
-			for _, attendance := range attendanceList {
-				flag := false
-				//查一下课表，有课且打卡的话，判定为有课
-				if isInSchool {
-					course, _ := classCourse.GetIsHasCourse(CourseNumber, startWeek, 0, []string{attendance.UserID}, week)
-					for _, Byclass := range course {
-						if Byclass.Userid == attendance.UserID {
-							result["HasCourse"] = append(result["HasCourse"], attendance)
-							flag = true
-							break
-						}
-					}
-				}
-
-				if flag == false {
-					if attendance.TimeResult == "Normal" {
-						result["Normal"] = append(result["Normal"], attendance)
-					}
-				}
-			}
 			zap.L().Info(fmt.Sprintf("有考勤记录同学已经处理完成，接下来开始处理没有考勤数据的同学"))
-
 			/*
 				获取课表小程序有课的同学
 				课表小程序有一个接口，可以获取到大家的有课无课情况，其中参数有
@@ -746,20 +684,16 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				//调用课表小程序接口，判断没有考勤数据的人是否请假了
 				//需要参数：当前周、周几、第几节课，NotRecordUserIdList
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
-				handle := HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
+				handle := HasCourseHandle(NotRecordUserIdList, curTime.ClassNumber, curTime.StartWeek, curTime.Week, result)
 				NotRecordUserIdList = handle
 			}
 
-			err, _ = LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
+			err = LeaveLateHandle(DeptDetail, NotRecordUserIdList, token, result, curTime, true) // flag为true开启统计信息到redis中
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
 			}
 			zap.L().Info("没有考勤数据的同学已经处理完成")
-			//一个部门的考勤结束了，开始封装信息，发送考勤消息
-
 			message := MessageHandle(curTime, DeptDetail, result)
-
-			zap.L().Info("message编辑完成，开始封装发送信息参数")
 			pSend := &ParamCronTask{
 				MsgText: &common.MsgText{
 					At: common.At{IsAtAll: false},
@@ -777,8 +711,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 				continue
 			}
 			//在此处使用bitmap来实现存储功能
-			err, week := GetWeek()
-			err = BitMapHandle(result, curTime, startWeek, week)
+			err = BitMapHandle(result, curTime)
 			if err != nil {
 				zap.L().Error("使用bitmap存储每个人的记录失败", zap.Error(err))
 			}
@@ -795,95 +728,18 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 			if err != nil {
 				zap.L().Error("发送至部门负责人失败", zap.Error(err))
 			}
-			//(DingRobot{}).CommonSingleChat()
-			// 向各部门根据请假次数排序的集合中 设置key
-			// 获取此次考勤该部门的请假次数
-			zap.L().Info(fmt.Sprintf("部门：%v开始统计请假迟到信息到redis中", DeptDetail.Name))
-			leaveCount := len(result["Leave"])
-			// 该部门的总人数
-			var deptNumbers float64 = float64(len(deptAttendanceUser[DeptId]))
-			memberName := fmt.Sprintf("部门名称:%v", DeptDetail.Name)
-			preAveScore := global.GLOBAL_REDIS.ZScore(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":", memberName).Val()
-			zap.L().Info(fmt.Sprintf("取出该部门先前的平均请假次数：%v", preAveScore))
-			// 该部门的平均请假率
-			score, err := strconv.ParseFloat(fmt.Sprintf("%.6f", (preAveScore*deptNumbers+float64(leaveCount))/deptNumbers), 64)
-			if err != nil {
-				zap.L().Info("部门平均请假率转换失败")
-				return
-			}
-			// 开启事务
-			pipeline := global.GLOBAL_REDIS.TxPipeline()
-			err = pipeline.ZAdd(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":", &redisZ.Z{
-				// 根据平均请假次数排序
-				Score:  score,
-				Member: memberName,
-			}).Err()
 
-			// 记录此部门的请假总次数，拼装键，然后在键上面进行添加
-			//这是普通的key value键值对
-			err = pipeline.IncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(leaveCount)).Err()
-
-			//登记部门里面每个人请假情况 （对zset进行操作）
-			err = (&DeptDetail).CountFrequencyLeave(startWeek, result)
-			if err != nil {
-				zap.L().Info("CountFrequencyLeave失败", zap.Error(err))
-			}
-
-			// 提交事务
-			_, err = pipeline.Exec(context.Background())
-			// 命令执行失败，取消提交
-			if err != nil {
-				zap.L().Info("key:部门 value:请假总次数的集合键设置失败，部门id为：" + DeptId)
-				pipeline.Discard()
-				continue
-			}
-			pipeline.Close()
-			//发送部门排行榜请假情况
-			DeptDetail.SendFrequencyLeave(startWeek)
 			// 发送各部门个人事假次数排行榜
 			DeptDetail.UserList = deptAttendanceUser[DeptId]
-
 			if int(time.Now().Weekday()) == 0 && curTime.Duration == 2 { // 周日下午考勤自动发
-				DeptDetail.SendFrequencyPrivateLeave(startWeek)
-				DeptDetail.SendSubSectorPrivateLeave(startWeek)
+				DeptDetail.SendFrequencyPrivateLeave(curTime.StartWeek)
+				DeptDetail.SendSubSectorPrivateLeave(curTime.StartWeek)
 			}
 
-			// 以下是对迟到Zset的操作
-			pipeline = global.GLOBAL_REDIS.TxPipeline()
-			lateCount := len(result["Late"])
-			preAveLateScore := global.GLOBAL_REDIS.ZScore(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":", memberName).Val()
-			scoreAveLate, err := strconv.ParseFloat(fmt.Sprintf("%.6f", (preAveLateScore*deptNumbers+float64(lateCount))/deptNumbers), 64)
-
-			// 对迟到Zset更新member的score
-			pipeline.ZAdd(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":", &redisZ.Z{
-				// 根据平均迟到次数排序
-				Score:  scoreAveLate,
-				Member: memberName,
-			})
-			err = (&DeptDetail).CountFrequencyLate(startWeek, result)
-			if err != nil {
-
-			}
-			pipeline.IncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+DeptDetail.Name, int64(lateCount))
-
-			_, err = pipeline.Exec(context.Background())
-			if err != nil {
-				zap.L().Info("更新迟到有序集合事务提交失败")
-				pipeline.Discard()
-				continue
-			}
-			pipeline.Close()
-			// 若是周日就发送各部门平均请假、迟到排行榜
-			err = DeptDetail.SendFrequencyLate(startWeek) //部门个人请假排行榜
-			//当遍历到map最后一个元素的时候，我们发送一下所有部门的请假和迟到情况
-			if Count == Len {
-				SundayAfternoonExec(startWeek)
-			}
-			zap.L().Info("信息发送成功" + message)
 		}
 		return
 	}
-	taskID, err = global.GLOAB_CORN.AddFunc(spec, task)
+	taskID, err = global.GLOAB_CORN.AddFunc(AttendSpec, AttendTask)
 	if err != nil {
 		zap.L().Error("启动机器人查考勤定时任务失败", zap.Error(err))
 		return
@@ -895,147 +751,90 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 		zap.L().Error("获取定时任务下一次执行时间有误", zap.Error(err))
 		return
 	}
-	return result, taskID, err
+	return
 }
 
 // AlerdAttent 提醒未打卡的同学考勤
-func (a *DingAttendGroup) AlertAttend(p *params.ParamAllDepartAttendByRobot) (result map[string][]DingAttendance, taskID cron.EntryID, err error) {
+func (a *DingAttendGroup) AlertAttendByRobot() (taskID cron.EntryID, AlertSpec string, err error) {
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	if err != nil || token == "" {
 		zap.L().Error("从redis中取出token失败", zap.Error(err))
 		return
 	}
-	g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
-	commutingTime, err := g.GetCommutingTime()
+	a.Token = token
+	_, _, _, AlertSpec, _, _, err = a.GetCommutingTimeAndSpec()
 	if err != nil {
 		zap.L().Error("根据考勤组获取上下班时间失败", zap.Error(err))
 		return
 	}
-	//获取到上班时间
-	OnDutyTimeList := commutingTime["OnDuty"]
-	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
-	minute := ""
-	hour := ""
-	for i := 0; i < len(OnDutyTimeList); i++ {
-		s := strings.Split(strings.Split(OnDutyTimeList[i], " ")[1], ":")
-		h, _ := strconv.Atoi(s[0])
-		m, _ := strconv.Atoi(s[1])
-		time, _ := strconv.Atoi(utils.Advance)
-		//先转化成分钟
-		i2 := h*60 + m
-		m = (i2 - time) % 60
-		h = (i2 - time) / 60
-		minuteute := strconv.Itoa(m)
-		hours := strconv.Itoa(h)
-		hour += hours + ","
-		minute += minuteute + ","
-	}
-	hour = hour[:len(hour)-1]
-	minute = minute[:len(minute)-1]
-	//把时间格式拼装处理一下，拼装成corn定时库spec定时规则能够使用的格式
-	spec := "00 " + minute + " " + hour + " * * ?"
-	//spec = "00 55,25,55 7,14,19 * * ?"
-	zap.L().Info(spec)
-	task := func() {
+	AlertTask := func() {
+		if int(taskID) != 0 {
+			nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
+			a.NextTime = nextTime
+			err = global.GLOAB_DB.Updates(a).Error
+			if err != nil {
+				zap.L().Error("更新定时任务下一次执行时间有误", zap.Error(err))
+				return
+			}
+		}
 		token, err = (&DingToken{}).GetAccessToken()
-		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
-		//a := DingAttendance{DingToken: DingToken{Token: token}}
+		a.Token = token
 		//获取一天上下班的时间
-		commutingTimes, err := g.GetCommutingTime1()
+		_, AlterTime, _, _, restTime, isInSchool, err := a.GetCommutingTimeAndSpec()
 		if err != nil {
 			zap.L().Error("根据考勤组id获取一天上下班失败失败", zap.Error(err))
 			return
 		}
-		//获取上班时间、//获取下班时间
-		OnDutyTime := commutingTimes["OnDuty"]
-		OffDutyTime := commutingTimes["OffDuty"]
-		zap.L().Info(fmt.Sprintf("上班时间：%v", OnDutyTime))
-		zap.L().Info(fmt.Sprintf("下班时间：%v", OffDutyTime))
+		zap.L().Info(fmt.Sprintf("上班时间：%v", AlterTime["OnDuty"]) + fmt.Sprintf("下班时间：%v", AlterTime["OffDuty"]))
 		//获取当前时间，curTime是自己封装的时间类型，有各种格式的时间
-		curTime, err := (&localTime.MySelfTime{}).GetCurTime(commutingTimes)
+		curTime := &localTime.MySelfTime{}
+		err = curTime.GetCurTime(AlterTime)
 		if err != nil {
 			zap.L().Error("获取当前时间失败", zap.Error(err))
 			return
 		}
 		//判断当前时间是否需要运行，我们使用的是cron定时器，corn定时器不支持一些不规则的定时，我们此处做一些判断，跳过一些不合法的时间
-		ok := CronHandle(spec, curTime)
-		if ok == false {
+		if CronHandle(AlertSpec, curTime) == false {
 			zap.L().Info("当前时间cron执行，但是不是我们想要的时间，跳过执行")
 			return
 		}
-		//获取考勤组部门成员，已经筛掉了不参与考勤的个人
+		//获取考勤组部门成员，已经筛掉了不参与考勤的个人，每个部门都要设置无需考勤的，同一个人如果需要的话，需要在每个考勤组里面设置多次
 		//注意一定要放在task里面，这样当纪检部更新了考勤组之后，每次加载人员都是最新的
-		deptAttendanceUser, err := g.GetGroupDeptNumber()
+		deptAttendanceUser, err := a.GetGroupDeptNumber()
 		if err != nil {
 			zap.L().Error("获取考勤组部门成员(已经筛掉了不参与考勤的个人)失败", zap.Error(err))
 			return
 		}
-		zap.L().Info(fmt.Sprintf("考勤规则：%v，考勤人员详情：%v", spec, deptAttendanceUser))
-		//判断该考勤组是否在校，在校的话，需要判定有课无课情况，如果不在校，则统一按照无课处理
-		var isInSchool bool
-		err = global.GLOAB_DB.Model(&DingAttendGroup{GroupId: p.GroupId}).Select("is_in_school").Scan(&isInSchool).Error
-		if err != nil {
-			zap.L().Error("通过考勤组判断是否在学校（加入课表小程序数据失败）", zap.Error(err))
-			isInSchool = false
+		//判断是不是freetime时间
+		for _, rest := range restTime {
+			if curTime.Week == rest.WeekDay && curTime.Duration == rest.MAE {
+				zap.L().Info("本考勤组freetime不再执行考勤")
+				return
+			}
 		}
-		token, err := (&DingToken{}).GetAccessToken()
-		if err != nil {
-			zap.L().Error("从redis中取出token失败", zap.Error(err))
-			return
-		}
-		//Len := len(deptAttendanceUser)
-		Count := 0
-		startWeek, week, CourseNumber, err := DateHandle(curTime)
-
-		for DeptId, _ := range deptAttendanceUser { //
-			Count++
+		for DeptId, _ := range deptAttendanceUser {
 			atoi, _ := strconv.Atoi(DeptId)
-			DeptDetail, err := (&DingDept{DingToken: DingToken{Token: token}, DeptId: atoi}).GetDeptByIDFromMysql()
-			DeptDetail.DingToken.Token = token
+
+			DeptDetail := &DingDept{DeptId: atoi}
+			err := DeptDetail.GetDeptByIDFromMysql()
+			DeptDetail.Token = token
+			DeptDetail.NumberAttendUser = len(deptAttendanceUser[DeptId])
+
 			if err != nil {
 				zap.L().Error(fmt.Sprintf("通过部门id：%s获取部门详情失败，继续执行下一轮循环", DeptId), zap.Error(err))
 				continue
 			}
-			fmt.Println("当前部门名称", DeptDetail.Name)
 			//todo 判断一下此部门是否开启推送考勤
 			if DeptDetail.IsRobotAttendance == false || DeptDetail.RobotToken == "" {
 				zap.L().Error(fmt.Sprintf("该部门:%s为开启考勤或者机器人robotToken:%s是空，跳过", DeptDetail.Name, DeptDetail.RobotToken))
 				continue
 			}
 			zap.L().Info(fmt.Sprintf("该部门:%s开启考勤,机器人robotToken:%s", DeptDetail.Name, DeptDetail.RobotToken))
-			result = make(map[string][]DingAttendance, 0)
-			result["Normal"] = make([]DingAttendance, 0)
-			result["Late"] = make([]DingAttendance, 0)
-			result["Leave"] = make([]DingAttendance, 0)
-			result["HasCourse"] = make([]DingAttendance, 0)
-			//获取了一个部门所有参与考勤的用户id
-			DeptAttendanceUserIdList := GetUserIdListByUserList(deptAttendanceUser[DeptId])
 			//根据用户id获取用户打卡情况，同时返回了没有考勤数据的同学
-			attendanceList, NotRecordUserIdList, err := DeptDetail.GetAttendanceData(DeptAttendanceUserIdList, curTime, OnDutyTime, OffDutyTime)
+			result, _, NotRecordUserIdList, err := DeptDetail.GetAttendanceData(GetUserIdListByUserList(deptAttendanceUser[DeptId]), curTime, AlterTime["OnDuty"], AlterTime["OffDuty"], isInSchool)
 			if err != nil {
 				zap.L().Error("根据部门用户id列表获取用户打卡情况失败", zap.Error(err))
-			}
-			fmt.Println("已经打卡的同学", attendanceList)
-			//遍历考勤数据,有课的优先级高于考勤
-			for _, attendance := range attendanceList {
-				flag := false
-				//查一下课表，有课且打卡的话，判定为有课
-				if isInSchool {
-					course, _ := classCourse.GetIsHasCourse(CourseNumber, startWeek, 0, []string{attendance.UserID}, week)
-					for _, Byclass := range course {
-						if Byclass.Userid == attendance.UserID {
-							result["HasCourse"] = append(result["HasCourse"], attendance)
-							flag = true
-							break
-						}
-					}
-				}
-				if flag == false {
-					if attendance.TimeResult == "Normal" {
-						result["Normal"] = append(result["Normal"], attendance)
-					}
-				}
 			}
 			zap.L().Info(fmt.Sprintf("有考勤记录同学已经处理完成，接下来开始处理没有考勤数据的同学"))
 			/*
@@ -1044,65 +843,51 @@ func (a *DingAttendGroup) AlertAttend(p *params.ParamAllDepartAttendByRobot) (re
 				当前周、高级筛选中的部门，我们找到部门中有课的同学，然后跳过即可
 			*/
 			//处理没有考勤记录的同学，看看其是否有课，map传递的引用类型
-			fmt.Println("没有打卡的同学", NotRecordUserIdList)
 			if isInSchool {
 				//调用课表小程序接口，判断没有考勤数据的人是否请假了
 				//需要参数：当前周、周几、第几节课，NotRecordUserIdList
 				//此处传递的两个参数 NotRecordUserIdList、result 都是引用类型，NotRecordUserIdList处理之后已经不含有课的成员了
-				HasCourseHandle(NotRecordUserIdList, CourseNumber, startWeek, week, result)
+				handle := HasCourseHandle(NotRecordUserIdList, curTime.ClassNumber, curTime.StartWeek, curTime.Week, result)
+				NotRecordUserIdList = handle
 			}
-			if (week == 1 && curTime.Duration == 3) || (week == 2 && curTime.Duration == 1) || (week == 2 && curTime.Duration == 2) {
-				zap.L().Info("freetime跳过")
-				//直接所有部门都不再发送了
-				return
-			}
-			//if week == 7 && curTime.Duration == 3 {
-			//	zap.L().Info("周日晚上跳过")
-			//	//直接所有部门都不再发送了
-			//	return
-			//}
-			//if week == 1 && curTime.Duration == 1 && DeptDetail.DeptId == 440395094 {
-			//	zap.L().Info("周一上午三期社招跳过")
-			//	//跳过三期校招，继续循环其他部门
-			//	continue
-			//}
-			err, late := LeaveLateHandle(NotRecordUserIdList, token, result, curTime)
+
+			err = LeaveLateHandle(DeptDetail, NotRecordUserIdList, token, result, curTime, false)
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
 			}
-
 			zap.L().Info("没有考勤数据的同学已经处理完成")
-			//将考勤数据发给部门负责人以及管理人员
-			p := &ParamChat{
-				RobotCode: "dingepndjqy7etanalhi",
-				UserIds:   late,
-				MsgKey:    "sampleText",
-				MsgParam:  "还有五分钟上班，你还没有打卡",
-			}
-			err = (&DingRobot{}).ChatSendMessage(p)
-			if err != nil {
-				zap.L().Error("发送提醒信息失败", zap.Error(err))
+			if runtime.GOOS == "linux" {
+				p := &ParamChat{
+					RobotCode: "dinglyjekzn80ebnlyge",
+					UserIds:   NotRecordUserIdList,
+					MsgKey:    "sampleText",
+					MsgParam:  fmt.Sprintf("还有%v分钟上班，你还没有打卡", a.AlertTime),
+				}
+				err = (&DingRobot{}).ChatSendMessage(p)
+				if err != nil {
+					zap.L().Error("发送提醒信息失败", zap.Error(err))
+				}
 			}
 		}
 		return
 	}
 	//添加一个定时任务
-	taskID, err = global.GLOAB_CORN.AddFunc(spec, task)
+	taskID, err = global.GLOAB_CORN.AddFunc(AlertSpec, AlertTask)
 	if err != nil {
 		zap.L().Error("启动机器人查考勤定时任务失败", zap.Error(err))
 		return
 	}
 	nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
-	g.NextTime = nextTime
-	err = global.GLOAB_DB.Updates(&g).Error
+	a.NextTime = nextTime
+	err = global.GLOAB_DB.Updates(&a).Error
 	if err != nil {
 		zap.L().Error("获取定时任务下一次执行时间有误", zap.Error(err))
 		return
 	}
-	return result, taskID, err
+	return
 }
 
-func BitMapHandle(result map[string][]DingAttendance, curTime localTime.MySelfTime, startWeek, weekDay int) (err error) {
+func BitMapHandle(result map[string][]DingAttendance, curTime *localTime.MySelfTime) (err error) {
 	//把有课，打卡的，请假的放入sign切片中
 	sign := make([]DingAttendance, 0)
 	sign = append(sign, result["Normal"]...)
@@ -1120,7 +905,7 @@ func BitMapHandle(result map[string][]DingAttendance, curTime localTime.MySelfTi
 	}
 	for i := 0; i < len(sign); i++ {
 		//让每一个用户进行签到
-		consecutiveSignNum, err := (&DingUser{UserId: sign[i].UserID}).Sign(year, upOrDown, startWeek, weekDay, curTime.Duration)
+		consecutiveSignNum, err := (&DingUser{UserId: sign[i].UserID}).Sign(year, upOrDown, curTime.StartWeek, curTime.Week, curTime.Duration)
 		if err != nil {
 			zap.L().Error("用户打卡后签到存储redis失败", zap.Error(err))
 		} else {
@@ -1130,7 +915,7 @@ func BitMapHandle(result map[string][]DingAttendance, curTime localTime.MySelfTi
 	return err
 }
 
-func MessageHandle(curTime localTime.MySelfTime, DeptDetail DingDept, result map[string][]DingAttendance) (message string) {
+func MessageHandle(curTime *localTime.MySelfTime, DeptDetail *DingDept, result map[string][]DingAttendance) (message string) {
 	MANCourseNum := ""
 	if curTime.Duration == 1 {
 		if curTime.ClassNumber == 1 {
@@ -1173,13 +958,10 @@ func MessageHandle(curTime localTime.MySelfTime, DeptDetail DingDept, result map
 	return message
 }
 
-func LeaveLateHandle(NotRecordUserIdList []string, token string, result map[string][]DingAttendance, curTime localTime.MySelfTime) (err error, late []string) {
+func LeaveLateHandle(DeptDetail *DingDept, NotRecordUserIdList []string, token string, result map[string][]DingAttendance, curTime *localTime.MySelfTime, flag bool) (err error) {
 	var dl DingLeave
 	dl.DingToken.Token = token
-	limit := 20
-	Offset := 0
-	hasMore := true
-	late = make([]string, len(NotRecordUserIdList))
+	limit, Offset, hasMore := 20, 0, true
 	//遍历每一个没有考勤记录的同学
 	for i := 0; i < len(NotRecordUserIdList); i++ {
 		var u DingUser
@@ -1222,11 +1004,79 @@ func LeaveLateHandle(NotRecordUserIdList []string, token string, result map[stri
 		} else {
 			zap.L().Info(fmt.Sprintf("%s未在合法时间段请假，被判定为迟到", NotAttendanceUser.Name))
 			result["Late"] = append(result["Late"], DingAttendance{TimeResult: "Late", CheckType: "OnDuty", UserID: NotRecordUserIdList[i], UserName: NotAttendanceUser.Name})
-			//创建一个还未打卡的切片，并返回
-			late = append(late, NotRecordUserIdList[i])
 		}
-		//Todo 把每个人的请假状态的最后一次记录存储到redis中
+	}
+	if flag {
+		zap.L().Info(fmt.Sprintf("部门：%v开始统计请假迟到信息到redis中", DeptDetail.Name))
+		leaveCount, deptNumbers, preAveScore := len(result["Leave"]), float64(DeptDetail.NumberAttendUser), global.GLOBAL_REDIS.ZScore(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(curTime.StartWeek)+":", DeptDetail.Name).Val()
+		score, err := strconv.ParseFloat(fmt.Sprintf("%.6f", (preAveScore*deptNumbers+float64(leaveCount))/deptNumbers), 64)
+		if err != nil {
+			zap.L().Info("部门平均请假率转换失败")
+		}
+		// 开启事务
+		pipeline := global.GLOBAL_REDIS.TxPipeline()
+		err = pipeline.ZAdd(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(curTime.StartWeek), &redisZ.Z{
+			// 根据平均请假次数排序
+			Score:  score,
+			Member: DeptDetail.Name,
+		}).Err()
+		if err != nil {
+			return err
+		}
+		// 记录此部门的请假总次数，拼装键，然后在键上面进行添加
+		//这是普通的key value键值对
+		err = pipeline.IncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(curTime.StartWeek)+":dept:"+DeptDetail.Name, int64(leaveCount)).Err()
+		if err != nil {
+			return err
+		}
+		//登记部门里面每个人请假情况 （对zset进行操作）
+		//我们取到所有请假的同学，然后进行登记
+		for i := 0; i < len(result["Leave"]); i++ {
+			//对部门中的每一位同学进行统计
+			//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
+			err = pipeline.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(curTime.StartWeek)+":dept:"+DeptDetail.Name+":detail:", 1, result["Leave"][i].UserName).Err()
+			if err != nil {
+				return err
+			}
+		}
+		// 提交事务
+		_, err = pipeline.Exec(context.Background())
+		// 命令执行失败，取消提交
+		if err != nil {
+			zap.L().Error(DeptDetail.Name+"redis请假事务失败", zap.Error(err))
+			pipeline.Discard()
+			return err
+		}
+		pipeline.Close()
+		//发送部门排行榜请假情况
+		DeptDetail.SendFrequencyLeave(curTime.StartWeek)
 
+		// 以下是对迟到Zset的操作
+		pipeline = global.GLOBAL_REDIS.TxPipeline()
+		lateCount := len(result["Late"])
+		preAveLateScore := global.GLOBAL_REDIS.ZScore(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(curTime.StartWeek)+":", DeptDetail.Name).Val()
+		scoreAveLate, err := strconv.ParseFloat(fmt.Sprintf("%.6f", (preAveLateScore*float64(DeptDetail.NumberAttendUser)+float64(lateCount))/float64(DeptDetail.NumberAttendUser)), 64)
+		// 对迟到Zset更新member的score
+		pipeline.ZAdd(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(curTime.StartWeek)+":", &redisZ.Z{
+			// 根据平均迟到次数排序
+			Score:  scoreAveLate,
+			Member: DeptDetail.Name,
+		})
+		err = DeptDetail.CountFrequencyLate(curTime.StartWeek, result)
+		if err != nil {
+			return err
+		}
+		pipeline.IncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(curTime.StartWeek)+":dept:"+DeptDetail.Name, int64(lateCount))
+
+		_, err = pipeline.Exec(context.Background())
+		if err != nil {
+			zap.L().Error(DeptDetail.Name+"redis迟到事务失败", zap.Error(err))
+			pipeline.Discard()
+			return err
+		}
+		pipeline.Close()
+		// 发送各部门平均请假、迟到排行榜
+		err = DeptDetail.SendFrequencyLate(curTime.StartWeek) //部门个人请假排行榜
 	}
 	return
 }

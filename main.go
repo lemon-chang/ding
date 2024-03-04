@@ -51,14 +51,6 @@ func main() {
 	zap.L().Debug("mysql init success...")
 	//初始化corn定时器
 	cron.InitCorn()
-	//初始化Validator
-
-	//将通信201的数据存入数据库
-	//if err = gxp.Init(); err != nil {
-	//	fmt.Printf("init gxpmysql failed ,err:%v\n", err)
-	//	zap.L().Error(fmt.Sprintf("init gxpmysql failed ,err:%v\n", err))
-	//	return
-	//}
 	r := routers.Setup(viper.Conf.Mode)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", viper.Conf.App.Port),

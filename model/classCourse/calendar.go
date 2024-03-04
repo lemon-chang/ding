@@ -20,7 +20,7 @@ func (*Calendar) GetWeek() (week int, err error) {
 	var request *http.Request
 	var resp *http.Response
 	var body []byte
-	URL := "http://110.40.228.197:8886/sys/getWeek?nowday=" + time.Now().Format("2006-01-02 15:04:05")[:10]
+	URL := "http://110.40.228.197:8888/sys/getWeek?nowday=" + time.Now().Format("2006-01-02 15:04:05")[:10]
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

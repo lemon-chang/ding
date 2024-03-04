@@ -604,6 +604,7 @@ func (g *DingAttendGroup) AllDepartAttendByRobot() (taskID cron.EntryID, AttendS
 		zap.L().Error("根据考勤组获取上下班时间失败", zap.Error(err))
 		return
 	}
+
 	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", AttendSpec))
 	AttendTask := func() {
 		if int(taskID) != 0 {
@@ -615,6 +616,7 @@ func (g *DingAttendGroup) AllDepartAttendByRobot() (taskID cron.EntryID, AttendS
 				return
 			}
 		}
+
 		token, err = (&DingToken{}).GetAccessToken()
 		g.Token = token
 		//获取一天上下班的时间
@@ -703,12 +705,10 @@ func (g *DingAttendGroup) AllDepartAttendByRobot() (taskID cron.EntryID, AttendS
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			if runtime.GOOS == "linux" {
-				err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-				if err != nil {
-					zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-					continue
-				}
+			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+			if err != nil {
+				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+				continue
 			}
 			//在此处使用bitmap来实现存储功能
 			err = BitMapHandle(result, curTime)

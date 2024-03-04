@@ -71,7 +71,6 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelf
 			}
 			var list []DingAttendance
 			zap.L().Info(fmt.Sprintf("接下来开始获取考勤数据，当前时间为：%v %s", curTime.Duration, curTime.Time))
-			fmt.Println("curTime.Duration = ", curTime.Duration)
 			if len(OnDutyTime) == 3 {
 				if curTime.Duration == 1 {
 					zap.L().Info(fmt.Sprintf("获取上午考勤数据,userIds:%v,开始时间%s,结束时间：%s", split, curTime.Format[:10]+" 00:00:00", OnDutyTime[0]))
@@ -163,7 +162,7 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelf
 		attendanceList[i].UserName = user.Name //完善考勤记录
 		HasAttendanceDateUser[attendanceList[i].UserID] = attendanceList[i].UserCheckTime
 	}
-	zap.L().Info(fmt.Sprintf("打卡机数据获取完毕，完成数据如下：%v", attendanceList))
+	zap.L().Info(fmt.Sprintf("打卡机数据获取完毕，完整数据如下：%v", attendanceList))
 	NotRecordUserIdList = make([]string, 0)
 	for _, UserId := range userids {
 		//找到没有考勤记录的人
@@ -217,7 +216,7 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
 	return nil
 }
 
@@ -413,7 +412,7 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 		time := int(results[i].Score)
 		msg += name + "迟到次数：" + strconv.Itoa(time) + "\n"
 	}
-	fmt.Println("发送迟到频率了")
+	//fmt.Println("发送迟到频率了")
 	p := &ParamCronTask{
 		MsgText: &common.MsgText{
 			Msgtype: "text",
@@ -421,7 +420,7 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
 	return nil
 }
 func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAttendance) (err error) {

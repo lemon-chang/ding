@@ -4,7 +4,6 @@ import (
 	"ding/global"
 	"ding/model/common"
 	"ding/model/dingding"
-	"ding/model/params"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
@@ -19,20 +18,21 @@ func AttendanceByRobot() (err error) {
 	for _, group := range groupList {
 		//根据考勤组id获取成员信息
 		if group.IsRobotAttendance {
-			p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
-			//正常考勤
-			AttendTaskID, err := group.AllDepartAttendByRobot()
-			if err != nil {
-				return err
-			}
 			var AlertTaskID cron.EntryID
+			var AlertSpec, AttendSpec string
 			if group.IsAlert {
 				//提醒没有打卡的人考勤
-				AlertTaskID, err = group.AlertAttendByRobot(p)
+				AlertTaskID, AlertSpec, err = group.AlertAttendByRobot()
 				if err != nil {
 					return err
 				}
 			}
+			//正常考勤
+			AttendTaskID, AttendSpec, err := group.AllDepartAttendByRobot()
+			if err != nil {
+				return err
+			}
+
 			err = global.GLOAB_DB.Model(&group).Updates(dingding.DingAttendGroup{RobotAttendTaskID: int(AttendTaskID), RobotAlterTaskID: int(AlertTaskID)}).Error
 			if err != nil {
 				return err
@@ -43,7 +43,7 @@ func AttendanceByRobot() (err error) {
 					Msgtype: "text",
 					At:      common.At{AtMobiles: []common.AtMobile{{AtMobile: "18737480171"}}},
 					Text: common.Text{
-						Content: fmt.Sprintf("考勤组：%v 开启机器人考勤", group.GroupName),
+						Content: fmt.Sprintf("考勤组：%v 开启机器人考勤\n提醒考勤定时规则：%v\n考勤定时规则:%v\n ", group.GroupName, AlertSpec, AttendSpec),
 					},
 				},
 			}

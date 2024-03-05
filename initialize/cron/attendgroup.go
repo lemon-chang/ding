@@ -28,7 +28,7 @@ func AttendanceByRobot() (err error) {
 			//	}
 			//}
 			//正常考勤
-
+			// 此处记录一下问题，如果使用不传递group.GroupId 的话，会一直考勤最后一个部门的考勤，暂时没有解决方法
 			AttendTaskID, AttendSpec, err := group.AllDepartAttendByRobot(group.GroupId)
 			if err != nil {
 				return err

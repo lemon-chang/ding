@@ -225,7 +225,7 @@ func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime ma
 	} else if runtime.GOOS == "linux" {
 		AttendSpec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
-		AttendSpec = "00 56,42,59 8,16,21 * * ?"
+		AttendSpec = "00 56,14,59 8,17,21 * * ?"
 	}
 
 	minute = ""
@@ -554,42 +554,6 @@ func CronHandle(spec string, curTime *localTime.MySelfTime) (Ok bool) {
 	return OK
 }
 
-// 处理日期
-func DateHandle(curTime localTime.MySelfTime) (startWeek, week, CourseNumber int, err error) {
-	startWeek, err = (&classCourse.Calendar{}).GetWeek()
-	if err != nil {
-		zap.L().Error("通过课表小程序获取当前第几周失败", zap.Error(err))
-	}
-	m1 := map[string]int{"Sunday": 7, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6}
-	now := time.Now()
-	weekEnglish := (&localTime.MySelfTime{}).GetWeek(&now)
-	//周几
-	week = m1[weekEnglish]
-	//第几周
-
-	//获取当前是第几节课
-	if curTime.Duration == 1 {
-		if curTime.ClassNumber == 1 {
-			CourseNumber = 1
-		} else if curTime.ClassNumber == 2 {
-			CourseNumber = 2
-		}
-	} else if curTime.Duration == 2 {
-		if curTime.ClassNumber == 1 {
-			zap.L().Info("curT.Duration == 2 ,现在是下午，所以我们查第三课考勤")
-			CourseNumber = 3
-		} else if curTime.ClassNumber == 2 {
-			zap.L().Info("curT.Duration == 2 ,现在是下午，所以我们查第四课考勤")
-			CourseNumber = 4
-		}
-
-	} else if curTime.Duration == 3 {
-		zap.L().Info("curT.Duration == 3 ,现在是晚上，所以我们查第五课考勤")
-		CourseNumber = 5
-	}
-	return
-}
-
 // 该考勤组进行机器人考勤
 func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.EntryID, AttendSpec string, err error) {
 	g := &DingAttendGroup{}
@@ -633,6 +597,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 		//获取当前时间，curTime是自己封装的时间类型，有各种格式的时间
 		curTime := &localTime.MySelfTime{}
 		err = curTime.GetCurTime(commutingTimes)
+
 		if err != nil {
 			zap.L().Error("获取当前时间失败", zap.Error(err))
 			return
@@ -709,10 +674,12 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 				RobotId: DeptDetail.RobotToken,
 			}
 			zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
-			err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
-			if err != nil {
-				zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
-				continue
+			if runtime.GOOS == "linux" {
+				err = (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
+				if err != nil {
+					zap.L().Error(fmt.Sprintf("发送信息失败，信息参数为%v", pSend), zap.Error(err))
+					continue
+				}
 			}
 			//在此处使用bitmap来实现存储功能
 			err = BitMapHandle(result, curTime)

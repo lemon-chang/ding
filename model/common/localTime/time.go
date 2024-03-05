@@ -33,7 +33,6 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
 	if err != nil {
 		zap.L().Error("通过课表小程序获取当前第几周失败", zap.Error(err))
 	}
-	zap.L().Info("进入到了自己封装的时间结构体中")
 	timeStamp := time.Now()
 	//获取到时间戳
 	t.TimeStamp = timeStamp.UnixMilli()
@@ -80,9 +79,6 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
 	}
 
 	OnDuty := commutingTime["OnDuty"]
-	//OffDuty := commutingTime["OffDuty"]
-	//MorningStart, _ := time.Parse("2006-01-02 15:04:05", OnDuty[0])
-	//MorningEnd, _ := time.Parse("2006-01-02 15:04:05", OffDuty[0])
 	if len(OnDuty) == 3 {
 		AfternoonStart, _ := time.Parse("2006-01-02 15:04:05", OnDuty[1])
 		//AfternoonEnd, _ := time.Parse("2006-01-02 15:04:05", OffDuty[1])
@@ -125,7 +121,6 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
 		AfternoonStart, _ := time.Parse("2006-01-02 15:04:05", OnDuty[2])
 
 		//AfternoonEnd, _ := time.Parse("2006-01-02 15:04:05", OffDuty[1])
-
 		EveningStart, _ := time.Parse("2006-01-02 15:04:05", OnDuty[4]) //晚上上班
 		//EveningEnd, _ := time.Parse("2006-01-02 15:04:05", OffDuty[2])
 		zap.L().Info(fmt.Sprintf("上午下午时间分界点为：%s", AfternoonStart))
@@ -180,22 +175,27 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
 			}
 		}
 	}
-
-	if t.Duration == 0 {
-		zap.L().Info("直接用时间对比，判断现在是上午还是下午失败，我们使用时间字符串，截取到小时，来判断")
-		atoi, _ := strconv.Atoi(strings.Split(strings.Split(t.Format, " ")[1], ":")[0])
-		zap.L().Info(fmt.Sprintf("截取到的小时为%v", atoi))
-		if atoi < 12 {
-			zap.L().Info("小于12，是上午")
-			t.Duration = 1
-		} else if atoi > 12 && atoi < 18 {
-			zap.L().Info("大于12&&小于18，是下午")
-			t.Duration = 2
-		} else if atoi > 18 {
-			zap.L().Info("大于18，是晚上")
-			t.Duration = 3
+	//获取当前是第几节课
+	if t.Duration == 1 {
+		if t.ClassNumber == 1 {
+			t.ClassNumber = 1
+		} else if t.ClassNumber == 2 {
+			t.ClassNumber = 2
 		}
+	} else if t.Duration == 2 {
+		if t.ClassNumber == 1 {
+			zap.L().Info("curT.Duration == 2 ,现在是下午，所以我们查第三课考勤")
+			t.ClassNumber = 3
+		} else if t.ClassNumber == 2 {
+			zap.L().Info("curT.Duration == 2 ,现在是下午，所以我们查第四课考勤")
+			t.ClassNumber = 4
+		}
+
+	} else if t.Duration == 3 {
+		zap.L().Info("curT.Duration == 3 ,现在是晚上，所以我们查第五课考勤")
+		t.ClassNumber = 5
 	}
+
 	return
 }
 

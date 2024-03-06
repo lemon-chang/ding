@@ -687,16 +687,20 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 			}
 			//将考勤数据发给部门负责人以及管理人员
 			var userids []string
-			global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, DeptId).Select("ding_user_user_id").Find(&userids)
-			p := &ParamChat{
-				RobotCode: "dinglyjekzn80ebnlyge",
-				UserIds:   userids,
-				MsgKey:    "sampleText",
-				MsgParam:  message,
-			}
-			err = (&DingRobot{}).ChatSendMessage(p)
-			if err != nil {
-				zap.L().Error("发送至部门负责人失败", zap.Error(err))
+			err = global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, DeptId).Select("ding_user_user_id").Find(&userids).Error
+			if err != nil || len(userids) == 0 {
+				zap.L().Error(fmt.Sprintf("mysql获取部门管理人员失败或者该部门：%s 没有设置管理员", DeptDetail.Name), zap.Error(err))
+			} else {
+				p := &ParamChat{
+					RobotCode: "dinglyjekzn80ebnlyge",
+					UserIds:   userids,
+					MsgKey:    "sampleText",
+					MsgParam:  message,
+				}
+				err = (&DingRobot{}).SingleChat(p)
+				if err != nil {
+					zap.L().Error("发送至部门负责人失败", zap.Error(err))
+				}
 			}
 
 			// 发送各部门个人事假次数排行榜
@@ -833,7 +837,7 @@ func (a *DingAttendGroup) AlertAttendByRobot() (taskID cron.EntryID, AlertSpec s
 					MsgKey:    "sampleText",
 					MsgParam:  fmt.Sprintf("还有%v分钟上班，你还没有打卡", a.AlertTime),
 				}
-				err = (&DingRobot{}).ChatSendMessage(p)
+				err = (&DingRobot{}).SingleChat(p)
 				if err != nil {
 					zap.L().Error("发送提醒信息失败", zap.Error(err))
 				}

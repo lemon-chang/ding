@@ -4,6 +4,7 @@ import (
 	"context"
 	"ding/global"
 	myselfRedis "ding/initialize/redis"
+	"ding/model/common/localTime"
 	"errors"
 	"fmt"
 	"github.com/go-redis/redis/v8"
@@ -11,17 +12,15 @@ import (
 	"strconv"
 )
 
-func (d *DingUser) Sign(semester string, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
+func (d *DingUser) Sign(semester string, startWeek, weekDay, MNE int) (getWeekSignNum int64, ConsecutiveSignNum int, err error) {
 	// MNE 是上午下午晚上 1 2 3
-	if weekDay == 0 {
-		weekDay = 7
-	}
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v", semester, startWeek, d.UserId)
 	// 我们一个key代表的是一周的签到，offset可以帮助我们定位到当前是在一周当中的哪一位
 	offset := int64((weekDay-1)*3 + MNE - 1)
 	IsSigned := global.GLOBAL_REDIS.GetBit(context.Background(), key, offset).Val()
 	if IsSigned == 1 {
-		return ConsecutiveSignNum, errors.New("当前日期已经打卡签到，无需再次打卡签到")
+		err = errors.New("当前日期已经打卡签到，无需再次打卡签到")
+		return
 	}
 	// 用户没有签到，设置成签到即可
 	_, err = global.GLOBAL_REDIS.SetBit(context.Background(), key, offset, 1).Result()
@@ -31,9 +30,21 @@ func (d *DingUser) Sign(semester string, startWeek, weekDay, MNE int) (Consecuti
 	}
 	// 统计用户连续签到次数
 	ConsecutiveSignNum, err = d.GetConsecutiveSignNum(semester, startWeek, weekDay, MNE)
+	if err != nil {
+		zap.L().Error("统计用户连续签到次数失败", zap.Error(err))
+	}
+	// 统计用户这周签到的总次数（非连续）
+	getWeekSignNum, err = d.GetWeekSignNum(semester, startWeek)
+	if err != nil {
+		zap.L().Error("统计用户这周签到的总次数（非连续）失败", zap.Error(err))
+	}
 	return
 }
+
+// GetConsecutiveSignNum 当前周中，获取用户连续签到数量
 func (d *DingUser) GetConsecutiveSignNum(semester string, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
+	curTime := &localTime.MySelfTime{}
+	err = curTime.GetCurTime(nil)
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v", semester, startWeek, d.UserId)
 	offset := int64((weekDay-1)*3 + MNE - 1)
 	// bitfield可以操作多个位 bitfield sign:2023-2024学年第二学期:2:413550622937553255 u21 0  //u表示无符号位置，7表示往后面统计7位的，0表示从第0位开始统计
@@ -47,7 +58,7 @@ func (d *DingUser) GetConsecutiveSignNum(semester string, startWeek, weekDay, MN
 	for i := offset; i >= 0; i-- {
 		//如果这个很大的数字转化为二进制之后，左移动一位，右移动一位，如果还等于自己，说明最后一位是0，表示没有签到
 		if v>>1<<1 == v {
-			if i == int64(offset) {
+			if i == offset {
 				continue
 			} else {
 				//低位为0 且 非当天早中晚应该签到的时间，签到中断

@@ -113,14 +113,7 @@ func (r *DingRobot) GetRobotByRobotId() (robot *DingRobot, err error) {
 	return
 }
 
-type MySendParam struct {
-	MsgParam  string   `json:"msgParam"`
-	MsgKey    string   `json:"msgKey"`
-	RobotCode string   `json:"robotCode"`
-	UserIds   []string `json:"userIds"`
-}
-
-func (r *DingRobot) GxpSingleChat(p *ParamChat) (err error) {
+func (r *DingRobot) SingleChat(p *ParamChat) (err error) {
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -132,12 +125,12 @@ func (r *DingRobot) GxpSingleChat(p *ParamChat) (err error) {
 		},
 	}, Timeout: time.Duration(time.Second * 5)}
 	//此处是post请求的请求题，我们先初始化一个对象
-	var b MySendParam
-	b.RobotCode = p.RobotCode
-	b.MsgKey = p.MsgKey
-	b.RobotCode = p.RobotCode
-	b.UserIds = p.UserIds
-	b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
+	b := ParamChat{
+		RobotCode: p.RobotCode,
+		MsgKey:    p.MsgKey,
+		UserIds:   p.UserIds,
+		MsgParam:  fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam),
+	}
 
 	//然后把结构体对象序列化一下
 	bodymarshal, err := json.Marshal(&b)
@@ -185,81 +178,6 @@ func (r *DingRobot) GxpSingleChat(p *ParamChat) (err error) {
 
 	return nil
 
-}
-
-// 钉钉机器人单聊
-func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
-	var client *http.Client
-	var request *http.Request
-	var resp *http.Response
-	var body []byte
-	URL := "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend"
-	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}, Timeout: time.Duration(time.Second * 5)}
-	//此处是post请求的请求题，我们先初始化一个对象
-	var b MySendParam
-	b.RobotCode = "dingepndjqy7etanalhi"
-	if p.MsgKey == "sampleText" {
-		b.MsgKey = p.MsgKey
-		b.RobotCode = "dingepndjqy7etanalhi"
-		b.UserIds = p.UserIds
-		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
-
-	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
-		b.MsgKey = p.MsgKey
-		b.RobotCode = "dingepndjqy7etanalhi"
-		b.UserIds = p.UserIds
-		b.MsgParam = p.MsgParam
-	}
-
-	//然后把结构体对象序列化一下
-	bodymarshal, err := json.Marshal(&b)
-	if err != nil {
-		return nil
-	}
-	//再处理一下
-	reqBody := strings.NewReader(string(bodymarshal))
-	//然后就可以放入具体的request中的
-	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
-	if err != nil {
-		return nil
-	}
-	token, err := r.DingToken.GetAccessToken()
-	if err != nil {
-		return err
-	}
-	request.Header.Set("x-acs-dingtalk-access-token", token)
-	request.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(request)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
-	if err != nil {
-		return nil
-	}
-	h := struct {
-		Code                      string   `json:"code"`
-		Message                   string   `json:"message"`
-		ProcessQueryKey           string   `json:"processQueryKey"`
-		InvalidStaffIdList        []string `json:"invalidStaffIdList"`
-		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
-	}{}
-	//把请求到的结构反序列化到专门接受返回值的对象上面
-	err = json.Unmarshal(body, &h)
-	if err != nil {
-		return nil
-	}
-	if h.Code != "" {
-		return errors.New(h.Message)
-	}
-	// 此处举行具体的逻辑判断，然后返回即可
-
-	return nil
 }
 
 type MySendGroupParam struct {
@@ -1292,31 +1210,6 @@ type data struct {
 	Result result `json:"result"`
 }
 
-func (t *DingRobot) RobotSendInviteCode(resp *RobotAtResp) error {
-	code, expire, err := t.GetInviteCode()
-	if err != nil {
-		zap.L().Error("获取邀请码失败", zap.Error(err))
-	}
-	content := fmt.Sprintf(
-		"欢迎加入闫佳鹏的打字邀请比赛\n网站: https://dazi.kukuw.com/\n邀请码: %v\n比赛剩余时间: %v",
-		code, expire)
-	if err != nil {
-		content = "获取失败！"
-	}
-	param := &ParamChat{
-		MsgKey:    "sampleText",
-		MsgParam:  content,
-		RobotCode: "dingepndjqy7etanalhi",
-		UserIds:   []string{resp.SenderStaffId},
-	}
-	err = t.ChatSendMessage(param)
-	if err != nil {
-		zap.L().Error("单聊中发送打字邀请码错误" + err.Error())
-		return err
-	}
-	return nil
-}
-
 func (t *DingRobot) RobotSendGroupInviteCode(resp *RobotAtResp) (res map[string]interface{}, err error) {
 	code, expire, err := t.GetInviteCode()
 	if err != nil {
@@ -1338,41 +1231,6 @@ func (t *DingRobot) RobotSendGroupInviteCode(resp *RobotAtResp) (res map[string]
 	res, err = t.ChatSendGroupMessage(param)
 	if err != nil {
 		zap.L().Error("单聊中发送打字邀请码错误" + err.Error())
-	}
-	return res, nil
-}
-func (t *DingRobot) RobotSendGroupWater(resp *RobotAtResp) (res map[string]interface{}, err error) {
-	param := &ParamChat{
-		MsgKey:             "sampleText",
-		MsgParam:           "送水师傅电话: 15236463964",
-		RobotCode:          "dingepndjqy7etanalhi",
-		UserIds:            []string{resp.SenderStaffId},
-		OpenConversationId: resp.ConversationId,
-	}
-	res, err = t.ChatSendGroupMessage(param)
-	if err != nil {
-		zap.L().Error("发送送水师傅电话失败" + err.Error())
-	}
-	return res, nil
-}
-func (t *DingRobot) RobotSendGroupCard(resp *RobotAtResp) (res map[string]interface{}, err error) {
-	param := &ParamChat{
-		MsgKey: "sampleActionCard2",
-		MsgParam: "{\n" +
-			"        \"title\": \"帮助\",\n" +
-			"        \"text\": \"请问你是否在查找以下功能\",\n" +
-			"        \"actionTitle1\": \"送水电话号码\",\n" +
-			fmt.Sprintf("'actionURL1':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("送水电话号码")) +
-			"        \"actionTitle2\": \"打字邀请码\",\n" +
-			fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
-			"    }",
-		RobotCode:          "dingepndjqy7etanalhi",
-		UserIds:            []string{resp.SenderStaffId},
-		OpenConversationId: resp.ConversationId,
-	}
-	res, err = t.ChatSendGroupMessage(param)
-	if err != nil {
-		zap.L().Error("发送chatSendMessage错误" + err.Error())
 	}
 	return res, nil
 }
@@ -1433,7 +1291,7 @@ func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result)
 
 	fmt.Println(action)
 
-	err = t.ChatSendMessage(param)
+	err = t.SingleChat(param)
 	if err != nil {
 		zap.L().Error("发送chatSendCardToPerson错误" + err.Error())
 	}
@@ -1459,7 +1317,7 @@ func (t *DingRobot) RobotSendMessageToPerson(resp *RobotAtResp, dataByStr []Resu
 		RobotCode: "dingepndjqy7etanalhi",
 		UserIds:   []string{resp.SenderStaffId},
 	}
-	err = t.ChatSendMessage(param)
+	err = t.SingleChat(param)
 	if err != nil {
 		zap.L().Error("发送chatSendMessageToPerson错误" + err.Error())
 	}

@@ -35,8 +35,8 @@ type ParamMakeupSign struct {
 }
 type ParamGetWeekConsecutiveSignNum struct {
 	Userid    string `json:"userid"`
-	Semester  string `json:"semester"` //学期
-	StartWeek int    `json:"start_week"`
+	Semester  string `json:"semester"`   //学期
+	StartWeek int    `json:"start_week"` //第几周
 }
 type ParamGetWeekSignNum struct {
 	Userid    string `json:"userid"`

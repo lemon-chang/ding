@@ -275,13 +275,21 @@ func MakeupSign(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).Sign(p.Semester, p.StartWeek, p.WeekDay, p.MNE)
+
+	WeekSignNum, consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).Sign(p.Semester, p.StartWeek, p.WeekDay, p.MNE)
 	if err != nil {
 		zap.L().Error("为用户补签失败", zap.Error(err))
 		response.FailWithMessage("为用户补签失败", c)
 		return
 	}
-	response.OkWithDetailed(consecutiveSignNum, "补签成功", c)
+	r := struct {
+		WeekSignNum        int64 `json:"week_sign_num"`
+		ConsecutiveSignNum int   `json:"consecutive_sign_num"`
+	}{
+		WeekSignNum:        WeekSignNum,
+		ConsecutiveSignNum: consecutiveSignNum,
+	}
+	response.OkWithDetailed(r, "补签成功", c)
 }
 func GetWeekConsecutiveSignNum(c *gin.Context) {
 	var p params.ParamGetWeekConsecutiveSignNum
@@ -290,7 +298,7 @@ func GetWeekConsecutiveSignNum(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Semester, p.StartWeek, 20)
+	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Semester, p.StartWeek, 20, 20)
 	if err != nil {
 		zap.L().Error("获取用户本周连续签到次数失败", zap.Error(err))
 		response.FailWithMessage("获取用户本周连续签到次数失败", c)

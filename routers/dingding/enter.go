@@ -3,7 +3,6 @@ package dingding
 import (
 	ding2 "ding/controllers/ding"
 	"ding/global"
-	"ding/model/dingding"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
@@ -53,7 +52,6 @@ func SetupDing(System *gin.RouterGroup) {
 		User.GET("/getWeekSignNum", ding2.GetWeekSignNum)                       //根据第几星期获取用户签到次数（使用redis的bitCount函数）
 		User.GET("/getWeekSignDetail", ding2.GetWeekSignDetail)                 //获取用户某个星期签到情况，默认是当前所处的星期，构建成为一个有序的HashMap
 		User.GET("/getDeptIdByUserId", ding2.GetDeptByUserId)                   //通过userid查询部门id
-		User.POST("/resetWeek", dingding.ResetWeek)                             //重置维护的周数
 	}
 	Robot := System.Group("robot")
 	{

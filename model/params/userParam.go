@@ -27,8 +27,7 @@ type ParamSearchUser struct {
 }
 type ParamMakeupSign struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
 	WeekDay   int    `json:"weekDay"`
 	Diff      int    `json:"diff"` //1是正签，0是反签 暂时都默认成1
@@ -36,21 +35,16 @@ type ParamMakeupSign struct {
 }
 type ParamGetWeekConsecutiveSignNum struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
-	WeekDay   int    `json:"week_day"`
-	MNE       int    `json:"mne"` //早中晚
 }
 type ParamGetWeekSignNum struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
 }
 type ParamGetWeekSignDetail struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
 }

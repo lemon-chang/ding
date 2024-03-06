@@ -275,7 +275,7 @@ func MakeupSign(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).Sign(p.Year, p.UpOrDown, p.StartWeek, p.WeekDay, p.MNE)
+	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).Sign(p.Semester, p.StartWeek, p.WeekDay, p.MNE)
 	if err != nil {
 		zap.L().Error("为用户补签失败", zap.Error(err))
 		response.FailWithMessage("为用户补签失败", c)
@@ -290,7 +290,7 @@ func GetWeekConsecutiveSignNum(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Year, p.UpOrDown, p.StartWeek, p.WeekDay, p.MNE)
+	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Semester, p.StartWeek, 20)
 	if err != nil {
 		zap.L().Error("获取用户本周连续签到次数失败", zap.Error(err))
 		response.FailWithMessage("获取用户本周连续签到次数失败", c)
@@ -305,7 +305,7 @@ func GetWeekSignNum(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignNum(p.Year, p.UpOrDown, p.StartWeek)
+	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignNum(p.Semester, p.StartWeek)
 	if err != nil {
 		zap.L().Error("获取用户一周的签到次数失败", zap.Error(err))
 		response.FailWithMessage("获取用户一周的签到次数失败", c)
@@ -320,7 +320,8 @@ func GetWeekSignDetail(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignDetail(p.Year, p.UpOrDown, p.StartWeek)
+	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignDetail(p.Semester, p.StartWeek)
+
 	if err != nil {
 		zap.L().Error("获取用户一周的签到详情失败", zap.Error(err))
 		response.FailWithMessage("获取用户一周的签到详情失败", c)

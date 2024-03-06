@@ -62,6 +62,7 @@ type DingAttendGroup struct {
 	NextTime          string     `json:"next_time"`            //下次执行时间
 	IsSecondClass     int        `json:"is_second_class"`      //是否开启第二节课考勤
 	RestTimes         []RestTime `json:"rest_times" gorm:"foreignKey:AttendGroupID;references:group_id"`
+	IsWeekPaper       bool       `json:"is_week_paper"`
 }
 type RestTime struct {
 	gorm.Model    // 1 2 2 0 2 1
@@ -225,7 +226,7 @@ func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime ma
 	} else if runtime.GOOS == "linux" {
 		AttendSpec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
-		AttendSpec = "00 56,14,59 8,17,21 * * ?"
+		AttendSpec = utils.AttendSpec
 	}
 
 	minute = ""
@@ -244,7 +245,7 @@ func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime ma
 		AlertSpec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
 		AlertSpec = "00 " + minute + " " + hour + " * * ?"
-		AlertSpec = "00 32,00,28 8,17,22 * * ?"
+		AlertSpec = utils.AlertSpec
 	}
 	err = global.GLOAB_DB.Model(&a).Select("is_in_school").Scan(&isInSchool).Error
 	if err != nil {
@@ -597,7 +598,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 		//获取当前时间，curTime是自己封装的时间类型，有各种格式的时间
 		curTime := &localTime.MySelfTime{}
 		err = curTime.GetCurTime(commutingTimes)
-
 		if err != nil {
 			zap.L().Error("获取当前时间失败", zap.Error(err))
 			return
@@ -656,7 +656,6 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 				handle := HasCourseHandle(NotRecordUserIdList, curTime.ClassNumber, curTime.StartWeek, curTime.Week, result)
 				NotRecordUserIdList = handle
 			}
-
 			err = LeaveLateHandle(DeptDetail, NotRecordUserIdList, token, result, curTime, true) // flag为true开启统计信息到redis中
 			if err != nil {
 				zap.L().Error("处理请假和迟到有误", zap.Error(err))
@@ -864,21 +863,11 @@ func BitMapHandle(result map[string][]DingAttendance, curTime *localTime.MySelfT
 	sign = append(sign, result["Normal"]...)
 	sign = append(sign, result["Leave"]...)
 	sign = append(sign, result["HasCourse"]...)
-	year, _ := strconv.Atoi(curTime.Format[0:4])
-	mouth, _ := strconv.Atoi(curTime.Format[5:7])
-	//upOrDown用于判断是上半年还是下半年
-	upOrDown := 0
-	//如果月份小于九，就是上半年
-	if mouth < 9 {
-		upOrDown = 1
-	} else {
-		upOrDown = 2
-	}
 	for i := 0; i < len(sign); i++ {
 		//让每一个用户进行签到
-		consecutiveSignNum, err := (&DingUser{UserId: sign[i].UserID}).Sign(year, upOrDown, curTime.StartWeek, curTime.Week, curTime.Duration)
+		consecutiveSignNum, err := (&DingUser{UserId: sign[i].UserID}).Sign(curTime.Semester, curTime.StartWeek, curTime.Week, curTime.Duration)
 		if err != nil {
-			zap.L().Error("用户打卡后签到存储redis失败", zap.Error(err))
+			zap.L().Error(fmt.Sprintf("用户:%s 打卡后签到存储redis失败", sign[i].UserName), zap.Error(err))
 		} else {
 			zap.L().Info(fmt.Sprintf("用户打卡后签到存储redis成功，用户%v，连续签到次数：%v", sign[i].UserName, consecutiveSignNum))
 		}

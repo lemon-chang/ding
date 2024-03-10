@@ -106,7 +106,7 @@ func (s *DingSubscribe) Leave(result map[string]interface{}) {
 	p.UserIds = userids
 	p.MsgKey = "sampleText"
 	p.MsgParam = fmt.Sprintf("请假人姓名：%v \n开始时间: %v\n结束时间: %v", user.Name, time.Unix(status[len(status)-1].StartTime/1e3, 0).Format("2006-01-02 15:04:05"), time.Unix(status[len(status)-1].EndTime/1e3, 0).Format("2006-01-02 15:04:05"))
-	_ = (&DingRobot{DingToken: DingToken{token}}).ChatSendMessage(&p)
+	_ = (&DingRobot{DingToken: DingToken{token}}).SingleChat(&p)
 }
 
 // UserAddOrg 用户加入组织

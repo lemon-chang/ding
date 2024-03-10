@@ -44,14 +44,14 @@ func SetupDing(System *gin.RouterGroup) {
 			username, _ := c.Get(global.CtxUserNameKey)
 			c.File(fmt.Sprintf("Screenshot_%s.png", username))
 		})
-		User.GET("getQRCode", ding2.GetQRCode)                                  //获取群聊基本信息已经群成员id
-		User.GET("/getAllTask", ding2.GetAllTask)                               //获取所有定时任务，包括暂停的任务
-		User.GET("/getActiveTask", ding2.GetAllActiveTask)                      //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
-		User.POST("/MakeupSign", ding2.MakeupSign)                              //为用户补签到并返回用户联系签到次数
-		User.GET("/getWeekConsecutiveSignNum", ding2.GetWeekConsecutiveSignNum) //获取用户当周连续签到次数
-		User.GET("/getWeekSignNum", ding2.GetWeekSignNum)                       //根据第几星期获取用户签到次数（使用redis的bitCount函数）
-		User.GET("/getWeekSignDetail", ding2.GetWeekSignDetail)                 //获取用户某个星期签到情况，默认是当前所处的星期，构建成为一个有序的HashMap
-		User.GET("/getDeptIdByUserId", ding2.GetDeptByUserId)                   //通过userid查询部门id
+		User.GET("/getQRCode", ding2.GetQRCode)                                  //获取群聊基本信息已经群成员id
+		User.GET("/getAllTask", ding2.GetAllTask)                                //获取所有定时任务，包括暂停的任务
+		User.GET("/getActiveTask", ding2.GetAllActiveTask)                       //查看所有的活跃任务,也就是手动更新，后续可以加入casbin，然后就是管理员权限
+		User.POST("/makeupSign", ding2.MakeupSign)                               //为用户补签到并返回用户联系签到次数
+		User.POST("/getWeekConsecutiveSignNum", ding2.GetWeekConsecutiveSignNum) //获取用户周连续签到次数
+		User.POST("/getWeekSignNum", ding2.GetWeekSignNum)                       //根据第几星期获取用户签到次数（使用redis的bitCount函数）
+		User.POST("/getWeekSignDetail", ding2.GetWeekSignDetail)                 //获取用户某个星期签到情况，默认是当前所处的星期，构建成为一个有序的HashMap
+		User.GET("/getDeptIdByUserId", ding2.GetDeptByUserId)                    //通过userid查询部门id
 	}
 	Robot := System.Group("robot")
 	{

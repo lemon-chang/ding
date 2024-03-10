@@ -52,8 +52,21 @@ func (t *MySelfTime) GetCurTime(commutingTime map[string][]string) (err error) {
 	t.Time = CurTime
 	zap.L().Info(fmt.Sprintf("当前时间的时间戳：%v,time.Time：%v,字符串格式：%s", t.TimeStamp, t.Time, t.Format))
 	if commutingTime == nil {
+		atoi, _ := strconv.Atoi(strings.Split(strings.Split(t.Format, " ")[1], ":")[0])
+		zap.L().Info(fmt.Sprintf("截取到的小时为%v", atoi))
+		if atoi < 12 {
+			zap.L().Info("小于12，是上午")
+			t.Duration = 1
+		} else if atoi > 12 && atoi < 18 {
+			zap.L().Info("大于12&&小于18，是下午")
+			t.Duration = 2
+		} else if atoi > 18 {
+			zap.L().Info("大于18，是晚上")
+			t.Duration = 3
+		}
 		return
 	}
+
 	OnDuty := commutingTime["OnDuty"]
 	if len(OnDuty) == 3 {
 		AfternoonStart, _ := time.Parse("2006-01-02 15:04:05", OnDuty[1])

@@ -2,14 +2,19 @@ package dingding
 
 import (
 	"context"
+	"crypto/tls"
 	"ding/global"
 	myselfRedis "ding/initialize/redis"
 	"ding/model/common/localTime"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
+	"io/ioutil"
+	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func (d *DingUser) Sign(semester string, startWeek, weekDay, MNE int) (getWeekSignNum int64, ConsecutiveSignNum int, err error) {
@@ -75,8 +80,8 @@ func (d *DingUser) GetConsecutiveSignNum(semester string, startWeek, weekDay, MN
 }
 
 // GetWeekSignDetail 统计用户当前周签到的详情情况(用于前端构建日历控件)
-func (d *DingUser) GetWeekSignDetail(semester string, startWeek int) (result map[int][]bool, err error) {
-	result = make(map[int][]bool, 0)
+func (d *DingUser) GetWeekSignDetail(semester string, startWeek int) (result [][3]bool, err error) {
+	result = make([][3]bool, 7)
 	//使用bitFiled来获取int64，然后使用位运算计算结果
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v", semester, startWeek, d.UserId)
 	list, err := global.GLOBAL_REDIS.BitField(context.Background(), key, "GET", "u"+strconv.Itoa(21), "0").Result()
@@ -85,14 +90,14 @@ func (d *DingUser) GetWeekSignDetail(semester string, startWeek int) (result map
 		return nil, err
 	}
 	v := list[0]
-	for i := 7; i > 0; i-- {
-		for j := 0; j < 3; j++ {
+	for i := 6; i >= 0; i-- {
+		for j := 2; j >= 0; j-- {
 			if v>>1<<1 == v {
 				//说明没有签到
-				result[i] = append(result[i], false)
+				result[i][j] = false
 			} else {
 				//说明签到了
-				result[i] = append(result[i], true)
+				result[i][j] = true
 			}
 			v = v >> 1
 		}
@@ -102,14 +107,8 @@ func (d *DingUser) GetWeekSignDetail(semester string, startWeek int) (result map
 
 // GetWeekSignNum 统计用户一周的签到次数（非连续）
 func (d *DingUser) GetWeekSignNum(Semester string, startWeek int) (WeekSignNum int64, err error) {
-	//需要使用redis中的bitmap中bigcount方法来统计
-	//构建key
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v", Semester, startWeek, d.UserId)
-	bitCount := &redis.BitCount{
-		Start: 0, //都设置成0就是涵盖整个bitmap
-		End:   0,
-	}
-	WeekSignNum, err = global.GLOBAL_REDIS.BitCount(context.Background(), key, bitCount).Result()
+	WeekSignNum, err = global.GLOBAL_REDIS.BitCount(context.Background(), key, nil).Result()
 	if err != nil {
 		zap.L().Error("使用redis的BitCount失败", zap.Error(err))
 		return
@@ -123,4 +122,63 @@ func (d *DingUser) SendFrequencyLeave(start int) error {
 func (d *DingUser) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) error {
 	fmt.Println("存储个人请假频率")
 	return nil
+}
+
+func (d *DingUser) GetUserGroupID() (groupId int, err error) {
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	URL := "https://oapi.dingtalk.com/topapi/attendance/getusergroup?access_token=" + d.Token
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+	//此处是post请求的请求题，我们先初始化一个对象
+	b := struct {
+		UserId string `json:"userid"`
+	}{
+		UserId: d.UserId,
+	}
+
+	//然后把结构体对象序列化一下
+	bodymarshal, err := json.Marshal(&b)
+	if err != nil {
+		return
+	}
+	//再处理一下
+	reqBody := strings.NewReader(string(bodymarshal))
+	//然后就可以放入具体的request中的
+	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
+	if err != nil {
+		return
+	}
+	resp, err = client.Do(request)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return
+	}
+	r := struct {
+		DingResponseCommon
+		Result struct {
+			GroupID int `json:"group_id"`
+		} `json:"result"`
+	}{}
+
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return
+	}
+	if r.Errcode != 0 {
+		err = errors.New(r.Errmsg)
+		return
+	}
+	groupId = r.Result.GroupID
+	return
 }

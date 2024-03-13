@@ -29,6 +29,12 @@ auth:
   jwt_expire: 8760
 kafka:
   address: "121.43.119.224:9092"
+classCourse:
+  host: 110.40.228.197
+  port: 8886
+miniProgram:
+  appkey: dinglyjekzn80ebnlyge
+  appsecret: zKsishrdIL3h3LvWSV2Sm0G1WBP5uVJgDpRnzUmli564HJO78W_10GIFEBrM9r-C
 
 
 

@@ -20,13 +20,13 @@ func AttendanceByRobot() (err error) {
 		if group.IsRobotAttendance {
 			var AlertTaskID cron.EntryID
 			var AlertSpec, AttendSpec string
-			//if group.IsAlert {
-			//	//提醒没有打卡的人考勤
-			//	AlertTaskID, AlertSpec, err = group.AlertAttendByRobot()
-			//	if err != nil {
-			//		return err
-			//	}
-			//}
+			if group.IsAlert {
+				//提醒没有打卡的人考勤
+				AlertTaskID, AlertSpec, err = group.AlertAttendByRobot(group.GroupId)
+				if err != nil {
+					return err
+				}
+			}
 			//正常考勤
 			// 此处记录一下问题，如果使用不传递group.GroupId 的话，会一直考勤最后一个部门的考勤，暂时没有解决方法
 			AttendTaskID, AttendSpec, err := group.AllDepartAttendByRobot(group.GroupId)

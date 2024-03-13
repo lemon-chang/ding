@@ -1,41 +1,31 @@
-package dingding
+package cron
 
 import (
-	"context"
 	"ding/global"
-	"ding/model/common/response"
-	"ding/model/params"
+	"ding/model/common/localTime"
+	"ding/model/dingding"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"runtime"
 	"sort"
 	"strconv"
-	"time"
 )
 
-// 获取到考勤部门
-func GetAttendGroup() (err error, groupList []DingAttendGroup) {
-	err = global.GLOAB_DB.Find(&groupList).Error
-	return
-}
-
 // 考勤周报
-func AttendWeeklyNewsPaper() (err error) {
+func AttendWeekPaper() (err error) {
 	//获取考勤组列表
-	err, groupList := GetAttendGroup()
+	var groupList []dingding.DingAttendGroup
+	err = global.GLOAB_DB.Find(&groupList).Error
 	if err != nil {
 		zap.L().Error("获取考勤组列表失败", zap.Error(err))
 		return
 	}
 	for _, group := range groupList {
-		//根据考勤组获取成员信息
-		if group.IsRobotAttendance == false {
-			zap.L().Warn(fmt.Sprintf("考勤组：%v 开启未机器人考勤", group.GroupName))
+		if !group.IsRobotAttendance && !group.IsWeekPaper {
+			zap.L().Warn(fmt.Sprintf("考勤组：%v 开启未机器人考勤 或者未开启考勤推送", group.GroupName))
 			continue
 		}
-		p := &params.ParamAllDepartAttendByRobot{GroupId: group.GroupId}
-		err := CountNum(group, p)
+		err := CountWeekPaper(group.GroupId)
 		if err != nil {
 			zap.L().Error("打卡信息获取失败", zap.Error(err))
 			continue
@@ -45,7 +35,7 @@ func AttendWeeklyNewsPaper() (err error) {
 }
 
 // 开始统计周报
-func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err error) {
+func CountWeekPaper(GroupId int) (err error) {
 	//使用定时器,定时什么时候发送,每周的周日发
 	spec := ""
 	if runtime.GOOS == "windows" {
@@ -53,25 +43,16 @@ func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err
 	} else if runtime.GOOS == "linux" {
 		spec = "0 15 10 ? * SAT"
 	}
-	zap.L().Info(spec)
-	//获取当前的年份
-	year := time.Now().Year()
-	//获取当前是第几周,这个存到redis中方便去维护
-	//维护周
-	//判断当前年份，如果当前年份大于等于9则判定为下学期
-	//默认为上学期
-	upordown := 1
-	month := time.Now().Month()
-	if month >= 9 {
-		upordown = 2
+	curTime := localTime.MySelfTime{}
+	err = curTime.GetCurTime(nil)
+	if err != nil {
+		zap.L().Error("获取localTime.MySelfTime{}失败", zap.Error(err))
 	}
-	//获取当前周数
-	err, week := GetWeek()
 	//开启定时任务
 	task := func() {
 		//获取这个组织里面的成员信息
-		token, _ := (&DingToken{}).GetAccessToken()
-		g := DingAttendGroup{GroupId: p.GroupId, DingToken: DingToken{Token: token}}
+		token, _ := (&dingding.DingToken{}).GetAccessToken()
+		g := dingding.DingAttendGroup{GroupId: GroupId, DingToken: dingding.DingToken{Token: token}}
 		depts, err := g.GetGroupDeptNumber()
 		if err != nil {
 			zap.L().Error("获取考勤组部门成员(已经筛掉了不参与考勤的个人)失败", zap.Error(err))
@@ -82,7 +63,7 @@ func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err
 			num := make(map[string]int64)
 			for _, user := range dingUsers {
 				//拿到redis里面存的考勤信息
-				WeekSignNum, err := user.GetWeekSignNum(year, upordown, week)
+				WeekSignNum, err := user.GetWeekSignNum(curTime.Semester, curTime.Week)
 				if err != nil {
 					zap.L().Error("统计失败", zap.Error(err))
 					continue
@@ -99,22 +80,14 @@ func CountNum(group DingAttendGroup, p *params.ParamAllDepartAttendByRobot) (err
 				//封装要发送的消息
 				message := EditMessage(ranking, n.WeekSignNum)
 				//将考勤数据发给该人
-				p := &ParamChat{
+				p := &dingding.ParamChat{
 					RobotCode: "dingepndjqy7etanalhi",
 					UserIds:   ids,
 					MsgKey:    "sampleText",
 					MsgParam:  message,
 				}
-				err = (&DingRobot{}).ChatSendMessage(p)
+				err = (&dingding.DingRobot{}).ChatSendMessage(p)
 				ranking++
-			}
-		}
-		//每次执行完后就去更新周数
-		week += 1
-		err = Week(week)
-		if err != nil {
-			if err != nil {
-				zap.L().Error("周数设置失败，请尽快联系管理员", zap.Error(err))
 			}
 		}
 	}
@@ -151,27 +124,4 @@ func SortResult(num map[string]int64) (WeeklyNewPapers []WeeklyNewPaper) {
 	})
 	return WeeklyNewPapers
 	return
-}
-
-// 向redis里面添加周
-func Week(week int) (err error) {
-	//设置一年的过期时间
-	err = global.GLOBAL_REDIS.SetNX(context.Background(), "Week", week, 3600*time.Second*24*365).Err()
-	return
-}
-
-// 获取当前周
-func GetWeek() (err error, week int) {
-	str, err := global.GLOBAL_REDIS.Get(context.Background(), "Week").Result()
-	week, err = strconv.Atoi(str)
-	return
-}
-
-func ResetWeek(c *gin.Context) {
-	err := global.GLOBAL_REDIS.SetNX(context.Background(), "Week", 1, 3600*time.Second*24*365).Err()
-	if err != nil {
-		zap.L().Error("重置失败", zap.Error(err))
-		response.FailWithMessage("重置失败，请尽快联系管理员解决", c)
-		return
-	}
 }

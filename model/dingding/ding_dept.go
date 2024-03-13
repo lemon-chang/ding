@@ -42,7 +42,6 @@ type DingDept struct {
 	IsLeetCode        int        `json:"is_leet_code"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
 	Children          []DingDept `gorm:"-"`
-	NumberAttendUser  int        `gorm:"-"` // 该部门实际参与考勤人数
 }
 type UserDept struct {
 	DingUserUserID string
@@ -192,15 +191,12 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelf
 	}
 	return
 }
-func (d *DingDept) SendFrequencyLeave(startWeek int) error {
-	//从redis中取数据，封装，调用钉钉接口，发送即可
+func (d *DingDept) SendFrequencyLeave(startWeek int) (err error) {
+
 	key := redis.KeyDeptAveLeave + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
-	//global.GLOBAL_REDIS.ZRevRange().Result()
-	//从小到达进行排序
-	//results, err := global.GLOBAL_REDIS.ZRevRange(context.Background(), key, 0, -1).Result()
 	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
 	if err != nil {
-
+		return
 	}
 	msg := d.Name + "请假情况如下：\n"
 	for i := 0; i < len(results); i++ {
@@ -216,8 +212,11 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
-	return nil
+	err = (&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).SendMessage(p)
+	if err != nil {
+		return err
+	}
+	return
 }
 
 // GetLeaveStatus 获取部门请假状态
@@ -383,28 +382,12 @@ func (d *DingDept) SendSubSectorPrivateLeave(startWeek int) error {
 	return nil
 }
 
-func (d *DingDept) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) (err error) {
-	//我们取到所有请假的同学，然后进行登记
-	for i := 0; i < len(result["Leave"]); i++ {
-		//对部门中的每一位同学进行统计
-		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
-		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Leave"][i].UserName).Err()
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-	//此处应该被复用一下
-	return
-}
-func (d *DingDept) SendFrequencyLate(startWeek int) error {
+func (d *DingDept) SendFrequencyLate(startWeek int) (err error) {
 	//从redis中取数据，封装，调用钉钉接口，发送即可
 	key := redis.KeyDeptAveLate + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
-	//global.GLOBAL_REDIS.ZRevRange().Result()
-	//从小到达进行排序
-	//results, err := global.GLOBAL_REDIS.ZRevRange(context.Background(), key, 0, -1).Result()
 	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
 	if err != nil {
-
+		return
 	}
 	msg := d.Name + "迟到次数如下：\n"
 	for i := 0; i < len(results); i++ {
@@ -422,19 +405,6 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 	}
 	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
 	return nil
-}
-func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAttendance) (err error) {
-	//我们取到所有请假的同学，然后进行登记
-	for i := 0; i < len(result["Late"]); i++ {
-		//对部门中的每一位同学进行统计
-		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
-		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Late"][i].UserName).Err()
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-	//此处应该被复用一下
-	return
 }
 
 type JinAndBlogClassify struct {

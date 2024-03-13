@@ -2,6 +2,7 @@ package ding
 
 import (
 	"crypto/tls"
+	"ding/model/common/localTime"
 	"ding/model/common/request"
 	response2 "ding/model/common/response"
 	"runtime"
@@ -275,13 +276,13 @@ func MakeupSign(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).Sign(p.Year, p.UpOrDown, p.StartWeek, p.WeekDay, p.MNE)
+	WeekSignNum, _, err := (&dingding.DingUser{UserId: p.Userid}).Sign(p.Semester, p.StartWeek, p.WeekDay, p.MNE)
 	if err != nil {
 		zap.L().Error("为用户补签失败", zap.Error(err))
-		response.FailWithMessage("为用户补签失败", c)
+		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	response.OkWithDetailed(consecutiveSignNum, "补签成功", c)
+	response.OkWithDetailed(WeekSignNum, "补签成功", c)
 }
 func GetWeekConsecutiveSignNum(c *gin.Context) {
 	var p params.ParamGetWeekConsecutiveSignNum
@@ -290,7 +291,16 @@ func GetWeekConsecutiveSignNum(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Year, p.UpOrDown, p.StartWeek, p.WeekDay, p.MNE)
+	curTime := &localTime.MySelfTime{}
+	err := curTime.GetCurTime(nil)
+
+	weekDay, MNE := 7, 3
+	if curTime.Semester == p.Semester && curTime.StartWeek == p.StartWeek {
+		// 说明用户要看当前周，赋值为调用本接口时刻的周和具体的上午下午晚上
+		weekDay = curTime.Week
+		MNE = curTime.Duration
+	}
+	consecutiveSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetConsecutiveSignNum(p.Semester, p.StartWeek, weekDay, MNE)
 	if err != nil {
 		zap.L().Error("获取用户本周连续签到次数失败", zap.Error(err))
 		response.FailWithMessage("获取用户本周连续签到次数失败", c)
@@ -305,7 +315,7 @@ func GetWeekSignNum(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignNum(p.Year, p.UpOrDown, p.StartWeek)
+	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignNum(p.Semester, p.StartWeek)
 	if err != nil {
 		zap.L().Error("获取用户一周的签到次数失败", zap.Error(err))
 		response.FailWithMessage("获取用户一周的签到次数失败", c)
@@ -320,7 +330,8 @@ func GetWeekSignDetail(c *gin.Context) {
 		zap.L().Error("参数错误", zap.Error(err))
 		return
 	}
-	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignDetail(p.Year, p.UpOrDown, p.StartWeek)
+	WeekSignNum, err := (&dingding.DingUser{UserId: p.Userid}).GetWeekSignDetail(p.Semester, p.StartWeek)
+
 	if err != nil {
 		zap.L().Error("获取用户一周的签到详情失败", zap.Error(err))
 		response.FailWithMessage("获取用户一周的签到详情失败", c)

@@ -419,7 +419,7 @@ func SingleChat(c *gin.Context) {
 	err := c.ShouldBindJSON(&p)
 	if err != nil {
 	}
-	err = (&dingding.DingRobot{}).SingleChat(&p)
+	err = (&dingding.DingRobot{}).ChatSendMessage(&p)
 }
 func SubscribeTo(c *gin.Context) {
 	// 1. 参数获取

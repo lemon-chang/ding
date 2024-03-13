@@ -86,7 +86,7 @@ func CountWeekPaper(GroupId int) (err error) {
 					MsgKey:    "sampleText",
 					MsgParam:  message,
 				}
-				err = (&dingding.DingRobot{}).SingleChat(p)
+				err = (&dingding.DingRobot{}).ChatSendMessage(p)
 				ranking++
 			}
 		}

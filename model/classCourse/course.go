@@ -2,6 +2,7 @@ package classCourse
 
 import (
 	"crypto/tls"
+	"ding/initialize/viper"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,7 +30,7 @@ func GetIsHasCourse(lesson int, startWeek int, userType int, useridList []string
 		useridListString += userid + ","
 	}
 	useridListString = useridListString[:len(useridListString)-1]
-	URL := fmt.Sprintf("http://110.40.228.197:8888/course/findUserByClass?lesson=%v&page=0&startWeek=%v&userType=%v&useridList=%v&week=%v&pageSize=100", lesson, startWeek, userType, useridListString, week)
+	URL := fmt.Sprintf("http://"+viper.Conf.ClassCourseConfig.Host+":"+viper.Conf.ClassCourseConfig.Port+"/course/findUserByClass?lesson=%v&page=0&startWeek=%v&userType=%v&useridList=%v&week=%v&pageSize=100", lesson, startWeek, userType, useridListString, week)
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

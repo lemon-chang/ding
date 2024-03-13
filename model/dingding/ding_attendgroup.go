@@ -802,7 +802,7 @@ func (a *DingAttendGroup) AlertAttendByRobot() (taskID cron.EntryID, AlertSpec s
 					MsgKey:    "sampleText",
 					MsgParam:  fmt.Sprintf("还有%v分钟上班，你还没有打卡", a.AlertTime),
 				}
-				err = (&DingRobot{}).SingleChat(p)
+				err = (&DingRobot{}).ChatSendMessage(p)
 				if err != nil {
 					zap.L().Error("发送提醒信息失败", zap.Error(err))
 				}
@@ -1074,7 +1074,7 @@ func SendAttendResultHandler(DeptDetail *DingDept, result map[string][]DingAtten
 			MsgParam:  openMessage,
 		}
 		if runtime.GOOS == "linux" {
-			err = (&DingRobot{}).SingleChat(p)
+			err = (&DingRobot{}).ChatSendMessage(p)
 			if err != nil {
 				zap.L().Error("发送至部门负责人失败", zap.Error(err))
 			}

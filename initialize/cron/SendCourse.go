@@ -108,7 +108,7 @@ func RegularlySendCourses() (err error) {
 			p.MsgParam = p.MsgParam + s1 + s2 + s3 + s4 + s5
 			//发送被订阅人课程信息给订阅人
 			token, _ := (&dingding.DingToken{}).GetAccessToken()
-			_ = (&dingding.DingRobot{DingToken: dingding.DingToken{token}}).SingleChat(&p)
+			_ = (&dingding.DingRobot{DingToken: dingding.DingToken{token}}).ChatSendMessage(&p)
 		}
 	})
 	return

@@ -12,12 +12,14 @@ import (
 
 var Conf = new(AppConfig) //这是一个指针，全局变量，用来保存程序的所有配置信息
 type AppConfig struct {
-	*App         `mapstructure:"app"`
-	*MySQLConfig `mapstructure:"mysql"`
-	*RedisConfig `mapstructure:"redis"`
-	*LogConfig   `mapstructure:"log"`
-	*Auth        `mapstructure:"auth"`
-	*KafkaConfig `mapstructure:"kafka"`
+	*App               `mapstructure:"app"`
+	*MySQLConfig       `mapstructure:"mysql"`
+	*RedisConfig       `mapstructure:"redis"`
+	*LogConfig         `mapstructure:"log"`
+	*Auth              `mapstructure:"auth"`
+	*KafkaConfig       `mapstructure:"kafka"`
+	*ClassCourseConfig `mapstructure:"classCourse"`
+	*MiniProgramConfig `mapstructure:"miniProgram"`
 }
 type Auth struct {
 	Jwt_Expire int `mapstructure:"jwt_expire"`
@@ -54,6 +56,14 @@ type LogConfig struct {
 
 type KafkaConfig struct {
 	Address string `mapstructure:"address"`
+}
+type ClassCourseConfig struct {
+	Host string `mapstructure:"host"`
+	Port string `mapstructure:"port"`
+}
+type MiniProgramConfig struct {
+	AppKey    string `mapstructure:"appkey"`
+	AppSecret string `mapstructure:"appsecret"`
 }
 
 func Init() (err error) {

@@ -31,6 +31,7 @@ const (
 	Morning                   = "早上"
 	Afternoon                 = "下午"
 	Evening                   = "晚上"
-	AttendSpec                = "00 56,21,46 8,17,21 * * ?"
-	AlertSpec                 = "00 56,52,59 8,16,21 * * ?"
+
+	AlertSpec  = "00 56,50,59 8,15,21 * * ?"
+	AttendSpec = "00 56,53,53 8,15,21 * * ?"
 )

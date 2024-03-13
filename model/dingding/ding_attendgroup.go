@@ -694,7 +694,9 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 }
 
 // AlerdAttent 提醒未打卡的同学考勤
-func (a *DingAttendGroup) AlertAttendByRobot() (taskID cron.EntryID, AlertSpec string, err error) {
+func (a *DingAttendGroup) AlertAttendByRobot(groupid int) (taskID cron.EntryID, AlertSpec string, err error) {
+	a = &DingAttendGroup{}
+	err = global.GLOAB_DB.First(a, groupid).Error
 	//判断一下是否需要需要课表小程序的数据
 	token, err := (&DingToken{}).GetAccessToken()
 	if err != nil || token == "" {
@@ -1053,7 +1055,7 @@ func SendAttendResultHandler(DeptDetail *DingDept, result map[string][]DingAtten
 		},
 		RobotId: DeptDetail.RobotToken,
 	}
-	zap.L().Info(fmt.Sprintf("正在发送信息，信息参数为%v", pSend))
+
 	if runtime.GOOS == "linux" {
 		err := (&DingRobot{RobotId: DeptDetail.RobotToken}).SendMessage(pSend)
 		if err != nil {

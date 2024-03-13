@@ -22,7 +22,7 @@ func AttendanceByRobot() (err error) {
 			var AlertSpec, AttendSpec string
 			if group.IsAlert {
 				//提醒没有打卡的人考勤
-				AlertTaskID, AlertSpec, err = group.AlertAttendByRobot()
+				AlertTaskID, AlertSpec, err = group.AlertAttendByRobot(group.GroupId)
 				if err != nil {
 					return err
 				}

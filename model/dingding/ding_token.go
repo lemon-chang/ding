@@ -3,6 +3,7 @@ package dingding
 import (
 	"context"
 	"ding/global"
+	"ding/initialize/viper"
 	"ding/utils"
 	"fmt"
 
@@ -115,8 +116,8 @@ func (t *DingToken) GetAccessTokenDing() (access_token string, expireIn int64, _
 	if _err != nil {
 		return
 	}
-	appKey, _ := global.GLOBAL_REDIS.Get(context.Background(), utils.AppKey).Result()
-	appSecret, _ := global.GLOBAL_REDIS.Get(context.Background(), utils.AppSecret).Result()
+	appKey := viper.Conf.MiniProgramConfig.AppKey
+	appSecret := viper.Conf.MiniProgramConfig.AppSecret
 	getAccessTokenRequest := &dingtalkoauth2_1_0.GetAccessTokenRequest{
 		AppKey:    tea.String(appKey),
 		AppSecret: tea.String(appSecret),

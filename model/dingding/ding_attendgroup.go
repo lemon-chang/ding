@@ -623,7 +623,7 @@ func (a *DingAttendGroup) AllDepartAttendByRobot(p *params.ParamAllDepartAttendB
 	} else if runtime.GOOS == "linux" {
 		spec = "00 " + minute + " " + hour + " * * ?"
 	} else if runtime.GOOS == "darwin" {
-		spec = "00 50,24,28 8,17,22 * * ?"
+		spec = "00 50,07,24 8,16,19 * * ?"
 	}
 	zap.L().Info(fmt.Sprintf("根据钉钉考勤组数据拼装spec:%v", spec))
 	task := func() {

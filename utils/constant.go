@@ -1,8 +1,8 @@
 package utils
 
 const (
-	ConfigFile = "./conf/config.yaml"
 	//ConfigFile = "./conf/config.yaml"
+	ConfigFile                = "./conf/temiconfig.yaml"
 	Version                   = "v2"
 	CropId                    = "CropId"
 	AccessToken               = "AccessToken"

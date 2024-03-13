@@ -2,6 +2,7 @@ package classCourse
 
 import (
 	"crypto/tls"
+	"ding/initialize/viper"
 	"ding/model/common/localTime"
 	"encoding/json"
 	"errors"
@@ -23,7 +24,7 @@ func (*Calendar) GetWeek() (week int, err error) {
 	var body []byte
 	curTime, _ := (&localTime.MySelfTime{}).GetCurTime(nil)
 	//URL := "http://schedule.lzyjykj.com/sys/getWeek?nowday=" + curTime.Format[:10]
-	URL := "http://110.40.228.197:8886/sys/getWeek?nowday=" + curTime.Format[:10]
+	URL := "http://" + viper.Conf.ClassCourseConfig.Host + ":" + viper.Conf.ClassCourseConfig.Port + "/sys/getWeek?nowday=" + curTime.Format[:10]
 	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

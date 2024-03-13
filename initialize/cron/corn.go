@@ -2,7 +2,6 @@ package cron
 
 import (
 	"ding/global"
-	"fmt"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
@@ -17,11 +16,11 @@ func InitCorn() {
 	global.GLOAB_CORN = Gcontab
 	global.GLOAB_CORN.Start()
 	//======重启定时任务=======
-	if err := Reboot(); err != nil {
-		zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
-	} else {
-		zap.L().Debug("重启定时任务成功...")
-	}
+	//if err := Reboot(); err != nil {
+	//	zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
+	//} else {
+	//	zap.L().Debug("重启定时任务成功...")
+	//}
 
 	//======重启考勤=======
 	if err := AttendanceByRobot(); err != nil {

@@ -1,5 +1,7 @@
 package params
 
+import "ding/model/common/request"
+
 // ParamSignUp 定义请求的结构体参数
 type ParamSignUp struct {
 	Username   string `json:"username"  binding:"required" from:"username"`
@@ -47,4 +49,9 @@ type ParamGetWeekSignDetail struct {
 	Userid    string `json:"userid"`
 	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
+}
+type ParamGetTasks struct {
+	request.PageInfo
+	TaskName   string `json:"task_name" form:"task_name"`
+	OnlyActive int    `json:"only_active" form:"only_active"`
 }

@@ -123,15 +123,13 @@ func (s *DingSubscribe) UserAddOrg(c *gin.Context) {
 		zap.L().Info("user.DingToken.GetAccessToken() success ,token: " + token)
 	}
 	user.DingToken.Token = token
-	dingUser, _ := user.GetUserDetailByUserId()
-	//输出用户信息，UserId和Token
-	fmt.Printf("dingUser: %v\n", dingUser)
+	_ = user.GetUserDetailByUserId()
 	//根据官方接口查询用户详细信息
-	detailDingUser, err := dingUser.GetUserDetailByUserId()
+	err := user.GetUserDetailByUserId()
 	if err != nil {
 		zap.L().Error("dingUser.GetUserInfo() failed,err: ", zap.Error(err))
 	}
-	fmt.Printf("detailDingUser: %v\n", detailDingUser)
+	fmt.Printf("detailDingUser: %v\n", user)
 }
 
 // UserLeaveOrg 用户退出组织
@@ -148,15 +146,15 @@ func (s *DingSubscribe) UserLeaveOrg(c *gin.Context) {
 		zap.L().Info("user.DingToken.GetAccessToken() success ,token: " + token)
 	}
 	user.DingToken.Token = token
-	dingUser, _ := user.GetUserDetailByUserId()
+	_ = user.GetUserDetailByUserId()
 	//输出用户信息，UserId和Token
-	fmt.Printf("dingUser: %v\n", dingUser)
+	fmt.Printf("dingUser: %v\n", user)
 	//根据官方接口查询用户详细信息
-	detailDingUser, err := dingUser.GetUserDetailByUserId()
+	err := user.GetUserDetailByUserId()
 	if err != nil {
 		zap.L().Error("dingUser.GetUserInfo() failed,err: ", zap.Error(err))
 	}
-	fmt.Printf("detailDingUser: %v\n", detailDingUser)
+	fmt.Printf("detailDingUser: %v\n", user)
 }
 
 // DingTalkCrypto 事件订阅加密

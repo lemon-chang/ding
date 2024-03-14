@@ -1,7 +1,8 @@
 package utils
 
 const (
-	ConfigFile                = "./conf/config.yaml"
+	//ConfigFile = "./conf/config.yaml"
+	ConfigFile                = "./conf/config_test.yaml"
 	Version                   = "v2"
 	CropId                    = "CropId"
 	AccessToken               = "AccessToken"
@@ -33,5 +34,5 @@ const (
 	Evening                   = "晚上"
 
 	AlertSpec  = "00 56,50,59 8,15,21 * * ?"
-	AttendSpec = "00 56,53,53 8,15,21 * * ?"
+	AttendSpec = "06 56,53,42 8,15,20 * * ?"
 )

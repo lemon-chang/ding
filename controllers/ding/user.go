@@ -67,29 +67,13 @@ func SelectAllUsers(c *gin.Context) {
 
 func GetUserInfoDetailByToken(c *gin.Context) {
 	user_id, _ := c.Get(global.CtxUserIDKey)
-	DingUser := dingding.DingUser{}
-	DingUser.UserId = user_id.(string)
-	err := DingUser.GetUserInfoDetailByToken()
+	DingUser := dingding.DingUser{UserId: user_id.(string)}
+	err := DingUser.GetUserInfoDetailByUserId()
 	if err != nil {
 		response.FailWithMessage("查询用户失败", c)
 		return
 	}
 	response.OkWithDetailed(DingUser, "查询所有用户成功", c)
-}
-
-// 设置用户信息，调用钉钉接口进行修改钉钉数据
-func SetUserInfo(c *gin.Context) {
-	var DingUser dingding.DingUser
-	if err := c.ShouldBindJSON(&DingUser); err != nil {
-		response.FailWithMessage("参数错误", c)
-		zap.L().Error("参数错误", zap.Error(err))
-		return
-	}
-	if err := DingUser.SetUserInfo(DingUser); err != nil {
-		zap.L().Error("更新用户博客和简书地址失败", zap.Error(err))
-		response.FailWithMessage("更新用户博客&简书地址失败", c)
-	}
-	response.OkWithMessage("更新用户博客&简书地址成功", c)
 }
 
 // LoginHandler 处理登录请求的函数
@@ -233,8 +217,7 @@ func GetQRCode(c *gin.Context) {
 		zap.L().Error("获取token失败", zap.Error(err))
 		return
 	}
-	openConversationID := (&dingding.DingGroup{Token: dingding.DingToken{Token: token}, ChatID: ChatID}).GetOpenConversationID()
-	userIds, err := (&dingding.DingRobot{DingToken: dingding.DingToken{Token: token}, OpenConversationID: openConversationID}).GetGroupUserIds()
+	userIds, err := (&dingding.DingRobot{DingToken: dingding.DingToken{Token: token}}).GetGroupUserIds()
 	result := struct {
 		buf     []byte
 		ChatId  string
@@ -250,10 +233,16 @@ func GetQRCode(c *gin.Context) {
 }
 
 // 获取所有任务列表,包括已暂停的任务
-func GetAllTask(c *gin.Context) {
-	var tasks []dingding.Task
+func GetTasks(c *gin.Context) {
+	var p params.ParamGetTasks
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("Login with invalid param", zap.Error(err))
+		response.FailWithMessage("参数有误", c)
+		return
+	}
 	user_id, _ := global.GetCurrentUserId(c)
-	err := global.GLOAB_DB.Model(&tasks).Where("user_id", user_id).Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
+	//err := global.GLOAB_DB.Model(&tasks).Where("user_id", user_id).Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
+	tasks, err := (&dingding.Task{}).GetTasks(user_id, &p)
 	if err != nil {
 		zap.L().Error("获取所有定时任务失败", zap.Error(err))
 		response.FailWithMessage("服务繁忙", c)

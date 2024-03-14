@@ -5,6 +5,7 @@ import (
 	"ding/global"
 	redis2 "ding/initialize/redis"
 	"ding/model/common"
+	"ding/model/params"
 	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
@@ -31,7 +32,7 @@ type Task struct {
 	NextTime          time.Time           `json:"next_time"`
 }
 
-//编辑定时任务内容
+// 编辑定时任务内容
 type EditTaskContentParam struct {
 	ID      uint   `json:"id"`
 	TaskID  string `json:"task_id"`
@@ -63,19 +64,18 @@ func (t *Task) GetAllActiveTask() (tasks []Task, err error) {
 	//删除所有的key
 	global.GLOBAL_REDIS.Del(context.Background(), activeTasksKeys...)
 	//拿到所有的任务的id
-	//entries := global.GLOAB_CORN.Entries()
+	entries := global.GLOAB_CORN.Entries()
 	//拿到所有任务的id
-	//var entriesInt = make([]int, len(entries))
-	//for index, value := range entries {
-	//	entriesInt[index] = int(value.ID)
-	//}
+	var entriesInt = make([]int, len(entries))
+	for index, value := range entries {
+		entriesInt[index] = int(value.ID)
+	}
 	// 根据id查询数据库，拿到详细的任务信息，存放到redis中
-	global.GLOAB_DB.Model(&tasks).Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Where("deleted_at is null").Find(&tasks)
+	global.GLOAB_DB.Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Where("deleted_at is null").Find(&tasks, entriesInt)
 	//查询所有的在线任务
 	//把找到的数据存储到redis中 ，现在先写成手动获取
 	//应该是存放在一个集合里面，集合里面存放着此条任务的所有信息，以id作为标识
 	//哈希特别适合存储对象，所以我们用哈希来存储
-
 	for _, task := range tasks {
 		taskValue, err := json.Marshal(task) //把对象序列化成为一个json字符串
 		if err != nil {
@@ -88,5 +88,26 @@ func (t *Task) GetAllActiveTask() (tasks []Task, err error) {
 			continue
 		}
 	}
+	return
+}
+
+func (t *Task) GetTasks(user_id string, p *params.ParamGetTasks) (tasks []Task, err error) {
+	db := global.GLOAB_DB
+	if p.TaskName != "" {
+		db.Where("task_name = ?", p.TaskName)
+	}
+	if p.OnlyActive == 1 {
+		//拿到所有的任务的id
+		entries := global.GLOAB_CORN.Entries()
+		//拿到所有任务的id
+		var entriesInt = make([]int, len(entries))
+		for index, value := range entries {
+			entriesInt[index] = int(value.ID)
+		}
+		db = db.Where("task_id in ?", entriesInt)
+	}
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+	err = db.Limit(limit).Offset(offset).Where("user_id = ? ", user_id).Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
 	return
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"ding/global"
 	myselfRedis "ding/initialize/redis"
-	"ding/model/common/localTime"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,8 +47,6 @@ func (d *DingUser) Sign(semester string, startWeek, weekDay, MNE int) (getWeekSi
 
 // GetConsecutiveSignNum 当前周中，获取用户连续签到数量
 func (d *DingUser) GetConsecutiveSignNum(semester string, startWeek, weekDay, MNE int) (ConsecutiveSignNum int, err error) {
-	curTime := &localTime.MySelfTime{}
-	err = curTime.GetCurTime(nil)
 	key := fmt.Sprintf(myselfRedis.UserSign+"%v:%v:%v", semester, startWeek, d.UserId)
 	offset := int64((weekDay-1)*3 + MNE - 1)
 	// bitfield可以操作多个位 bitfield sign:2023-2024学年第二学期:2:413550622937553255 u21 0  //u表示无符号位置，7表示往后面统计7位的，0表示从第0位开始统计

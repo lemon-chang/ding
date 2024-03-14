@@ -20,7 +20,7 @@ func AttendanceByRobot() (err error) {
 		if group.IsRobotAttendance {
 			var AlertTaskID cron.EntryID
 			var AlertSpec, AttendSpec string
-			if group.IsAlert {
+			if group.AlertTime != 0 {
 				//提醒没有打卡的人考勤
 				AlertTaskID, AlertSpec, err = group.AlertAttendByRobot(group.GroupId)
 				if err != nil {

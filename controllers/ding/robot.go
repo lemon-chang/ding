@@ -4,6 +4,7 @@ import (
 	"context"
 	"ding/global"
 	"ding/model/common"
+	response2 "ding/model/common/response"
 	"ding/model/dingding"
 	"ding/response"
 	"encoding/json"
@@ -32,25 +33,7 @@ func OutGoing(c *gin.Context) {
 	}
 	response.OkWithMessage("回调成功", c)
 }
-func GxpRobot(c *gin.Context) {
-	var p dingding.ParamReveiver
-	err := c.ShouldBindJSON(&p)
-	err = c.ShouldBindHeader(&p)
-	if err != nil {
-		zap.L().Error("GxpRobot OutGoing invaild param", zap.Error(err))
-		response.FailWithMessage("outgoing参数绑定失败", c)
-		return
-	}
-	err = (&dingding.DingRobot{}).GxpSendSessionWebHook(&p)
-	if err != nil {
-		zap.L().Error("钉钉机器人回调出错", zap.Error(err))
-		return
-	}
-}
 
-// addRobot 添加机器人
-// 思路如下
-// 当前登录的用户添加了一个属于自己的机器人
 func AddRobot(c *gin.Context) {
 	//1.获取参数和参数校验
 	var p dingding.ParamAddRobot
@@ -70,9 +53,7 @@ func AddRobot(c *gin.Context) {
 	user, _ := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	//说明插入的内部机器人
 	dingRobot := &dingding.DingRobot{
-		Type:       p.Type,
 		RobotId:    p.RobotId,
-		Secret:     p.Secret,
 		DingUserID: UserId,
 		UserName:   user.Name,
 		Name:       p.Name,
@@ -88,54 +69,24 @@ func AddRobot(c *gin.Context) {
 	}
 }
 func GetSharedRobot(c *gin.Context) {
-	robot, err := (&dingding.DingRobot{}).GetSharedRobot()
-	if err != nil {
-
-	}
-	response.OkWithDetailed(robot, "获取成功", c)
-}
-func GetRobotDetailByRobotId(c *gin.Context) {
-	UserId, _ := global.GetCurrentUserId(c)
-	//1.获取参数和参数校验
-	var p *dingding.ParamGetRobotBase
+	var p dingding.ParamGetRobotList
 	err := c.ShouldBindQuery(&p)
 	if err != nil {
 		zap.L().Error("Add Robot invaild param", zap.Error(err))
 		response.FailWithMessage("参数有误", c)
 		return
 	}
-	//说明插入的内部机器人
-	dingRobot := &dingding.DingRobot{
-		RobotId: p.RobotId,
-	}
-	err = global.GLOAB_DB.Where("robot_id = ? and ding_user_id = ?", p.RobotId, UserId).Preload("DingUsers").Preload("Tasks").First(dingRobot).Error
+	robot, total, err := (&dingding.DingRobot{}).GetSharedRobot(&p)
 	if err != nil {
-		zap.L().Error("通过机器人id和所属用户id查询机器人基本信息失败", zap.Error(err))
-		response.FailWithMessage("获取机器人信息失败", c)
-	} else {
-		response.OkWithDetailed(dingRobot, "获取机器人信息成功", c)
-	}
-}
-func GetRobotBaseList(c *gin.Context) {
-	UserId, _ := global.GetCurrentUserId(c)
-
-	//1.获取参数和参数校验
-	var p *dingding.ParamGetRobotListBase
-	err := c.ShouldBindQuery(&p)
-	if err != nil {
-		zap.L().Error("Add Robot invaild param", zap.Error(err))
-		response.FailWithMessage("参数有误", c)
+		response.FailWithMessage("获取失败", c)
 		return
 	}
-	//说明插入的内部机器人
-	var dingRobotList []dingding.DingRobot
-	err = global.GLOAB_DB.Where("ding_user_id = ?", UserId).Find(&dingRobotList).Error
-	if err != nil {
-		zap.L().Error(fmt.Sprintf("获取用户%v拥有的所有机器人列表基本信息失败", UserId), zap.Error(err))
-		response.FailWithMessage("获取机器人列表基本信息失败", c)
-	} else {
-		response.OkWithDetailed(dingRobotList, "获取机器人列表基本信息失败", c)
-	}
+	response.OkWithDetailed(response2.PageResult{
+		List:     robot,
+		Total:    total,
+		Page:     p.Page,
+		PageSize: p.PageSize,
+	}, "获取成功", c)
 }
 func RemoveRobot(c *gin.Context) {
 	var p dingding.ParamRemoveRobot
@@ -158,41 +109,27 @@ func RemoveRobot(c *gin.Context) {
 
 }
 
-// GetRobots 获得用户自身的所有机器人
-func GetRobots(c *gin.Context) {
+// GetRobotList 获得用户自身的所有机器人
+func GetRobotList(c *gin.Context) {
+	var p dingding.ParamGetRobotList
+	if err := c.ShouldBindQuery(&p); err != nil {
+		response.FailWithMessage("参数有误", c)
+		return
+	}
 	uid, err := global.GetCurrentUserId(c)
 	//查询到所有的机器人
-	robots, err := (&dingding.DingUser{UserId: uid}).GetRobotList()
+	robots, count, err := (&dingding.DingUser{UserId: uid}).GetRobotList(&p)
 	if err != nil {
 		zap.L().Error("logic.GetRobotst() failed", zap.Error(err))
 		response.FailWithMessage("获取失败", c) //不轻易把服务器的报错返回给外部
 		return
 	}
-	response.OkWithDetailed(robots, "获取成功", c)
-
-}
-func UpdateRobot(c *gin.Context) {
-	var p dingding.ParamUpdateRobot
-	if err := c.ShouldBindJSON(&p); err != nil {
-		response.FailWithMessage("参数有误", c)
-		return
-	}
-	dingRobot := &dingding.DingRobot{
-		RobotId:            p.RobotId,
-		Type:               p.Type,
-		ChatBotUserId:      p.ChatBotUserId,
-		Secret:             p.Secret,
-		DingUsers:          p.DingUsers,
-		ChatId:             p.ChatId,
-		OpenConversationID: p.OpenConversationID,
-		Name:               p.Name,
-	}
-	err := (dingRobot).CreateOrUpdateRobot()
-	if err != nil {
-		response.FailWithMessage("更新机器人失败", c)
-	} else {
-		response.OkWithDetailed(dingRobot, "更新机器人成功", c)
-	}
+	response.OkWithDetailed(response2.PageResult{
+		List:     robots,
+		Total:    count,
+		Page:     p.Page,
+		PageSize: p.PageSize,
+	}, "获取成功", c)
 }
 
 func CronTask(c *gin.Context) {
@@ -220,41 +157,26 @@ func CronTask(c *gin.Context) {
 	}
 }
 func PingRobot(c *gin.Context) {
-	var p *dingding.ParamCronTask
+	p := &dingding.ParamCronTask{}
+	p.TaskName = "ping"
+	if err := c.ShouldBindJSON(&p); err != nil {
+		response.FailWithMessage("参数有误", c)
+		return
+	}
 	p = &dingding.ParamCronTask{
 		MsgText:    &common.MsgText{Text: common.Text{Content: "机器人测试成功"}, At: common.At{}, Msgtype: "text"},
 		RepeatTime: "立即发送",
+		RobotId:    p.RobotId,
 	}
-	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-	}
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		UserId = ""
-	}
-	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
-	if err != nil {
-		CurrentUser = dingding.DingUser{}
-	}
-
-	err, task := (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
-
-	r := struct {
-		taskName string `json:"task_name"` //任务名字
-		taskId   int    `json:"task_id"`
-	}{
-		taskName: task.TaskName,
-	}
+	err, _ := (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
 
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("测试机器人失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
+		zap.L().Error(fmt.Sprintf("测试机器人失败"), zap.Error(err))
 		response.FailWithMessage("发送定时任务失败", c)
 	} else {
-		response.OkWithDetailed(r, "发送定时任务成功", c)
+		response.OkWithMessage("发送定时任务成功", c)
 	}
 }
-
 func StopTask(c *gin.Context) {
 	UserId, err := global.GetCurrentUserId(c)
 	if err != nil {
@@ -278,26 +200,44 @@ func StopTask(c *gin.Context) {
 		response.OkWithMessage("暂停定时任务成功", c)
 	}
 }
-func GetTaskList(c *gin.Context) {
-	//UserId, err := global.GetCurrentUserId(c)
-	//if err != nil {
-	//	UserId = ""
-	//}
-	//CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
-	//if err != nil {
-	//	CurrentUser = dingding.DingUser{}
-	//}
-	var p *dingding.ParamGetTaskList
+func GetRobotTaskList(c *gin.Context) {
+	var p dingding.ParamGetTaskList
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("GetTaskList做定时任务参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
-	tasks, err := (&dingding.DingRobot{}).GetTaskList(p.RobotId)
+	tasks, total, err := (&dingding.DingRobot{RobotId: p.RobotId}).GetTaskList(&p)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("获取定时任务列表失败"), zap.Error(err))
 		response.FailWithMessage("获取定时任务列表失败", c)
 	} else {
-		response.OkWithDetailed(tasks, "获取定时任务列表成功", c)
+		response.OkWithDetailed(response2.PageResult{
+			List:     tasks,
+			Total:    total,
+			Page:     p.Page,
+			PageSize: p.PageSize,
+		}, "获取定时任务列表成功", c)
+	}
+}
+func GetUserTaskList(c *gin.Context) {
+	var p dingding.ParamGetTaskList
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("GetTaskList做定时任务参数绑定失败", zap.Error(err))
+		response.FailWithMessage("参数错误", c)
+	}
+	UserId, _ := global.GetCurrentUserId(c)
+
+	tasks, total, err := (&dingding.DingUser{UserId: UserId}).GetTaskList(&p)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("获取定时任务列表失败"), zap.Error(err))
+		response.FailWithMessage("获取定时任务列表失败", c)
+	} else {
+		response.OkWithDetailed(response2.PageResult{
+			List:     tasks,
+			Total:    total,
+			Page:     p.Page,
+			PageSize: p.PageSize,
+		}, "获取定时任务列表成功", c)
 	}
 
 }
@@ -332,27 +272,8 @@ func ReStartTask(c *gin.Context) {
 		response.OkWithMessage("ReStartTask定时任务成功", c)
 	}
 }
-func UpdateMobile(c *gin.Context) {
-	token, _ := (&dingding.DingToken{}).GetAccessToken()
-	//向数据库拿到考勤组id
-	deptids := make([]string, 0)
-	global.GLOAB_DB.Model(dingding.DingDept{}).Where("is_robot_attendance", 1).Select("dept_id").Find(&deptids)
-	for _, deptid := range deptids {
-		var p dingding.DingDept
-		p.DingToken.Token = token
-		id, _ := strconv.Atoi(deptid)
-		p.DeptId = id
-		list, _, err := p.GetUserListByDepartmentID(0, 100)
-		fmt.Println("err :", err)
-		//将数据存到数据库
-		for _, user := range list {
-			global.GLOAB_DB.Model(dingding.DingUser{}).Where("user_id", user.UserId).Updates(dingding.DingUser{Mobile: user.Mobile, Password: "123456"})
-		}
-	}
-	response.OkWithMessage("更新成功", c)
-}
 
-// 修改定时任务的内容
+// EditTaskContent 修改定时任务的内容
 func EditTaskContent(c *gin.Context) {
 	var r *dingding.EditTaskContentParam
 	err := c.ShouldBindJSON(&r)
@@ -383,44 +304,6 @@ func GetTaskDetail(c *gin.Context) {
 		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
 	}
 }
-
-// 获取所有的公共机器人
-func GetAllPublicRobot(c *gin.Context) {
-	robots, err := dingding.GetAllPublicRobot()
-	if err != nil {
-		zap.L().Error("查询所有公共机器人失败", zap.Error(err))
-		response.FailWithMessage("获取机器人失败", c)
-		return
-	} else if len(robots) == 0 {
-		response.FailWithMessage("没有公共机器人", c)
-		return
-	}
-	response.OkWithDetailed(robots, "获取成功", c)
-}
-func AlterResultByRobot(c *gin.Context) {
-	var p *dingding.ParamAlterResultByRobot
-	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("AlterResultByRobot参数绑定失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-		return
-	}
-	err := dingding.AlterResultByRobot(p)
-	if err != nil {
-		zap.L().Error("AlterResultByRobot失败", zap.Error(err))
-		response.FailWithMessage("更新失败", c)
-		return
-	}
-	response.FailWithMessage("更新成功", c)
-}
-
-// 进行单聊
-func SingleChat(c *gin.Context) {
-	var p dingding.ParamChat
-	err := c.ShouldBindJSON(&p)
-	if err != nil {
-	}
-	err = (&dingding.DingRobot{}).ChatSendMessage(&p)
-}
 func SubscribeTo(c *gin.Context) {
 	// 1. 参数获取
 	signature := c.Query("signature")
@@ -442,7 +325,10 @@ func SubscribeTo(c *gin.Context) {
 	// 3. 反序列化回调事件json数据
 	//把取值不方便的json字符串反序列化带map中
 	result := make(map[string]interface{})
-	json.Unmarshal([]byte(decryptMsg), &result)
+	err := json.Unmarshal([]byte(decryptMsg), &result)
+	if err != nil {
+		return
+	}
 	//事件类型
 	eventType := result["EventType"].(string)
 	subscription := dingding.NewDingSubscribe(result)
@@ -487,93 +373,6 @@ type ParamLeetCodeAddr struct {
 	LeetCodeAddr string `json:"leetCodeAddr"`
 }
 
-func UpdateLeetCode(c *gin.Context) {
-	var leetcode ParamLeetCodeAddr
-	err := c.ShouldBindJSON(&leetcode)
-	if err != nil {
-		zap.L().Error("LeetCodeResp", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-		return
-	}
-	err = global.GLOAB_DB.Table("ding_users").Where("user_id = ?", leetcode.UserId).Update("leet_code_addr", leetcode.LeetCodeAddr).Error
-	if err != nil {
-		zap.L().Error("存入数据库失败", zap.Error(err))
-		response.FailWithMessage("存入数据库失败", c)
-		return
-	}
-	response.OkWithMessage("更新成功", c)
-}
-
-//	func RobotAt(c *gin.Context) {
-//		var resp *dingding.RobotAtResp
-//		if err := c.ShouldBindJSON(&resp); err != nil {
-//			zap.L().Error("RobotAtResp", zap.Error(err))
-//			response.FailWithMessage("参数错误", c)
-//		}
-//		fmt.Println("内容为:", resp.Text)
-//		//userId := resp.SenderStaffId
-//		conversationType := resp.ConversationType               //聊天类型
-//		str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
-//		dingRobot := &dingding.DingRobot{}
-//		//单聊
-//		if conversationType == "1" {
-//			if str == "打字邀请码" {
-//				err := dingRobot.RobotSendInviteCode(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if str == "送水电话号码" {
-//				err := dingRobot.RobotSendWater(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if str == "获取个人信息" {
-//				err := dingRobot.RobotSendPrivateMessage(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if strings.Contains(str, "保存个人信息") {
-//				err := dingRobot.RobotSavePrivateMessage(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if strings.Contains(str, "更改个人信息") {
-//				err := dingRobot.RobotPutPrivateMessage(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if str == "学习资源" {
-//
-//			} else {
-//				err := dingRobot.RobotSendHelpCard(resp)
-//				if err != nil {
-//					return
-//				}
-//			}
-//			//群聊
-//		} else if conversationType == "2" {
-//			if str == "打字邀请码" {
-//				//_ 代表res["processQueryKey"]可以查看已读状态
-//				_, err := dingRobot.RobotSendGroupInviteCode(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if str == "送水电话号码" {
-//				//_ 代表res["processQueryKey"]可以查看已读状态
-//				_, err := dingRobot.RobotSendGroupWater(resp)
-//				if err != nil {
-//					return
-//				}
-//			} else if str == "帮助" {
-//				//_ 代表res["processQueryKey"]可以查看已读状态
-//				_, err := dingRobot.RobotSendGroupCard(resp)
-//				if err != nil {
-//					return
-//				}
-//			}
-//		}
-//		response.ResponseSuccess(c, "成功")
-//	}
 func RobotAt(c *gin.Context) {
 	var resp *dingding.RobotAtResp
 	if err := c.ShouldBindJSON(&resp); err != nil {
@@ -675,7 +474,8 @@ func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, e
 	//查询此人所有部门内的所有资源
 	//deptList := dingding.GetDeptByUserId(userId).DeptList
 	token, _ := (&dingding.DingToken{}).GetAccessToken()
-	DetailUser, err := (&dingding.DingUser{UserId: userId, DingToken: dingding.DingToken{Token: token}}).GetUserDetailByUserId()
+	DetailUser := &dingding.DingUser{UserId: userId, DingToken: dingding.DingToken{Token: token}}
+	err = DetailUser.GetUserDetailByUserId()
 	if err != nil {
 		return
 	}

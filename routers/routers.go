@@ -39,8 +39,7 @@ func Setup(mode string) *gin.Engine {
 	V3 := r.Group("/api/v3")
 	V3.POST("/outgoing", ding2.OutGoing) //outgoing接口是让官方
 	V3.POST("/robotAt", ding2.RobotAt)
-	V3.GET("GetAllUsers", ding2.SelectAllUsers)     // 查询所有用户信息
-	V3.POST("updateLeetCode", ding2.UpdateLeetCode) //更新力扣地址
+	V3.GET("GetAllUsers", ding2.SelectAllUsers) // 查询所有用户信息
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)
 		c.File(fmt.Sprintf("Screenshot_%s.png", username))
@@ -50,8 +49,8 @@ func Setup(mode string) *gin.Engine {
 	{
 		//无需token验证
 		Ding.POST("login", ding2.LoginHandler)
-		Ding.POST("loginByDingDing", ding2.LoginByDingDing)
-		Ding.POST("subscribeTo", ding2.SubscribeTo) //钉钉订阅事件路由
+		Ding.POST("loginByDingDing", ding2.LoginByDingDing) // 判断钉钉扫码登陆
+		Ding.POST("subscribeTo", ding2.SubscribeTo)         //钉钉订阅事件路由
 	}
 	Ding.Use(middlewares.JWTAuthMiddleware())
 	Ding.POST("loginByToken", ding2.LoginHandlerByToken) //单点登录后续要用

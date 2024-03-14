@@ -31,7 +31,6 @@ func Reboot() (err error) {
 		}
 		d := dingding2.DingRobot{
 			RobotId: task.RobotId,
-			Secret:  task.Secret,
 		}
 		tasker = func() {
 			err = d.SendMessage(&p)

@@ -1,8 +1,8 @@
 package utils
 
 const (
-	//ConfigFile = "./conf/config.yaml"
-	ConfigFile                = "./conf/config_test.yaml"
+	ConfigFile = "./conf/config.yaml"
+	//ConfigFile                = "./conf/config_test.yaml"
 	Version                   = "v2"
 	CropId                    = "CropId"
 	AccessToken               = "AccessToken"

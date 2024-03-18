@@ -261,13 +261,15 @@ func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime ma
 	}
 	hour = hour[:len(hour)-1]
 	minute = minute[:len(minute)-1]
-	if runtime.GOOS == "windows" {
-		AttendSpec = "00 07,24,47 15,17,22 * * ?"
-	} else if runtime.GOOS == "linux" {
-		AttendSpec = "00 " + minute + " " + hour + " * * ?"
-	} else if runtime.GOOS == "darwin" {
-		AttendSpec = utils.AttendSpec
-	}
+
+	AttendSpec = "00 " + minute + " " + hour + " * * ?"
+	//if runtime.GOOS == "windows" {
+	//	AttendSpec = "00 07,24,47 15,17,22 * * ?"
+	//} else if runtime.GOOS == "linux" {
+	//	AttendSpec = "00 " + minute + " " + hour + " * * ?"
+	//} else if runtime.GOOS == "darwin" {
+	//	AttendSpec = utils.AttendSpec
+	//}
 
 	minute = ""
 	hour = ""
@@ -751,8 +753,8 @@ func (a *DingAttendGroup) AlertAttendByRobot(groupid int) (taskID cron.EntryID, 
 	}
 	AlertTask := func() {
 		if int(taskID) != 0 {
-			nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
-			a.NextTime = nextTime
+
+			a.NextTime = global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
 			err = global.GLOAB_DB.Updates(a).Error
 			if err != nil {
 				zap.L().Error("更新定时任务下一次执行时间有误", zap.Error(err))
@@ -796,7 +798,6 @@ func (a *DingAttendGroup) AlertAttendByRobot(groupid int) (taskID cron.EntryID, 
 		}
 		for DeptId, _ := range deptAttendanceUser {
 			atoi, _ := strconv.Atoi(DeptId)
-
 			DeptDetail := &DingDept{DeptId: atoi}
 			err := DeptDetail.GetDeptByIDFromMysql()
 			DeptDetail.Token = token

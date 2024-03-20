@@ -17,7 +17,7 @@ mysql:
 redis:
   db: 2
   addr: 110.40.228.197:6379
-  password: ""
+  password: "3yueruanjian!"
 #  正式数据库
 log:
   level: "info"

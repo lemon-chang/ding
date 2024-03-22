@@ -262,14 +262,13 @@ func (a *DingAttendGroup) GetCommutingTimeAndSpec() (commutingTime, AlterTime ma
 	hour = hour[:len(hour)-1]
 	minute = minute[:len(minute)-1]
 
-	AttendSpec = "00 " + minute + " " + hour + " * * ?"
-	//if runtime.GOOS == "windows" {
-	//	AttendSpec = "00 07,24,47 15,17,22 * * ?"
-	//} else if runtime.GOOS == "linux" {
-	//	AttendSpec = "00 " + minute + " " + hour + " * * ?"
-	//} else if runtime.GOOS == "darwin" {
-	//	AttendSpec = utils.AttendSpec
-	//}
+	if runtime.GOOS == "windows" {
+		AttendSpec = "00 07,24,47 15,17,22 * * ?"
+	} else if runtime.GOOS == "linux" {
+		AttendSpec = "00 " + minute + " " + hour + " * * ?"
+	} else if runtime.GOOS == "darwin" {
+		AttendSpec = utils.AttendSpec
+	}
 
 	minute = ""
 	hour = ""

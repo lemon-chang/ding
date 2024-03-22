@@ -40,6 +40,7 @@ type DingDept struct {
 	IsRobotAttendance int        `json:"is_robot_attendance"` //是否
 	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 	IsLeetCode        int        `json:"is_leet_code"`
+	IsWeekPaper       int        `json:"is_week_paper"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
 	Children          []DingDept `gorm:"-"`
 }
@@ -802,6 +803,12 @@ func (d *DingDept) GetDeptByIDFromMysql() (err error) {
 	err = global.GLOAB_DB.First(d, d.DeptId).Error
 	return
 }
+
+// 获得需要进行周报检测的部门
+func (d *DingDept) GetDeptByWeekPaper(num int) (depts []DingDept, err error) {
+	err = global.GLOAB_DB.Where("is_week_paper = ?", num).Find(&depts).Error
+	return
+}
 func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (deptList []DingDept, total int64, err error) {
 	limit := p.PageSize
 	offset := p.PageSize * (p.Page - 1)
@@ -908,7 +915,6 @@ func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
 	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog, IsLeetCode: p.IsLeetCode}
 	// 使用select更新选中的字段
 	err = global.GLOAB_DB.Select("IsSendFirstPerson", "IsRobotAttendance", "RobotToken", "IsJianShuOrBlog", "IsLeetCode", "ResponsibleUserIds").Updates(dept).Error
-
 	if len(p.ResponsibleUserIds) > 0 {
 		err = global.GLOAB_DB.Table("user_dept").Where("ding_dept_dept_id = ?", p.DeptID).Update("is_responsible", false).Error
 		err = global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.ResponsibleUserIds, p.DeptID).Update("is_responsible", true).Error
@@ -917,5 +923,17 @@ func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
 }
 func (d *DingAttendGroup) UpdateSchool(s *ding.ParameIsInSchool) (err error) {
 	err = global.GLOAB_DB.Model(&DingAttendGroup{}).Where("group_id", s.GroupId).Update("is_in_school", s.IsInSchool).Error
+	return
+}
+
+// 查询部门周报检测状态
+func (d *DingDept) GetDeptWeekCheckStatus() (depts []DingDept, err error) {
+	err = global.GLOAB_DB.Model(d).Select("dept_id", "name", "is_week_paper").Find(&depts).Error
+	return
+}
+
+// 更新部门周报检测状态
+func (d *DingDept) UpdateDeptWeekCheckStatus() (err error) {
+	err = global.GLOAB_DB.Model(d).Where("dept_id = ?", d.DeptId).Update("is_week_paper", d.IsWeekPaper).Error
 	return
 }

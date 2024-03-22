@@ -47,10 +47,12 @@ type DingUser struct {
 	Mobile       string                `json:"mobile"`
 	Password     string                `json:"password,omitempty" `
 	DeptIdList   []int                 `json:"dept_id_list,omitempty" gorm:"-"` //所属部门
+	DeptId       int                   `json:"dept_id"`
 	DeptList     []DingDept            `json:"dept_list,omitempty" gorm:"many2many:user_dept"`
 	AuthorityId  uint                  `json:"authorityId,omitempty" gorm:"default:888;comment:用户角色ID"`
 	Authority    system.SysAuthority   `json:"authority,omitempty" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
 	Authorities  []system.SysAuthority `json:"authorities,omitempty" gorm:"many2many:sys_user_authority;"`
+	IsWeekPaper  int                   `json:"is_week_paper"`
 	Title        string                `json:"title,omitempty"` //职位
 	JianshuAddr  string                `json:"jianshu_addr"`
 	BlogAddr     string                `json:"blog_addr"`
@@ -99,6 +101,49 @@ func (d *DingUser) GetUserInfo() (user DingUser, err error) {
 func (d *DingUser) GetUserInfoDetailByUserId() (err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Preload("Authority").Preload("Authorities").Preload("DeptList").First(&d).Error
 	return
+}
+
+// 初始化用户表部门字段--获取全部用户
+func (d *DingUser) InitGetUserId() (users []DingUser, err error) {
+	err = global.GLOAB_DB.Select("user_id").Find(&users).Error
+	return
+}
+
+// 初始化用户表部门字段--更新（插入）用户的数据
+func (d *DingUser) InitInsertDeptId(deptId int) (err error) {
+	var user DingUser
+	err = global.GLOAB_DB.Where("user_id = ? and dept_id=?", d.UserId, deptId).Find(&user).Limit(1).Error
+	if user.UserId == "" {
+		err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Find(&user).Limit(1).Error
+		if user.DeptId == 0 {
+			err = global.GLOAB_DB.Model(&user).Update("dept_id", deptId).Limit(1).Error
+		}
+		if user.DeptId != deptId {
+			user.DeptId = deptId
+			err = global.GLOAB_DB.Model(&user).Create(&user).Error
+		}
+	}
+	return
+}
+func (d *DingUser) GetIsWeekPaperUsersByDeptId(deptId, flg int) (users []DingUser, err error) {
+	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("dept_id=? ", deptId)
+	err = global.GLOAB_DB.Where("is_week_paper = ? and user_id IN (?)", flg, userIds).Find(&users).Error
+	return
+}
+func (d *DingUser) GetWeekPaperUsersStatusByDeptId(deptId int) (users []DingUser, err error) {
+	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("dept_id=? ", deptId)
+	err = global.GLOAB_DB.Where("user_id IN (?)", userIds).Find(&users).Error
+	return
+}
+
+// 更新部门周报检测状态
+func (d *DingUser) UpdateUserWeekCheckStatus() (err error) {
+	err = global.GLOAB_DB.Model(d).Where("user_id", d.UserId).Update("is_week_paper", d.IsWeekPaper).Error
+	return
+}
+func (d *DingUser) InitUserWeekPaper(num int) (err error) {
+	err = global.GLOAB_DB.Model(d).Update("is_week_paper", num).Error
+	return nil
 }
 
 func (m *DingUser) UserAuthorityDefaultRouter(user *DingUser) {

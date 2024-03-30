@@ -94,4 +94,9 @@ func SetupDing(System *gin.RouterGroup) {
 		LeaveGroup.POST("/SubscribeToSomeone", ding2.SubscribeToSomeone) //订阅某人考勤情况
 		LeaveGroup.DELETE("/Unsubscribe", ding2.Unsubscribe)             //取消订阅
 	}
+	robotStr := System.Group("/robotStream")
+	{
+		robotStr.POST("/createStreamMsg", ding2.CreateStreamMsg) //订阅某人考勤情况
+		robotStr.DELETE("/Unsubscribe", ding2.Unsubscribe)       //取消订阅
+	}
 }

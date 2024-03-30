@@ -41,7 +41,7 @@ func GetDeptWeekCheckStatus(c *gin.Context) {
 		}
 		ps = append(ps, p)
 	}
-	response.OkWithDetailed(ps, "获取部门考勤状态成功！", c)
+	response.OkWithDetailed(ps, "获取部门周报检测状态成功！", c)
 }
 
 // 更新成员周报检测

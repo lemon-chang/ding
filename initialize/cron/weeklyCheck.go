@@ -11,7 +11,7 @@ func weeklyCheckByRobot() (err error) {
 	//每周日晚上10点
 	reportSpec := "0 0 22 * * 0"
 	weekFun := reprotDescribe.WeekCheckByRobot
-	reprotDescribe.WeekCheckByRobot()
+	//reprotDescribe.WeekCheckByRobot()
 	_, err = global.GLOAB_CORN.AddFunc(reportSpec, weekFun)
 	if err != nil {
 		zap.L().Error("启动周报检测失败", zap.Error(err))

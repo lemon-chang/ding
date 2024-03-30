@@ -752,8 +752,8 @@ func (a *DingAttendGroup) AlertAttendByRobot(groupid int) (taskID cron.EntryID, 
 	}
 	AlertTask := func() {
 		if int(taskID) != 0 {
-
-			a.NextTime = global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
+			nextTime := global.GLOAB_CORN.Entry(taskID).Next.Format("2006-01-02 15:04:05")
+			a.NextTime = nextTime
 			err = global.GLOAB_DB.Updates(a).Error
 			if err != nil {
 				zap.L().Error("更新定时任务下一次执行时间有误", zap.Error(err))
@@ -797,6 +797,7 @@ func (a *DingAttendGroup) AlertAttendByRobot(groupid int) (taskID cron.EntryID, 
 		}
 		for DeptId, _ := range deptAttendanceUser {
 			atoi, _ := strconv.Atoi(DeptId)
+
 			DeptDetail := &DingDept{DeptId: atoi}
 			err := DeptDetail.GetDeptByIDFromMysql()
 			DeptDetail.Token = token

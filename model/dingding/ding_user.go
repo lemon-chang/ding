@@ -40,7 +40,7 @@ var jin *DingUser
 type Strs []string
 
 type DingUser struct {
-	UserId       string                ` gorm:"primaryKey;foreignKey:UserId" json:"userid"`
+	UserId       string                `gorm:"primaryKey;foreignKey:UserId" json:"userid"`
 	DingRobots   []DingRobot           `json:"omitempty"`
 	Deleted      gorm.DeletedAt        `json:"omitempty"`
 	Name         string                `json:"name"`
@@ -126,13 +126,19 @@ func (d *DingUser) InitInsertDeptId(deptId int) (err error) {
 	return
 }
 func (d *DingUser) GetIsWeekPaperUsersByDeptId(deptId, flg int) (users []DingUser, err error) {
-	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("dept_id=? ", deptId)
+	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("ding_dept_dept_id=? ", deptId)
 	err = global.GLOAB_DB.Where("is_week_paper = ? and user_id IN (?)", flg, userIds).Find(&users).Error
 	return
 }
 func (d *DingUser) GetWeekPaperUsersStatusByDeptId(deptId int) (users []DingUser, err error) {
-	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("dept_id=? ", deptId)
+	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("ding_dept_dept_id=? ", deptId)
 	err = global.GLOAB_DB.Where("user_id IN (?)", userIds).Find(&users).Error
+	return
+}
+
+func (d *DingUser) GetUserDeptIdByUserId() (dept DingDept, err error) {
+	userId := global.GLOAB_DB.Table("user_dept").Select("ding_dept_dept_id").Where("ding_user_user_id=? ", d.UserId).Limit(1)
+	err = global.GLOAB_DB.Select("dept_id").Where("user_id  =  ?", userId).Find(&dept).Error
 	return
 }
 

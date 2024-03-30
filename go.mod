@@ -29,6 +29,7 @@ require (
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.5
 	github.com/clbanning/mxj/v2 v2.5.6 // indirect
 	github.com/go-playground/validator/v10 v10.17.0
+	github.com/open-dingtalk/dingtalk-stream-sdk-go v0.8.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )

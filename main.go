@@ -6,6 +6,7 @@ import (
 	"ding/initialize/logger"
 	"ding/initialize/mysql"
 	"ding/initialize/redis"
+	"ding/initialize/robot"
 	"ding/initialize/validator"
 	"ding/initialize/viper"
 	"ding/routers"
@@ -36,6 +37,9 @@ func main() {
 	}
 	defer zap.L().Sync()
 	zap.L().Debug("zap init success...")
+
+	//初始化robat的outgoing功能
+	robot.RobotOutGoing()
 	//初始化连接飞书
 	//global.InitFeishu()
 	//初始化链接mysql,刚好使用一下gorm，没有用到连表查询，所以比较简单

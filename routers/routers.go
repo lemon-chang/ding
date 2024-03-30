@@ -37,8 +37,9 @@ func Setup(mode string) *gin.Engine {
 	personal.SetupPersonal(Personal)
 	/*=========钉钉回调、无需token验证路由==========*/
 	V3 := r.Group("/api/v3")
-	V3.POST("/outgoing", ding2.OutGoing) //outgoing接口是让官方
-	V3.POST("/robotAt", ding2.RobotAt)
+	//V3.POST("/outgoing", ding2.OutGoing) //outgoing接口是让官方
+	//V3.POST("/robotAt", ding2.RobotAt)
+
 	V3.GET("GetAllUsers", ding2.SelectAllUsers) // 查询所有用户信息
 	V3.GET("upload", func(c *gin.Context) {
 		username, _ := c.Get(global.CtxUserNameKey)

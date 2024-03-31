@@ -3,6 +3,7 @@ package ding
 import (
 	"context"
 	"ding/global"
+	"ding/initialize/viper"
 	"ding/model/common"
 	response2 "ding/model/common/response"
 	"ding/model/dingding"
@@ -319,7 +320,7 @@ func SubscribeTo(c *gin.Context) {
 
 	// 2. 参数解密
 	//测试回调的时候使用
-	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
+	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", viper.Conf.MiniProgramConfig.RobotCode)
 	//解密后的数据是一个json字符串
 	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
 	// 3. 反序列化回调事件json数据

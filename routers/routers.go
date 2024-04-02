@@ -17,24 +17,12 @@ import (
 	"go.uber.org/zap"
 )
 
-type MyRouterGroup struct {
-	RouterGroup *gin.RouterGroup
-}
-
-func (group *MyRouterGroup) DingEvent(event_url string, handlerFunc gin.HandlerFunc) {
-	group.RouterGroup.Handle("DINGEVENT", event_url, handlerFunc)
-}
 func Setup(mode string) *gin.Engine {
 	if mode == gin.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode) //设置为发布模式
 	}
 	r := gin.New()
 	r.GET("chat_update_title", func(context *gin.Context) {
-		fmt.Println("测试chat_update_title")
-	})
-	group := MyRouterGroup{RouterGroup: &r.RouterGroup}
-
-	group.DingEvent("chat_update_title", func(c *gin.Context) {
 		fmt.Println("测试chat_update_title")
 	})
 	global.GLOBAL_GIN_Engine = r

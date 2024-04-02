@@ -1,5 +1,7 @@
 package params
 
+import "ding/model/common/request"
+
 // ParamSignUp 定义请求的结构体参数
 type ParamSignUp struct {
 	Username   string `json:"username"  binding:"required" from:"username"`
@@ -27,8 +29,7 @@ type ParamSearchUser struct {
 }
 type ParamMakeupSign struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
 	WeekDay   int    `json:"weekDay"`
 	Diff      int    `json:"diff"` //1是正签，0是反签 暂时都默认成1
@@ -36,21 +37,21 @@ type ParamMakeupSign struct {
 }
 type ParamGetWeekConsecutiveSignNum struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
-	StartWeek int    `json:"start_week"`
-	WeekDay   int    `json:"week_day"`
-	MNE       int    `json:"mne"` //早中晚
+	Semester  string `json:"semester"`   //学期
+	StartWeek int    `json:"start_week"` //第几周
 }
 type ParamGetWeekSignNum struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
 }
 type ParamGetWeekSignDetail struct {
 	Userid    string `json:"userid"`
-	Year      int    `json:"year"`
-	UpOrDown  int    `json:"up_or_down"`
+	Semester  string `json:"semester"` //学期
 	StartWeek int    `json:"start_week"`
+}
+type ParamGetTasks struct {
+	request.PageInfo
+	TaskName   string `json:"task_name" form:"task_name"`
+	OnlyActive int    `json:"only_active" form:"only_active"`
 }

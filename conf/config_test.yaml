@@ -11,13 +11,13 @@ mysql:
   port: "3306"
   user: "root"
   password: "3yueruanjian!"
-  dbname: "lezhi_ding_v3_marchsoft"
+  dbname: "test_lezhi"
   max_open_conns: 200
   max_idle_conns: 50
 redis:
-  db: 2
+  db: 12
   addr: 110.40.228.197:6379
-  password: "3yueruanjian!"
+  password: ""
 #  正式数据库
 log:
   level: "info"

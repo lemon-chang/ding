@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"ding/global"
 	"ding/initialize/redis"
+	"ding/model/classCourse"
 	"ding/model/common"
 	"ding/model/common/localTime"
 	"ding/model/params"
@@ -36,7 +37,7 @@ type DingDept struct {
 	DingToken
 	IsSendFirstPerson int        `json:"is_send_first_person"` // 0为不推送，1为推送
 	RobotToken        string     `json:"robot_token"`
-	IsRobotAttendance bool       `json:"is_robot_attendance"` //是否
+	IsRobotAttendance int        `json:"is_robot_attendance"` //是否
 	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 	IsLeetCode        int        `json:"is_leet_code"`
 	ResponsibleUsers  []DingUser `gorm:"-"`
@@ -55,7 +56,8 @@ func (UserDept) user_dept() string {
 }
 
 // 获取用户的考勤信息
-func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string) (attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelfTime, OnDutyTime []string, OffDutyTime []string, isInSchool bool) (result map[string][]DingAttendance, attendanceList []DingAttendance, NotRecordUserIdList []string, err error) {
+	result = make(map[string][]DingAttendance, 0)
 	attendanceList = make([]DingAttendance, 0)
 	a := DingAttendance{DingToken: DingToken{Token: d.Token}}
 	if userids != nil || len(userids) != 0 {
@@ -68,7 +70,6 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 			}
 			var list []DingAttendance
 			zap.L().Info(fmt.Sprintf("接下来开始获取考勤数据，当前时间为：%v %s", curTime.Duration, curTime.Time))
-			fmt.Println("curTime.Duration = ", curTime.Duration)
 			if len(OnDutyTime) == 3 {
 				if curTime.Duration == 1 {
 					zap.L().Info(fmt.Sprintf("获取上午考勤数据,userIds:%v,开始时间%s,结束时间：%s", split, curTime.Format[:10]+" 00:00:00", OnDutyTime[0]))
@@ -89,33 +90,6 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 					list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
 					if err != nil {
 						zap.L().Error(fmt.Sprintf("获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
-						continue
-					}
-				}
-
-				if len(list) == 0 {
-					zap.L().Error("第一次获取考勤数据长度为0，再获取一次")
-					if curTime.Duration == 1 {
-						list, err = a.GetAttendanceList(split, curTime.Format[:10]+" 00:00:00", OnDutyTime[0])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, curTime.Format[:10]+" 00:00:00", OnDutyTime[0]), zap.Error(err))
-							continue
-						}
-					} else if curTime.Duration == 2 {
-						list, err = a.GetAttendanceList(split, OffDutyTime[0], OnDutyTime[1])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[0], OnDutyTime[1]), zap.Error(err))
-							continue
-						}
-					} else if curTime.Duration == 3 {
-						list, err = a.GetAttendanceList(split, OffDutyTime[1], OnDutyTime[2])
-						if err != nil {
-							zap.L().Error(fmt.Sprintf("第二次获取考勤数据失败,失败部门:%s，获取考勤时间范围:%s-%s", d.Name, OffDutyTime[1], OnDutyTime[2]), zap.Error(err))
-							continue
-						}
-					}
-					if len(list) == 0 {
-						zap.L().Error("第二次获取考勤数据仍然为空")
 						continue
 					}
 				}
@@ -178,15 +152,16 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 			},
 			UserId: attendanceList[i].UserID,
 		}
-		user, err := u.GetUserDetailByUserId()
+		err := u.GetUserDetailByUserId()
+
 		if err != nil {
 			zap.L().Error(fmt.Sprintf("考勤数据中的成员id:%s 转化为详细信息失败", attendanceList[i].UserID), zap.Error(err))
 			continue
 		}
-		attendanceList[i].UserName = user.Name //完善考勤记录
+		attendanceList[i].UserName = u.Name //完善考勤记录
 		HasAttendanceDateUser[attendanceList[i].UserID] = attendanceList[i].UserCheckTime
 	}
-	zap.L().Info(fmt.Sprintf("打卡机数据获取完毕，完成数据如下：%v", attendanceList))
+	zap.L().Info(fmt.Sprintf("打卡机数据获取完毕，完整数据如下：%v", attendanceList))
 	NotRecordUserIdList = make([]string, 0)
 	for _, UserId := range userids {
 		//找到没有考勤记录的人
@@ -195,17 +170,33 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime localTime.MySelfT
 			NotRecordUserIdList = append(NotRecordUserIdList, UserId)
 		}
 	}
+	for _, attendance := range attendanceList {
+		flag := false
+		//查一下课表，有课且打卡的话，判定为有课
+		if isInSchool {
+			course, _ := classCourse.GetIsHasCourse(curTime.ClassNumber, curTime.StartWeek, 0, []string{attendance.UserID}, curTime.Week)
+			for _, Byclass := range course {
+				if Byclass.Userid == attendance.UserID {
+					result["HasCourse"] = append(result["HasCourse"], attendance)
+					flag = true
+					break
+				}
+			}
+		}
+		if flag == false {
+			if attendance.TimeResult == "Normal" {
+				result["Normal"] = append(result["Normal"], attendance)
+			}
+		}
+	}
 	return
 }
-func (d *DingDept) SendFrequencyLeave(startWeek int) error {
-	//从redis中取数据，封装，调用钉钉接口，发送即可
+func (d *DingDept) SendFrequencyLeave(startWeek int) (err error) {
+
 	key := redis.KeyDeptAveLeave + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
-	//global.GLOBAL_REDIS.ZRevRange().Result()
-	//从小到达进行排序
-	//results, err := global.GLOBAL_REDIS.ZRevRange(context.Background(), key, 0, -1).Result()
 	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
 	if err != nil {
-
+		return
 	}
 	msg := d.Name + "请假情况如下：\n"
 	for i := 0; i < len(results); i++ {
@@ -221,8 +212,11 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
-	return nil
+	err = (&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).SendMessage(p)
+	if err != nil {
+		return err
+	}
+	return
 }
 
 // GetLeaveStatus 获取部门请假状态
@@ -388,28 +382,12 @@ func (d *DingDept) SendSubSectorPrivateLeave(startWeek int) error {
 	return nil
 }
 
-func (d *DingDept) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) (err error) {
-	//我们取到所有请假的同学，然后进行登记
-	for i := 0; i < len(result["Leave"]); i++ {
-		//对部门中的每一位同学进行统计
-		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
-		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLeave+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Leave"][i].UserName).Err()
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-	//此处应该被复用一下
-	return
-}
-func (d *DingDept) SendFrequencyLate(startWeek int) error {
+func (d *DingDept) SendFrequencyLate(startWeek int) (err error) {
 	//从redis中取数据，封装，调用钉钉接口，发送即可
 	key := redis.KeyDeptAveLate + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
-	//global.GLOBAL_REDIS.ZRevRange().Result()
-	//从小到达进行排序
-	//results, err := global.GLOBAL_REDIS.ZRevRange(context.Background(), key, 0, -1).Result()
 	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
 	if err != nil {
-
+		return
 	}
 	msg := d.Name + "迟到次数如下：\n"
 	for i := 0; i < len(results); i++ {
@@ -417,7 +395,7 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 		time := int(results[i].Score)
 		msg += name + "迟到次数：" + strconv.Itoa(time) + "\n"
 	}
-	fmt.Println("发送迟到频率了")
+	//fmt.Println("发送迟到频率了")
 	p := &ParamCronTask{
 		MsgText: &common.MsgText{
 			Msgtype: "text",
@@ -425,21 +403,8 @@ func (d *DingDept) SendFrequencyLate(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "aba857cf3ba132581d1a99f3f5c9c5fe2754ffd57a3e7929b6781367b9325e40"}).CronSend(nil, p)
+	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
 	return nil
-}
-func (d *DingDept) CountFrequencyLate(startWeek int, result map[string][]DingAttendance) (err error) {
-	//我们取到所有请假的同学，然后进行登记
-	for i := 0; i < len(result["Late"]); i++ {
-		//对部门中的每一位同学进行统计
-		//NX可以不存在时创建，存在时更新，ZIncrBy的话，可以以固定数值加分，如果是Z
-		err = global.GLOBAL_REDIS.ZIncrBy(context.Background(), redis.KeyDeptAveLate+strconv.Itoa(startWeek)+":dept:"+d.Name+":detail:", 1, result["Late"][i].UserName).Err()
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-	//此处应该被复用一下
-	return
 }
 
 type JinAndBlogClassify struct {
@@ -449,6 +414,63 @@ type JinAndBlogClassify struct {
 }
 
 // 通过部门id获取部门用户详情 https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
+func (d *DingDept) GetUserIDListByDepartmentID() (useridList []string, err error) {
+	var client *http.Client
+	var request *http.Request
+	var resp *http.Response
+	var body []byte
+	URL := "https://oapi.dingtalk.com/topapi/user/listid?access_token=" + d.DingToken.Token
+	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}, Timeout: time.Duration(time.Second * 5)}
+	//此处是post请求的请求题，我们先初始化一个对象
+	b := struct {
+		DeptID int `json:"dept_id"`
+	}{
+		DeptID: d.DeptId,
+	}
+	//然后把结构体对象序列化一下
+	bodymarshal, err := json.Marshal(&b)
+	if err != nil {
+		return
+	}
+	//再处理一下
+	reqBody := strings.NewReader(string(bodymarshal))
+	//然后就可以放入具体的request中的
+	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
+	if err != nil {
+		return
+	}
+	resp, err = client.Do(request)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
+	if err != nil {
+		return
+	}
+	r := struct {
+		DingResponseCommon
+		Result struct {
+			UserIdList []string `json:"userid_list"`
+		} `json:"result"`
+	}{}
+	//把请求到的结构反序列化到专门接受返回值的对象上面
+	err = json.Unmarshal(body, &r)
+	if err != nil {
+		return
+	}
+	if r.Errcode != 0 {
+		return nil, errors.New(r.Errmsg)
+	}
+	useridList = r.Result.UserIdList
+	return
+}
+
+// 通过部门id获取部门用户详情（无法获取到额外信息） https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
 func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingUser, hasMore bool, err error) {
 	var client *http.Client
 	var request *http.Request
@@ -506,9 +528,38 @@ func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingU
 	if r.Errcode != 0 {
 		return nil, false, errors.New(r.Errmsg)
 	}
+	userList = r.Result.List
 
 	// 此处举行具体的逻辑判断，然后返回即可
 	return r.Result.List, r.Result.HasMore, nil
+}
+
+func (d *DingDept) GetUserListByIdList() (userList []DingUser, err error) {
+	userList = make([]DingUser, len(userList))
+	UserIdList, err := d.GetUserIDListByDepartmentID()
+	if err != nil {
+		return
+	}
+	for i := 0; i < len(UserIdList); i++ {
+		user := &DingUser{UserId: UserIdList[i], DingToken: DingToken{Token: d.Token}}
+		err = user.GetUserDetailByUserId()
+		if err != nil {
+			zap.L().Error("获取用户详情失败", zap.Error(err))
+		}
+		userList = append(userList, *user)
+	}
+	for i := 0; i < len(userList); i++ {
+		for j := 0; j < len(userList[i].ExtAttrs); j++ {
+			if userList[i].ExtAttrs[j].Code == "1263467522" {
+				userList[i].JianshuAddr = userList[i].ExtAttrs[j].Value.Text
+			} else if userList[i].ExtAttrs[j].Code == "1263534303" {
+				userList[i].BlogAddr = userList[i].ExtAttrs[j].Value.Text
+			} else if userList[i].ExtAttrs[j].Code == "1263581295" {
+				userList[i].LeetcodeAddr = userList[i].ExtAttrs[j].Value.Text
+			}
+		}
+	}
+	return
 }
 
 // 两个数组取差集
@@ -572,7 +623,7 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 	var oldDept []DingDept
 	err = global.GLOAB_DB.Find(&oldDept).Error
 	if err != nil {
-
+		return
 	}
 	var dfs func(string, int) (err error)
 	dfs = func(token string, id int) (err error) {
@@ -651,36 +702,37 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 	}).Create(&DepartmentList).Error
 	//找到不存在的部门进行软删除,同时删除其关系
 	Deleted := DiffSilceDept(oldDept, DepartmentList)
-	err = global.GLOAB_DB.Select(clause.Associations).Delete(&Deleted).Error
+	if Deleted != nil {
+		err = global.GLOAB_DB.Select(clause.Associations).Delete(&Deleted).Error
+	}
+
 	//根据部门id存储一下部门用户
-	for i := 34; i < len(DepartmentList); i++ {
-		UserList := make([]DingUser, 0)
-		//调用钉钉接口，获取部门中的成员，然后存储进来
-		hasMore := true
-		for hasMore {
-			tempUserList := make([]DingUser, 0)
-			d.DeptId = DepartmentList[i].DeptId
-			tempUserList, hasMore, err = d.GetUserListByDepartmentID(0, 100)
-			if err != nil {
-				zap.L().Error("获取部门用户详情失败", zap.Error(err))
-			}
-			UserList = append(UserList, tempUserList...)
-			fmt.Println(i)
-			fmt.Println(hasMore)
+	for i := 0; i < len(DepartmentList); i++ {
+		d.DeptId = DepartmentList[i].DeptId
+		newUserList, err := d.GetUserListByIdList()
+		if err != nil {
+			zap.L().Error("获取部门用户详情失败", zap.Error(err))
 		}
+
 		//查到用户后，同步到数据库里面，把不在组织架构里面直接删除掉
 		//先查一下老的
-		oldUserList := make([]DingUser, 0)
-		global.GLOAB_DB.Model(&DingDept{DeptId: DepartmentList[i].DeptId}).Association("UserList").Find(&oldUserList)
+		var oldUserList []DingUser
+		err = global.GLOAB_DB.Model(&DingDept{DeptId: DepartmentList[i].DeptId}).Association("UserList").Find(&oldUserList)
+		if err != nil {
+			return nil, err
+		}
 		//取差集找到需要删除的名单
-		userDeleted := DiffSilceUser(oldUserList, UserList)
-		err = global.GLOAB_DB.Select(clause.Associations).Delete(&userDeleted).Error
+		userDeleted := DiffSilceUser(oldUserList, newUserList)
+		if userDeleted != nil {
+			err = global.GLOAB_DB.Select(clause.Associations).Delete(&userDeleted).Error
+		}
+
 		err = global.GLOAB_DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}},
-			DoUpdates: clause.AssignmentColumns([]string{"name", "title"}),
-		}).Create(&UserList).Error
+			Columns:   []clause.Column{{Name: "userid"}},
+			DoUpdates: clause.AssignmentColumns([]string{"jianshu_addr", "leetcode_addr", "blog_addr"}),
+		}).Create(&newUserList).Error
 		//更新用户部门关系，更新的原理是：先把之前该部门的关系全部删除，然后重新添加
-		err = global.GLOAB_DB.Model(&DepartmentList[i]).Association("UserList").Replace(UserList)
+		err = global.GLOAB_DB.Model(&DepartmentList[i]).Association("UserList").Replace(newUserList)
 	}
 	return
 }
@@ -746,14 +798,14 @@ func (d *DingDept) GetDepartmentListByID2() (subDepartments []DingDept, err erro
 	err = global.GLOAB_DB.Where("parent_id = ?", d.DeptId).Find(&subDepartments).Error
 	return
 }
-func (d *DingDept) GetDeptByIDFromMysql() (dept DingDept, err error) {
-	err = global.GLOAB_DB.First(&dept, d.DeptId).Error
+func (d *DingDept) GetDeptByIDFromMysql() (err error) {
+	err = global.GLOAB_DB.First(d, d.DeptId).Error
 	return
 }
 func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (deptList []DingDept, total int64, err error) {
 	limit := p.PageSize
 	offset := p.PageSize * (p.Page - 1)
-	err = global.GLOAB_DB.Limit(limit).Offset(offset).Find(&deptList).Error
+	err = global.GLOAB_DB.Limit(limit).Offset(offset).Preload("UserList", "user_dept.is_responsible = 1").Find(&deptList).Error
 	if err != nil {
 		zap.L().Error("查询部门列表失败", zap.Error(err))
 	}
@@ -852,9 +904,15 @@ func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
 }
 
 // 更新部门信息
-func (d *DingDept) UpdateDept(p *ding.ParamUpdateDeptToCron) (err error) {
-	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog}
-	err = global.GLOAB_DB.Preload("ResponsibleUsers").Updates(dept).Error
+func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
+	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog, IsLeetCode: p.IsLeetCode}
+	// 使用select更新选中的字段
+	err = global.GLOAB_DB.Select("IsSendFirstPerson", "IsRobotAttendance", "RobotToken", "IsJianShuOrBlog", "IsLeetCode", "ResponsibleUserIds").Updates(dept).Error
+
+	if len(p.ResponsibleUserIds) > 0 {
+		err = global.GLOAB_DB.Table("user_dept").Where("ding_dept_dept_id = ?", p.DeptID).Update("is_responsible", false).Error
+		err = global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.ResponsibleUserIds, p.DeptID).Update("is_responsible", true).Error
+	}
 	return err
 }
 func (d *DingAttendGroup) UpdateSchool(s *ding.ParameIsInSchool) (err error) {

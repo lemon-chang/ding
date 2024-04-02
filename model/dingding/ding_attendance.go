@@ -4,8 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"go.uber.org/zap"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -21,9 +19,9 @@ type DingAttendance struct {
 	DingToken
 }
 
-//获取考勤数据//获取考勤结果（可以根据userid批量查询） https://open.dingtalk.com/document/orgapp/attendance-clock-in-record-is-open
+// 获取考勤数据//获取考勤结果（可以根据userid批量查询） https://open.dingtalk.com/document/orgapp/attendance-clock-in-record-is-open
 func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom string, CheckDateTo string) (Recordresult []DingAttendance, err error) {
-	zap.L().Info("进入到了获取数据的接口")
+
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -49,7 +47,6 @@ func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom strin
 	if err != nil {
 		return
 	}
-	zap.L().Info(fmt.Sprintf("把参数序列化到结构体对象上成功%v", bodymarshal))
 	//再处理一下
 	reqBody := strings.NewReader(string(bodymarshal))
 	//然后就可以放入具体的request中的
@@ -61,7 +58,7 @@ func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom strin
 	if err != nil {
 		return
 	}
-	zap.L().Info(fmt.Sprintf("发送请求成功，原始resp为:%v", resp))
+
 	defer resp.Body.Close()
 	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
 	if err != nil {
@@ -77,7 +74,7 @@ func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom strin
 	if err != nil {
 		return
 	}
-	zap.L().Info(fmt.Sprintf("把请求结果序列化到结构体对象中成功%v", r))
+
 	if r.Errcode != 0 {
 		return nil, errors.New(r.Errmsg)
 	}

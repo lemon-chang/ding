@@ -81,7 +81,7 @@ func SendLeetCode() (err error) {
 				wg.Add(1)
 				CurrentDateDeptKey := fmt.Sprintf("%s%s:%s(%d):", redis.LeetCode, weekDay, dept.Name, dept.DeptId)
 				// 爬取本周数据，并存储
-				go getLeetCodeNum(user.LeetCodeAddr, CurrentDateDeptKey, user.Name, resultChan, &wg)
+				go getLeetCodeNum(user.LeetcodeAddr, CurrentDateDeptKey, user.Name, resultChan, &wg)
 				// 等待所有goroutine完成
 
 			}

@@ -14,17 +14,18 @@ const (
 	ActiveTask = "activeTask:" //活跃任务部分
 	Attendance = "attendance:" //考勤状态部分
 	User       = "user:"
-	UserSign   = User + "sign:"
+	UserSign   = "sign:"
 	LeetCode   = "leetCode:"
 )
 
 func Init(redisCfg *viper.RedisConfig) (err error) {
-	fmt.Printf("%s,%s,%i", redisCfg.Addr, redisCfg.Password, redisCfg.DB)
+
 	client := redis.NewClient(&redis.Options{
 		Addr:     redisCfg.Addr,
 		Password: redisCfg.Password,
 		DB:       redisCfg.DB,
 	})
+
 	pong, err := client.Ping(context.Background()).Result()
 	if err != nil {
 		zap.L().Error("redis connect ping failed , err :", zap.Error(err))

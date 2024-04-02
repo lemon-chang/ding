@@ -16,7 +16,6 @@ func Reboot() (err error) {
 		Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").
 		Where("deleted_at is null").
 		Find(&tasks).Error //拿到所有的处在活跃状态的定时任务
-	//a := "会议通知：\n时间：明天周四下午14：30\n地点：0#910\n主题：三期校招周会\n参会人员：三期校招全部成员、李老师、大学姐\n\n备注：该消息由机器人按时推送，如有变动，负责人请及时调整[送花花]"
 	if err != nil {
 		zap.L().Error("项目重启恢复定时查询数据库失败", zap.Error(err))
 		return
@@ -32,7 +31,6 @@ func Reboot() (err error) {
 		}
 		d := dingding2.DingRobot{
 			RobotId: task.RobotId,
-			Secret:  task.Secret,
 		}
 		tasker = func() {
 			err = d.SendMessage(&p)

@@ -1,8 +1,8 @@
 package utils
 
 const (
-	//ConfigFile = "./conf/config.yaml"
-	ConfigFile                = "./conf/temiconfig.yaml"
+	ConfigFile = "./conf/config.yaml"
+	//ConfigFile                = "./conf/config_test.yaml"
 	Version                   = "v2"
 	CropId                    = "CropId"
 	AccessToken               = "AccessToken"
@@ -19,7 +19,7 @@ const (
 	TypingInviationSucc       = "打字邀请码获取成功~"
 	JkRobotId                 = "1317ac8ee5004f475046029a3f1bb94873a7dd46897e6845f318a71d0402a1ea"
 	TestRobotToken            = "7e07aeb5a804631802f0347cbb98b579f5a0fbf9883da891b9188555efd42d97"
-	Delay                     = '0'  //考勤向后延长时间
+	Delay                     = '3'  //考勤向后延长时间
 	Advance                   = "10" //提前多久提醒打卡,提前时间加上延后时间
 	SanQiXiaoZhao             = "1317ac8ee5004f475046029a3f1bb94873a7dd46897e6845f318a71d0402a1ea"
 	LeZhiSanQi                = "a7501dc76c0bf9b4afcb756a77053483726f4ddf5ef1d7ef1ae8ac8156931714"
@@ -32,4 +32,7 @@ const (
 	Morning                   = "早上"
 	Afternoon                 = "下午"
 	Evening                   = "晚上"
+
+	AlertSpec  = "00 56,50,59 8,15,21 * * ?"
+	AttendSpec = "06 56,53,42 8,15,20 * * ?"
 )

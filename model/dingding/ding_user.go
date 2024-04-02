@@ -19,7 +19,6 @@ import (
 	"math"
 	"net"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -44,8 +43,8 @@ type DingUser struct {
 	UserId       string                ` gorm:"primaryKey;foreignKey:UserId" json:"userid"`
 	DingRobots   []DingRobot           `json:"omitempty"`
 	Deleted      gorm.DeletedAt        `json:"omitempty"`
-	Name         string                `json:"name,omitempty"`
-	Mobile       string                `json:"mobile,omitempty"`
+	Name         string                `json:"name"`
+	Mobile       string                `json:"mobile"`
 	Password     string                `json:"password,omitempty" `
 	DeptIdList   []int                 `json:"dept_id_list,omitempty" gorm:"-"` //所属部门
 	DeptList     []DingDept            `json:"dept_list,omitempty" gorm:"many2many:user_dept"`
@@ -53,12 +52,19 @@ type DingUser struct {
 	Authority    system.SysAuthority   `json:"authority,omitempty" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
 	Authorities  []system.SysAuthority `json:"authorities,omitempty" gorm:"many2many:sys_user_authority;"`
 	Title        string                `json:"title,omitempty"` //职位
-	JianShuAddr  string                `json:"jianshu_addr,omitempty"`
-	BlogAddr     string                `json:"blog_addr,omitempty"`
-	LeetCodeAddr string                `json:"leet_code_addr,omitempty"`
-	AuthToken    string                `json:"auth_token,omitempty" gorm:"-"`
+	JianshuAddr  string                `json:"jianshu_addr"`
+	BlogAddr     string                `json:"blog_addr"`
+	LeetcodeAddr string                `json:"leetcode_addr"`
+	AuthToken    string                `json:"auth_token" gorm:"-"`
 	DingToken    `json:"ding_token,omitempty" gorm:"-"`
 	Admin        bool `json:"admin,omitempty" gorm:"-"`
+	ExtAttrs     []struct {
+		Code  string `json:"code"`
+		Name  string `json:"name"`
+		Value struct {
+			Text string `json:"text"`
+		} `json:"value"`
+	} `json:"ext_attrs" gorm:"-"`
 }
 
 // 用户签到
@@ -90,7 +96,7 @@ func (d *DingUser) GetUserInfo() (user DingUser, err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).First(&user).Error
 	return
 }
-func (d *DingUser) GetUserInfoDetailByToken() (err error) {
+func (d *DingUser) GetUserInfoDetailByUserId() (err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Preload("Authority").Preload("Authorities").Preload("DeptList").First(&d).Error
 	return
 }
@@ -109,7 +115,7 @@ func (m *DingUser) UserAuthorityDefaultRouter(user *DingUser) {
 }
 
 // https://open.dingtalk.com/document/isvapp/query-user-details
-func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
+func (d *DingUser) GetUserDetailByUserId() (err error) {
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -124,7 +130,6 @@ func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 	b := struct {
 		UserId string `json:"userid"`
 	}{UserId: d.UserId}
-
 	//然后把结构体对象序列化一下
 	bodymarshal, err := json.Marshal(&b)
 	if err != nil {
@@ -146,6 +151,7 @@ func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 	if err != nil {
 		return
 	}
+
 	r := struct {
 		DingResponseCommon
 		User DingUser `json:"result"` //必须大写，不然的话，会被忽略，从而反序列化不上
@@ -156,12 +162,11 @@ func (d *DingUser) GetUserDetailByUserId() (user DingUser, err error) {
 		return
 	}
 	if r.Errcode != 0 {
-		return DingUser{}, errors.New(r.Errmsg)
+		return errors.New(r.Errmsg)
 	}
 	// 此处举行具体的逻辑判断，然后返回即可
-
-	return r.User, nil
-
+	*d = r.User
+	return
 }
 
 // ImportUserToMysql 把钉钉用户信息导入到数据库中
@@ -225,7 +230,7 @@ func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, authorityI
 		err = global.GLOAB_DB.Preload("DeptList").Preload("Authorities").Find(&us, UserIds).Error
 		return
 	}
-	if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfo" {
+	if strings.Split(c.Request.URL.Path, "/")[len(strings.Split(c.Request.URL.Path, "/"))-1] == "FindDingUsersInfoBase" {
 		err = db.Model(&DingUser{}).Count(&total).Error
 		// Limit 和 Offset方法一定要放在最后一行查询的代码中执行，Count方法要单独起一行来绑定total
 		err = db.Limit(limit).Offset(offset).Select("user_id", "name", "mobile").Find(&us).Error
@@ -234,275 +239,6 @@ func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, authorityI
 		err = db.Limit(limit).Offset(offset).Omit("password").Preload(clause.Associations).Find(&us).Error
 	}
 	return
-}
-
-// SetUserInfo 更新用户信息
-func (d *DingUser) SetUserInfo(user DingUser) error {
-	//调用钉钉接口进行修改
-	return nil
-}
-
-func (d *DingUser) GoCrawlerDingUserJinAndBlog() (err error) {
-	//spec = "00 03,33,45 08,14,21 * * ?"
-	//spec := "50 30 21 * * 1"
-	//task := func() {
-	err = global.GLOAB_DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Model(&DingUser{}).UpdateColumn("is_excellent_jian_blog", false).Error
-	if err != nil {
-		zap.L().Error("爬取文章之前清空之前的优秀简书博客人员", zap.Error(err))
-	}
-	wg.Add(2)
-	//go UpdateDingUserHref()
-	//UpdateDingUserJianShu()
-	//go UpdateDingUserBlog()
-	UpdateDingUserBlog()
-	wg.Wait()
-	zap.L().Info("爬取完毕，已成功存入数据库")
-	//}
-	//taskId, err := global.GLOAB_CORN.AddFunc(spec, task)
-
-	if err != nil {
-		zap.L().Error("启动爬虫爬取文文章地址失败", zap.Error(err))
-	}
-	//zap.L().Info(fmt.Sprintf("启动爬虫爬取文文章地址定时任务成功（非爬虫成功），定时任务id:%v", taskId))
-	return err
-}
-func UpdateDingUserJianShu() {
-	//获取所有人的博客和简书主页链接
-	urls, err := (&DingUser{}).FindDingUserAddr()
-	if err != nil {
-		zap.L().Error("获取简书链接错误", zap.Error(err))
-		return
-	}
-
-	for _, v := range urls {
-		falg := true
-		if v.JianShuAddr == "" {
-			//为了避免偶然因素
-			err := v.UpdateDingUserHref(hrefs, v.UserId)
-			if err != nil {
-				fmt.Println("空简书链接未清空")
-			}
-			continue
-		}
-		client := http.Client{}
-		v.JianShuAddr = strings.ReplaceAll(v.JianShuAddr, "\n", "")
-		//strings.Replace(v.JianShuAddr, "\n", "", -1)
-		req, err := http.NewRequest("GET", v.JianShuAddr, nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-		req.Header.Set("Connection", "keep-alive")
-		req.Header.Set("Content-Type", "text/html; charset=utf-8")
-		req.Header.Set("Keep-Alive", "timeout=30")
-		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Println(err)
-		}
-		//解析网页
-		docDetail, err := goquery.NewDocumentFromReader(resp.Body)
-		if err != nil {
-			fmt.Println(err)
-		}
-		docDetail.Find("#list-container > ul > li ").Each(func(i int, selection *goquery.Selection) {
-			if falg == false {
-				return
-			}
-			//获取文章链接
-			attr, exists := selection.Find(".content > a").Attr("href")
-			//获取时间，格式为utc时间
-			text, exits := selection.Find(".content > .meta > span.time").Attr("data-shared-at")
-			if exits == true {
-				//拿到当前时刻的时间戳和最近一篇简书的时间戳
-				timeUnix := time.Now().Unix()
-				timeUnix = 1678022322
-				t1 := UTCTransLocal(text)
-				unix := switchTime(t1)
-				//先把之前的文章进行一下清空
-				err = v.UpdateDingUserHref(hrefs, v.UserId)
-				if err != nil {
-					zap.L().Error("清空记录失败", zap.Error(err))
-				}
-				for end < timeUnix {
-					start += 604800
-					end += 604800
-				}
-				if unix >= start && unix < end {
-					zap.L().Info(fmt.Sprintf("%v简书文章爬取成功，文章链接：%v,文章发布时间：%v", v.Name, attr, text))
-					if exists == true {
-						str := "https://www.jianshu.com" + attr
-						hrefs = append(hrefs, str)
-					}
-				} else {
-					zap.L().Info(fmt.Sprintf("%v简书文章爬取成功，旦不满足时间要求，结束爬取，文章链接：%v,文章发布时间：%v", v.Name, attr, text))
-					falg = false
-					return
-				}
-
-			}
-
-		})
-
-		err = v.UpdateDingUserHref(hrefs, v.UserId)
-		if err != nil {
-			zap.L().Error("更新简书数组到数据库出错", zap.Error(err))
-			return
-		}
-		hrefs = []string{}
-	}
-	wg.Done()
-}
-func UpdateDingUserBlog() {
-	urls, err := jin.FindDingUserAddr()
-	if err != nil {
-		zap.L().Error("获取简书链接错误", zap.Error(err))
-		return
-	}
-	for _, v := range urls {
-		if v.Name != "闫佳鹏" {
-			continue
-		}
-		if v.BlogAddr == "" {
-			err = v.UpdateDingUserBlog(blogs, v.UserId)
-			if err != nil {
-				fmt.Println("空博客链接未清空")
-			}
-			zap.L().Info(fmt.Sprintf("%v博客链接是空，直接跳过", v.Name))
-			continue
-		}
-		target := v.BlogAddr + "/article/list"
-		htmls, err := GetHtml(target)
-		if err != nil {
-			fmt.Println(err)
-			panic("Get target ERROR!!!")
-		}
-
-		var html string
-		html = strings.Replace(string(htmls), "\n", "", -1)
-		html = strings.Replace(string(htmls), " ", "", -1)
-
-		//fmt.Println(html)
-		reBlog := regexp.MustCompile(`<div class="article-item-box csdn-tracking-statistics(.*?)</div>`)
-		reLink := regexp.MustCompile(`href="(.*?)"`)
-		reTime := regexp.MustCompile(`<span class="date">(.*?)</span>`)
-
-		articles := reBlog.FindAllString(html, -1)
-		if articles == nil || len(articles) == 0 {
-			zap.L().Info(fmt.Sprintf("%s本周未写博客", v.Name))
-			continue
-		}
-		for _, value := range articles {
-			BlogLink := reLink.FindAllStringSubmatch(value, -1)
-
-			BlogTime := reTime.FindAllStringSubmatch(value, -1)
-
-			timeUnix := time.Now().Unix()
-			timeUnix = 1678024664
-			t1 := UTCTransLocal(BlogTime[0][1])
-			unix := switchTime(t1)
-
-			err = v.UpdateDingUserBlog(blogs, v.UserId)
-			if err != nil {
-				zap.L().Error("清空博客数据失败", zap.Error(err))
-				return
-			}
-			for end < timeUnix {
-				start += 604800
-				end += 604800
-			}
-			if unix >= start && unix < end {
-				hrefs = append(hrefs, BlogLink[0][1])
-				zap.L().Info(fmt.Sprintf("%v博客文章爬取成功，文章链接：%v,文章发布时间：%v", v.Name, BlogLink, BlogTime))
-			} else {
-				zap.L().Info(fmt.Sprintf("%v博客文章爬取成功，旦不满足时间要求，结束爬取，文章链接：%v,文章发布时间：%v", v.Name, BlogLink, BlogTime))
-				break
-			}
-		}
-		err = v.UpdateDingUserBlog(blogs, v.UserId)
-		if err != nil {
-			zap.L().Error("更新博客数组到数据库出错", zap.Error(err))
-			return
-		}
-		blogs = []string{}
-	}
-	wg.Done()
-}
-
-func switchTime(ans string) (unix int64) {
-	loc, _ := time.LoadLocation("Local")
-	theTime, err := time.ParseInLocation("2006-01-02 15:04:05", ans, loc)
-	if err == nil {
-		unix = theTime.Unix()
-		return unix
-	}
-	return
-}
-
-func UTCTransLocal(utcTime string) string {
-	loc, _ := time.LoadLocation("Local")
-	t, _ := time.ParseInLocation("2006-01-02T15:04:05+08:00", utcTime, loc)
-	return t.Local().Format("2006-01-02 15:04:05")
-}
-
-func GetHtml(URL string) (html []byte, err error) {
-
-	tr := &http.Transport{
-		MaxIdleConns:       10,
-		IdleConnTimeout:    10 * time.Second,
-		DisableCompression: true,
-		// Proxy:              http.ProxyURL(proxyUrl),
-	}
-
-	req, err := http.NewRequest("GET", URL, nil)
-	req.Header.Add("UserAgent", " Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.41")
-
-	client := &http.Client{
-		Transport: tr, /*使用transport参数*/
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	html, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	return html, err
-}
-
-func (d *DingUser) FindDingUserAddr() (addrs []DingUser, err error) {
-	var address []DingUser
-	err = global.GLOAB_DB.Model(&DingUser{}).Select("jian_shu_addr", "blog_addr", "user_id", "name").Find(&address).Error
-	if err != nil {
-		zap.L().Error("获取钉钉用户的简书或博客链接失败", zap.Error(err))
-		return
-	}
-	return address, nil
-}
-
-func (d *DingUser) UpdateDingUserHref(jins Strs, id string) (err error) {
-	err = global.GLOAB_DB.Model(&DingUser{}).Where("user_id = ?", id).UpdateColumns(map[string]interface{}{
-		"jian_shu_article_url": jins,
-	}).Error
-	if err != nil {
-		zap.L().Error("在mysql中更新这周简书链接失败", zap.Error(err))
-		return
-	}
-	return nil
-}
-
-func (d *DingUser) UpdateDingUserBlog(blogs Strs, id string) (err error) {
-	err = global.GLOAB_DB.Model(&DingUser{}).Where("user_id = ?", id).UpdateColumns(map[string]interface{}{
-		"blog_article_url": blogs,
-	}).Error
-	if err != nil {
-		zap.L().Error("在mysql中更新这周博客链接失败", zap.Error(err))
-		return
-	}
-	return nil
 }
 
 // 获取二维码buf，chatId, title
@@ -785,8 +521,32 @@ func checkChromePort() bool {
 	defer conn.Close()
 	return true
 }
-func (u *DingUser) GetRobotList() (RobotList []DingRobot, err error) {
-	//err = global.GLOAB_DB.Where("ding_user_id = ?", u.UserId).Find(&RobotList).Error
-	err = global.GLOAB_DB.Model(u).Association("DingRobots").Find(&RobotList)
+func (u *DingUser) GetRobotList(p *ParamGetRobotList) (RobotList []DingRobot, count int64, err error) {
+
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+	db := global.GLOAB_DB
+	err = db.Model(&DingRobot{}).Where("ding_user_id = ?", u.UserId).Count(&count).Error
+	if err != nil {
+		return
+	}
+	if p.Name != "" {
+		db = db.Where("name = ?", p.Name)
+	}
+	err = db.Limit(limit).Offset(offset).Model(u).Association("DingRobots").Find(&RobotList)
+	return
+}
+func (u *DingUser) GetTaskList(p *ParamGetTaskList) (Tasks []Task, count int64, err error) {
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+	db := global.GLOAB_DB
+	if p.Name != "" {
+		db = db.Where("task_name like ?", "%"+p.Name+"%")
+	}
+	if p.IsActive == 1 {
+		err = db.Limit(limit).Offset(offset).Unscoped().Where("user_id = ?", u.UserId).Find(&Tasks).Count(&count).Error
+	} else {
+		err = db.Limit(limit).Offset(offset).Unscoped().Where("user_id = ?", u.UserId).Find(&Tasks).Count(&count).Error
+	}
 	return
 }

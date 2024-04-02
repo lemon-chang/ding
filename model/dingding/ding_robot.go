@@ -36,26 +36,30 @@ var (
 )
 
 type DingRobot struct {
-	RobotId            string         `gorm:"primaryKey;foreignKey:RobotId" json:"robot_id"` //机器人的token
-	Deleted            gorm.DeletedAt `json:"deleted"`                                       //软删除字段
-	Type               string         `json:"type"`                                          //机器人类型，1为企业内部机器人，2为自定义webhook机器人
-	TypeDetail         string         `json:"type_detail"`                                   //具体机器人类型
-	ChatBotUserId      string         `json:"chat_bot_user_id"`                              //加密的机器人id，该字段无用
-	Secret             string         `json:"secret"`                                        //如果是自定义成机器人， 则存在此字段
-	DingUserID         string         `json:"ding_user_id"`                                  // 机器人所属用户id
-	UserName           string         `json:"user_name"`                                     //机器人所属用户名
-	DingUsers          []DingUser     `json:"ding_users" gorm:"many2many:user_robot"`        //机器人@多个人，一个人可以被多个机器人@
-	ChatId             string         `json:"chat_id"`                                       //机器人所在的群聊chatId
-	OpenConversationID string         `json:"open_conversation_id"`                          //机器人所在的群聊openConversationID
-	Tasks              []Task         `gorm:"foreignKey:RobotId;references:RobotId"`         //机器人拥有多个任务
-	Name               string         `json:"name"`                                          //机器人的名称
-	DingToken          `json:"ding_token" gorm:"-"`
-	IsShared           int `json:"is_shared"`
+	RobotId    string         `gorm:"primaryKey;foreignKey:RobotId" json:"robot_id"` //机器人的token
+	Deleted    gorm.DeletedAt `json:"deleted"`                                       //软删除字段
+	DingUserID string         `json:"ding_user_id"`                                  // 机器人所属用户id
+	UserName   string         `json:"user_name"`                                     //机器人所属用户名
+	Tasks      []Task         `gorm:"foreignKey:RobotId;references:RobotId"`         //机器人拥有多个任务
+	Name       string         `json:"name"`                                          //机器人的名称
+	DingToken  `json:"ding_token" gorm:"-"`
+	IsShared   int `json:"is_shared"`
 }
 
-func (r *DingRobot) GetSharedRobot() (Robots []DingRobot, err error) {
-	err = global.GLOAB_DB.Where("is_shared = ?", 1).Find(&Robots).Error
+func (r *DingRobot) GetSharedRobot(p *ParamGetRobotList) (Robots []DingRobot, count int64, err error) {
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+	db := global.GLOAB_DB
+	err = db.Model(&DingRobot{}).Where("is_shared = ?", 1).Count(&count).Error
+	if err != nil {
+		return
+	}
+	if p.Name != "" {
+		db = db.Where("name = ?", p.Name)
+	}
+	err = global.GLOAB_DB.Limit(limit).Offset(offset).Where("is_shared = ?", 1).Find(&Robots).Error
 	return
+
 }
 func (r *DingRobot) PingRobot() (err error) {
 	robot, err := r.GetRobotByRobotId()
@@ -96,7 +100,8 @@ func (r *DingRobot) RemoveRobots(Robots []DingRobot) (err error) {
 }
 func (r *DingRobot) CreateOrUpdateRobot() (err error) {
 	err = global.GLOAB_DB.Clauses(clause.OnConflict{
-		UpdateAll: true,
+		Columns:   []clause.Column{{Name: "robot_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"name", "is_shared"}),
 	}).Create(r).Error
 	if err != nil {
 		return
@@ -118,73 +123,6 @@ type MySendParam struct {
 	MsgKey    string   `json:"msgKey"`
 	RobotCode string   `json:"robotCode"`
 	UserIds   []string `json:"userIds"`
-}
-
-func (r *DingRobot) GxpSingleChat(p *ParamChat) (err error) {
-	var client *http.Client
-	var request *http.Request
-	var resp *http.Response
-	var body []byte
-	URL := "https://api.dingtalk.com/v1.0/robot/oToMessages/batchSend"
-	client = &http.Client{Transport: &http.Transport{ //对客户端进行一些配置
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}, Timeout: time.Duration(time.Second * 5)}
-	//此处是post请求的请求题，我们先初始化一个对象
-	var b MySendParam
-	b.RobotCode = p.RobotCode
-	b.MsgKey = p.MsgKey
-	b.RobotCode = p.RobotCode
-	b.UserIds = p.UserIds
-	b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
-
-	//然后把结构体对象序列化一下
-	bodymarshal, err := json.Marshal(&b)
-	if err != nil {
-		return nil
-	}
-	//再处理一下
-	reqBody := strings.NewReader(string(bodymarshal))
-	//然后就可以放入具体的request中的
-	request, err = http.NewRequest(http.MethodPost, URL, reqBody)
-	if err != nil {
-		return nil
-	}
-	token, err := r.DingToken.GxpGetAccessToken()
-	if err != nil {
-		return err
-	}
-	request.Header.Set("x-acs-dingtalk-access-token", token)
-	request.Header.Set("Content-Type", "application/json")
-	resp, err = client.Do(request)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-	body, err = ioutil.ReadAll(resp.Body) //把请求到的body转化成byte[]
-	if err != nil {
-		return nil
-	}
-	h := struct {
-		Code                      string   `json:"code"`
-		Message                   string   `json:"message"`
-		ProcessQueryKey           string   `json:"processQueryKey"`
-		InvalidStaffIdList        []string `json:"invalidStaffIdList"`
-		FlowControlledStaffIdList []string `json:"flowControlledStaffIdList"`
-	}{}
-	//把请求到的结构反序列化到专门接受返回值的对象上面
-	err = json.Unmarshal(body, &h)
-	if err != nil {
-		return nil
-	}
-	if h.Code != "" {
-		return errors.New(h.Message)
-	}
-	// 此处举行具体的逻辑判断，然后返回即可
-
-	return nil
-
 }
 
 // 钉钉机器人单聊
@@ -410,13 +348,13 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			nextTime := global.GLOAB_CORN.Entry(TaskID).Next
 			//把定时任务添加到数据库中
 			task = Task{
-				TaskID:            tid,
-				TaskName:          p.TaskName,
-				UserId:            CurrentUser.UserId,
-				UserName:          CurrentUser.Name,
-				RobotId:           r.RobotId,
-				RobotName:         r.Name,
-				Secret:            r.Secret,
+				TaskID:    tid,
+				TaskName:  p.TaskName,
+				UserId:    CurrentUser.UserId,
+				UserName:  CurrentUser.Name,
+				RobotId:   r.RobotId,
+				RobotName: r.Name,
+
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
 				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
@@ -426,7 +364,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			err = (&task).InsertTask()
 			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
+				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因: %v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
 				return err, Task{}
 			}
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
@@ -442,13 +380,13 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			//定时任务
 			task = Task{
-				TaskID:            tid,
-				TaskName:          p.TaskName,
-				UserId:            CurrentUser.UserId,
-				UserName:          CurrentUser.Name,
-				RobotId:           r.RobotId,
-				RobotName:         r.Name,
-				Secret:            r.Secret,
+				TaskID:    tid,
+				TaskName:  p.TaskName,
+				UserId:    CurrentUser.UserId,
+				UserName:  CurrentUser.Name,
+				RobotId:   r.RobotId,
+				RobotName: r.Name,
+
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
 				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
@@ -479,13 +417,13 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			//把定时任务添加到数据库中
 			task = Task{
-				TaskID:            tid,
-				TaskName:          p.TaskName,
-				UserId:            CurrentUser.UserId,
-				UserName:          CurrentUser.Name,
-				RobotId:           r.RobotId,
-				RobotName:         r.Name,
-				Secret:            r.Secret,
+				TaskID:    tid,
+				TaskName:  p.TaskName,
+				UserId:    CurrentUser.UserId,
+				UserName:  CurrentUser.Name,
+				RobotId:   r.RobotId,
+				RobotName: r.Name,
+
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
 				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
@@ -497,7 +435,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			err = (&task).InsertTask()
 			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
+				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因:%v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
 				return err, Task{}
 			}
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
@@ -517,13 +455,13 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			//定时任务
 			task = Task{
-				TaskID:            tid,
-				TaskName:          p.TaskName,
-				UserId:            CurrentUser.UserId,
-				UserName:          CurrentUser.Name,
-				RobotId:           r.RobotId,
-				RobotName:         r.Name,
-				Secret:            r.Secret,
+				TaskID:    tid,
+				TaskName:  p.TaskName,
+				UserId:    CurrentUser.UserId,
+				UserName:  CurrentUser.Name,
+				RobotId:   r.RobotId,
+				RobotName: r.Name,
+
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
 				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
@@ -552,13 +490,13 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			//把定时任务添加到数据库中
 			task = Task{
-				TaskID:            tid,
-				TaskName:          p.TaskName,
-				UserId:            CurrentUser.UserId,
-				UserName:          CurrentUser.Name,
-				RobotId:           r.RobotId,
-				RobotName:         r.Name,
-				Secret:            r.Secret,
+				TaskID:    tid,
+				TaskName:  p.TaskName,
+				UserId:    CurrentUser.UserId,
+				UserName:  CurrentUser.Name,
+				RobotId:   r.RobotId,
+				RobotName: r.Name,
+
 				DetailTimeForUser: detailTimeForUser, //给用户看的
 				Spec:              spec,              //cron后端定时规则
 				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
@@ -569,7 +507,7 @@ func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task 
 			}
 			err = (&task).InsertTask()
 			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
+				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因:%v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
 				return err, Task{}
 			}
 			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
@@ -676,11 +614,7 @@ func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 
 	var resp *http.Response
 	var err error
-	if t.Type == "1" || t.Secret == "" {
-		resp, err = http.Post(t.getURLV2(), "application/json", bytes.NewBuffer(b))
-	} else {
-		resp, err = http.Post(t.getURL(), "application/json", bytes.NewBuffer(b))
-	}
+	resp, err = http.Post(t.getURLV2(), "application/json", bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -705,16 +639,6 @@ func (t *DingRobot) hmacSha256(stringToSign string, secret string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-func (t *DingRobot) getURL() string {
-	url := "https://oapi.dingtalk.com/robot/send?access_token=" + t.RobotId //拼接token路径
-	timestamp := time.Now().UnixNano() / 1e6                                //以毫秒为单位
-	formatTimeStr := time.Unix(time.Now().Unix(), 0).Format("2006-01-02 15:04:05")
-	zap.L().Info(fmt.Sprintf("当时时间戳对应的时间是：%s", formatTimeStr))
-	stringToSign := fmt.Sprintf("%d\n%s", timestamp, t.Secret)
-	sign := t.hmacSha256(stringToSign, t.Secret)
-	url = fmt.Sprintf("%s&timestamp=%d&sign=%s", url, timestamp, sign) //把timestamp和sign也拼接在一起
-	return url
-}
 func (t *DingRobot) getURLV2() string {
 	url := "https://oapi.dingtalk.com/robot/send?access_token=" + t.RobotId //拼接token路径
 	return url
@@ -1067,10 +991,10 @@ func (r *DingRobot) GetGroupUserIds() (userIds []string, _err error) {
 	batchQueryGroupMemberHeaders := &dingtalkim_1_0.BatchQueryGroupMemberHeaders{}
 	batchQueryGroupMemberHeaders.XAcsDingtalkAccessToken = tea.String(r.DingToken.Token)
 	batchQueryGroupMemberRequest := &dingtalkim_1_0.BatchQueryGroupMemberRequest{
-		OpenConversationId: tea.String(r.OpenConversationID),
-		CoolAppCode:        tea.String("COOLAPP-1-102118DC0ABA212C89C7000H"),
-		MaxResults:         tea.Int64(300),
-		NextToken:          tea.String("XXXXX"),
+
+		CoolAppCode: tea.String("COOLAPP-1-102118DC0ABA212C89C7000H"),
+		MaxResults:  tea.Int64(300),
+		NextToken:   tea.String("XXXXX"),
 	}
 	tryErr := func() (_e error) {
 		defer func() {
@@ -1140,8 +1064,22 @@ func (t *DingRobot) StopTask(taskId string) (err error) {
 	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
 	return err
 }
-func (t *DingRobot) GetTaskList(RobotId string) (tasks []Task, err error) {
-	err = global.GLOAB_DB.Model(&DingRobot{RobotId: RobotId}).Unscoped().Association("Tasks").Find(&tasks) //通过机器人的id拿到机器人，拿到机器人后，我们就可以拿到所有的任务
+func (t *DingRobot) GetTaskList(p *ParamGetTaskList) (tasks []Task, total int64, err error) {
+	limit := p.PageSize
+	offset := p.PageSize * (p.Page - 1)
+	db := global.GLOAB_DB
+
+	if p.Name != "" {
+		db = db.Where("task_name like ?", "%"+p.Name+"%")
+	}
+	if p.IsActive == 1 {
+		err = db.Model(&tasks).Where("robot_id = ?", t.RobotId).Count(&total).Error
+		err = db.Limit(limit).Offset(offset).Model(t).Association("Tasks").Find(&tasks) //通过机器人的id拿到机器人，拿到机器人后，我们就可以拿到所有的任务
+	} else {
+		err = db.Model(&tasks).Unscoped().Where("robot_id = ?", t.RobotId).Count(&total).Error
+		err = db.Limit(limit).Offset(offset).Model(t).Unscoped().Association("Tasks").Find(&tasks) //通过机器人的id拿到机器人，拿到机器人后，我们就可以拿到所有的任务
+	}
+
 	if err != nil {
 		zap.L().Error("通过机器人robot_id拿到该机器人的所有定时任务失败", zap.Error(err))
 		return
@@ -1178,11 +1116,10 @@ func (t *DingRobot) GetUnscopedTaskByID(id string) (task Task, err error) {
 	return
 }
 func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
-	err = global.GLOAB_DB.Model(&Task{}).First(&task, id).Error
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return Task{}, errors.New("该定时任务没有暂停，所以无法重启")
-	}
 	task, err = t.GetUnscopedTaskByID(id)
+	if err != nil {
+		return
+	}
 	//根据这个id主键查询到被删除的数据
 	err = global.GLOAB_DB.Unscoped().Model(&task).Update("deleted_at", nil).Error //这个地方必须加上Unscoped()，否则不报错，但是却无法更新
 	p := ParamCronTask{
@@ -1193,7 +1130,6 @@ func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
 	}
 	d := DingRobot{
 		RobotId: task.RobotId,
-		Secret:  task.Secret,
 	}
 	tasker := func() {
 		err := d.SendMessage(&p)
@@ -1250,7 +1186,6 @@ func (t *DingRobot) EditTaskContent(p *EditTaskContentParam) (err error) {
 	}
 	d := DingRobot{
 		RobotId: task.RobotId,
-		Secret:  task.Secret,
 	}
 	tasker := func() {
 		err := d.SendMessage(&paramCronTask)

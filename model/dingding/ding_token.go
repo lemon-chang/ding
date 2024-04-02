@@ -68,49 +68,6 @@ func (t *DingToken) GetAccessToken() (access_token string, err error) {
 
 	return
 }
-func (t *DingToken) GxpGetAccessToken() (access_token string, err error) {
-	//var accessToken string
-	var expire1 int64
-	fmt.Println(expire1)
-	expire, err := global.GLOBAL_REDIS.TTL(context.Background(), utils.GxpAccessToken).Result()
-	if err != nil {
-		zap.L().Error("判断token剩余生存时间失败", zap.Error(err))
-	}
-	if expire == -2 {
-		//申请新的token
-		access_token, expire1, err = t.GxpGetAccessTokenDing()
-		if err != nil {
-			zap.L().Error("申请新的token失败", zap.Error(err))
-			return
-		}
-		//将过期时间转换为int64
-
-		//重新设置token和token的过期时间
-
-		err = global.GLOBAL_REDIS.Set(context.Background(), utils.GxpAccessToken, access_token, time.Second*7200).Err()
-		if err != nil {
-			zap.L().Error("重新设置token和token的过期时间失败", zap.Error(err))
-			return
-		}
-		result, err := global.GLOBAL_REDIS.Get(context.Background(), utils.GxpAccessToken).Result()
-		if err != nil {
-			zap.L().Error("重新申请后，获取token失败", zap.Error(err))
-		}
-		access_token = result
-		if access_token == "" {
-			zap.L().Error("重新申请后，获取token失败")
-		}
-	} else {
-		access_token, err = global.GLOBAL_REDIS.Get(context.Background(), utils.GxpAccessToken).Result()
-	}
-	//如果err是key不存在的话，应该重新申请一遍
-	if err != nil {
-		zap.L().Error("从redis从取access_token失败", zap.Error(err))
-		return
-	}
-
-	return
-}
 func (t *DingToken) GetAccessTokenDing() (access_token string, expireIn int64, _err error) {
 	client, _err := CreateClient()
 	if _err != nil {
@@ -129,7 +86,6 @@ func (t *DingToken) GetAccessTokenDing() (access_token string, expireIn int64, _
 			}
 		}()
 		result, _err := client.GetAccessToken(getAccessTokenRequest)
-
 		if _err != nil {
 			return _err
 		}

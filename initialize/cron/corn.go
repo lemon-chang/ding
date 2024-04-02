@@ -23,10 +23,17 @@ func InitCorn() {
 	//}
 
 	//======重启考勤=======
+	//上班考勤
 	if err := AttendanceByRobot(); err != nil {
 		zap.L().Error("AttendanceByRobot init fail", zap.Error(err))
 	} else {
 		zap.L().Debug("AttendanceByRobot init success...")
+	}
+	//周报考勤，采用企业日志检测
+	if err := weeklyCheckByRobot(); err != nil {
+		zap.L().Error("weeklyCheckByRobot init fail", zap.Error(err))
+	} else {
+		zap.L().Debug("weeklyCheckByRobot init success...")
 	}
 	//======重启订阅关系=======
 	//if err := RegularlySendCourses(); err != nil {

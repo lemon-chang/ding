@@ -38,7 +38,7 @@ func Reboot() (err error) {
 				return
 			}
 		}
-		//	// 添加定时任务
+		// 添加定时任务
 		TaskID, err := global.GLOAB_CORN.AddFunc(task.Spec, tasker)
 		if err != nil {
 			zap.L().Error(fmt.Sprintf("AddFunc task:%v,失败原因:%v", task, zap.Error(err)))

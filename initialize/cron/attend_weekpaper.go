@@ -2,6 +2,7 @@ package cron
 
 import (
 	"ding/global"
+	"ding/initialize/viper"
 	"ding/model/common/localTime"
 	"ding/model/dingding"
 	"fmt"
@@ -81,7 +82,7 @@ func CountWeekPaper(GroupId int) (err error) {
 				message := EditMessage(ranking, n.WeekSignNum)
 				//将考勤数据发给该人
 				p := &dingding.ParamChat{
-					RobotCode: "dingepndjqy7etanalhi",
+					RobotCode: viper.Conf.MiniProgramConfig.RobotCode,
 					UserIds:   ids,
 					MsgKey:    "sampleText",
 					MsgParam:  message,

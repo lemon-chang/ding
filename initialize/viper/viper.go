@@ -64,6 +64,7 @@ type ClassCourseConfig struct {
 type MiniProgramConfig struct {
 	AppKey    string `mapstructure:"appkey"`
 	AppSecret string `mapstructure:"appsecret"`
+	RobotCode string `mapstructure:"robotcode"`
 }
 
 func Init() (err error) {

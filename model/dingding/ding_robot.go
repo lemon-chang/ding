@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"ding/global"
+	"ding/initialize/viper"
 	"ding/utils"
 	"encoding/base64"
 	"encoding/json"
@@ -139,16 +140,16 @@ func (r *DingRobot) ChatSendMessage(p *ParamChat) error {
 	}, Timeout: time.Duration(time.Second * 5)}
 	//此处是post请求的请求题，我们先初始化一个对象
 	var b MySendParam
-	b.RobotCode = "dingepndjqy7etanalhi"
+	b.RobotCode = viper.Conf.MiniProgramConfig.RobotCode
 	if p.MsgKey == "sampleText" {
 		b.MsgKey = p.MsgKey
-		b.RobotCode = "dingepndjqy7etanalhi"
+		b.RobotCode = viper.Conf.MiniProgramConfig.RobotCode
 		b.UserIds = p.UserIds
 		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
 
 	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
 		b.MsgKey = p.MsgKey
-		b.RobotCode = "dingepndjqy7etanalhi"
+		b.RobotCode = viper.Conf.MiniProgramConfig.RobotCode
 		b.UserIds = p.UserIds
 		b.MsgParam = p.MsgParam
 	}
@@ -222,17 +223,17 @@ func (r *DingRobot) ChatSendGroupMessage(p *ParamChat) (map[string]interface{}, 
 	}, Timeout: time.Duration(time.Second * 5)}
 	//此处是post请求的请求题，我们先初始化一个对象
 	var b MySendGroupParam
-	b.RobotCode = "dingepndjqy7etanalhi"
+	b.RobotCode = viper.Conf.MiniProgramConfig.RobotCode
 	b.CoolAppCode = "COOLAPP-1-102118DC0ABA212C89C7000H"
 	//b.OpenConversationId = "cidNOZESlAdvOGV/s3CVZxdlQ=="
 	b.OpenConversationId = p.OpenConversationId
 	if p.MsgKey == "sampleText" {
 		b.MsgKey = p.MsgKey
-		b.RobotCode = "dingepndjqy7etanalhi"
+		b.RobotCode = viper.Conf.MiniProgramConfig.RobotCode
 		b.MsgParam = fmt.Sprintf("{       \"content\": \"%s\"   }", p.MsgParam)
 	} else if strings.Contains(p.MsgKey, "sampleActionCard") {
 		b.MsgKey = p.MsgKey
-		b.RobotCode = "dingepndjqy7etanalhi"
+		b.RobotCode = viper.Conf.MiniProgramConfig.RobotCode
 		b.MsgParam = p.MsgParam
 	}
 
@@ -1241,7 +1242,7 @@ func (t *DingRobot) RobotSendInviteCode(resp *RobotAtResp) error {
 	param := &ParamChat{
 		MsgKey:    "sampleText",
 		MsgParam:  content,
-		RobotCode: "dingepndjqy7etanalhi",
+		RobotCode: viper.Conf.MiniProgramConfig.RobotCode,
 		UserIds:   []string{resp.SenderStaffId},
 	}
 	err = t.ChatSendMessage(param)
@@ -1266,7 +1267,7 @@ func (t *DingRobot) RobotSendGroupInviteCode(resp *RobotAtResp) (res map[string]
 	param := &ParamChat{
 		MsgKey:             "sampleText",
 		MsgParam:           content,
-		RobotCode:          "dingepndjqy7etanalhi",
+		RobotCode:          viper.Conf.MiniProgramConfig.RobotCode,
 		UserIds:            []string{resp.SenderStaffId},
 		OpenConversationId: resp.ConversationId,
 	}
@@ -1280,7 +1281,7 @@ func (t *DingRobot) RobotSendGroupWater(resp *RobotAtResp) (res map[string]inter
 	param := &ParamChat{
 		MsgKey:             "sampleText",
 		MsgParam:           "送水师傅电话: 15236463964",
-		RobotCode:          "dingepndjqy7etanalhi",
+		RobotCode:          viper.Conf.MiniProgramConfig.RobotCode,
 		UserIds:            []string{resp.SenderStaffId},
 		OpenConversationId: resp.ConversationId,
 	}
@@ -1301,7 +1302,7 @@ func (t *DingRobot) RobotSendGroupCard(resp *RobotAtResp) (res map[string]interf
 			"        \"actionTitle2\": \"打字邀请码\",\n" +
 			fmt.Sprintf("'actionURL2':'dtmd://dingtalkclient/sendMessage?content=%s',\n", url.QueryEscape("打字邀请码")) +
 			"    }",
-		RobotCode:          "dingepndjqy7etanalhi",
+		RobotCode:          viper.Conf.MiniProgramConfig.RobotCode,
 		UserIds:            []string{resp.SenderStaffId},
 		OpenConversationId: resp.ConversationId,
 	}
@@ -1318,7 +1319,7 @@ type Result struct {
 	DataLink string `json:"data_link"`
 }
 
-// 机器人问答发送卡片给个人https://open.dingtalk.com/document/isvapp/the-internal-robot-of-the-enterprise-realizes-the-interaction-in
+// 机器人问答发送卡片给个人https://open.dingtalk.com/document/isvapp/the-internal-outgoing-of-the-enterprise-realizes-the-interaction-in
 func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result) (err error) {
 	cardLen := len(dataByStr)
 	if cardLen <= 5 {
@@ -1345,7 +1346,7 @@ func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result)
 				"        \"text\": \"请问你是否在查找以下资料\",\n" +
 				action +
 				"    }",
-			RobotCode: "dingepndjqy7etanalhi",
+			RobotCode: viper.Conf.MiniProgramConfig.RobotCode,
 			UserIds:   []string{resp.SenderStaffId},
 		}
 
@@ -1361,7 +1362,7 @@ func (t *DingRobot) RobotSendCardToPerson(resp *RobotAtResp, dataByStr []Result)
 				"        \"text\": \"请问你是否在查找以下资料\",\n" +
 				action +
 				"    }",
-			RobotCode: "dingepndjqy7etanalhi",
+			RobotCode: viper.Conf.MiniProgramConfig.RobotCode,
 			UserIds:   []string{resp.SenderStaffId},
 		}
 	}
@@ -1391,7 +1392,7 @@ func (t *DingRobot) RobotSendMessageToPerson(resp *RobotAtResp, dataByStr []Resu
 	param := &ParamChat{
 		MsgKey:    "sampleText",
 		MsgParam:  msg,
-		RobotCode: "dingepndjqy7etanalhi",
+		RobotCode: viper.Conf.MiniProgramConfig.RobotCode,
 		UserIds:   []string{resp.SenderStaffId},
 	}
 	err = t.ChatSendMessage(param)

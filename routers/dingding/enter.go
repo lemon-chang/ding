@@ -25,6 +25,13 @@ func SetupDing(System *gin.RouterGroup) {
 		AttendanceGroup.PUT("/updateAttendanceGroup", ding2.UpdateAttendanceGroup)            //更新考勤组
 		AttendanceGroup.GET("/GetAttendanceGroupList", ding2.GetAttendanceGroupListFromMysql) //批量获取考勤组
 	}
+	weekPaperCheck := System.Group("/weekPaperCheck")
+	{
+		weekPaperCheck.GET("/getDeptWeekCheckStatus", ding2.GetDeptWeekCheckStatus)       //获取部门周报检测状态
+		weekPaperCheck.PUT("/updateDeptWeekCheckStatus", ding2.UpdateDeptWeekCheckStatus) //更新部门考勤状态
+		weekPaperCheck.GET("/getUserWeekCheckStatus", ding2.GetUserWeekCheckStatus)       //获取对应部门用户考勤状态
+		weekPaperCheck.PUT("/updateUserWeekCheckStatus", ding2.UpdateUserWeekCheckStatus) //更新用户考勤状态
+	}
 
 	User := System.Group("/user")
 	{
@@ -86,5 +93,10 @@ func SetupDing(System *gin.RouterGroup) {
 	{
 		LeaveGroup.POST("/SubscribeToSomeone", ding2.SubscribeToSomeone) //订阅某人考勤情况
 		LeaveGroup.DELETE("/Unsubscribe", ding2.Unsubscribe)             //取消订阅
+	}
+	robotStr := System.Group("/robotStream")
+	{
+		robotStr.POST("/createStreamMsg", ding2.CreateStreamMsg) //订阅某人考勤情况
+		robotStr.DELETE("/Unsubscribe", ding2.Unsubscribe)       //取消订阅
 	}
 }

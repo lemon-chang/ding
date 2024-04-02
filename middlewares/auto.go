@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//当在中间件或 handler 中启动新的 Goroutine 时，不能使用原始的上下文，必须使用只读副本。
+// 当在中间件或 handler 中启动新的 Goroutine 时，不能使用原始的上下文，必须使用只读副本。
 func JWTAuthMiddleware() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// 客户端携带Token有三种方式 1.放在请求头 2.放在请求体 3.放在URI
@@ -34,7 +34,7 @@ func JWTAuthMiddleware() func(c *gin.Context) {
 			c.Abort()
 			return
 		}
-		// 将当前请求的user的ID信息保存到请求的上下文c上
+		// 将当前请求的user的ID信息保存到请求的context上下文c上
 		c.Set(global.CtxUserIDKey, mc.UserId)
 		c.Set(global.CtxUserNameKey, mc.Username)
 		c.Set(global.CtxUserAuthorityIDKey, mc.AuthorityID)

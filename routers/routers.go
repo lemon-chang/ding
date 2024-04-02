@@ -4,12 +4,11 @@ import (
 	ding2 "ding/controllers/ding"
 	"ding/global"
 	"ding/initialize/logger"
+	"ding/middlewares"
 	"ding/routers/dingding"
 	"ding/routers/personal"
 	"ding/routers/system"
 	"fmt"
-
-	"ding/middlewares"
 
 	"github.com/gin-gonic/gin"
 
@@ -18,18 +17,33 @@ import (
 	"go.uber.org/zap"
 )
 
+type MyRouterGroup struct {
+	RouterGroup *gin.RouterGroup
+}
+
+func (group *MyRouterGroup) DingEvent(event_url string, handlerFunc gin.HandlerFunc) {
+	group.RouterGroup.Handle("DINGEVENT", event_url, handlerFunc)
+}
 func Setup(mode string) *gin.Engine {
 	if mode == gin.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode) //设置为发布模式
 	}
-	//con参数检验 server逻辑处理 dao数据操作
 	r := gin.New()
+	r.GET("chat_update_title", func(context *gin.Context) {
+		fmt.Println("测试chat_update_title")
+	})
+	group := MyRouterGroup{RouterGroup: &r.RouterGroup}
+
+	group.DingEvent("chat_update_title", func(c *gin.Context) {
+		fmt.Println("测试chat_update_title")
+	})
+	global.GLOBAL_GIN_Engine = r
 	//r.Use(cors.Default()) //第三方库
 	r.Use(middlewares.Cors())
 	zap.L().Info("跨域配置完成")
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 	/*=========系统路由==========*/
-	System := r.Group("/api/system")
+	System := r.Group("/api/system") // 此处engine可以直接调用RouterGroup的方法，原因不详
 	System.Use(middlewares.JWTAuthMiddleware())
 	system.SetupSystem(System)
 	/*=========私人个性化路由==========*/

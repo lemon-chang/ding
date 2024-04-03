@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"ding/global"
 	"ding/initialize/redis"
+	"ding/initialize/viper"
 	"ding/model/classCourse"
 	"ding/model/common"
 	"ding/model/common/localTime"
@@ -40,7 +41,7 @@ type DingDept struct {
 	IsRobotAttendance int        `json:"is_robot_attendance"` //是否
 	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
 	IsLeetCode        int        `json:"is_leet_code"`
-	IsWeekPaper       int        `json:"is_week_paper"`
+	IsStudyWeekPaper  int        `json:"is_study_week_paper"` // 学习周报
 	ResponsibleUsers  []DingUser `gorm:"-"`
 	Children          []DingDept `gorm:"-"`
 }
@@ -54,6 +55,49 @@ type UserDept struct {
 // 自定义表名建表
 func (UserDept) user_dept() string {
 	return "user_dept"
+}
+func (d *DingDept) Insert() (err error) {
+	err = global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
+		err = d.GetDeptDetailByDeptId()
+		if err != nil {
+			return err
+		}
+		err = tx.Create(d).Error
+		UserIdList, err := d.GetUserIDListByDepartmentID()
+		if err != nil {
+			return err
+		}
+		UserList := make([]DingUser, len(UserIdList))
+		for i := 0; i < len(UserList); i++ {
+			UserList[i].UserId = UserIdList[i]
+		}
+		err = tx.Model(d).Association("UserList").Replace(UserList)
+		return err
+	})
+	return err
+}
+func (d *DingDept) UpdateByDingEvent() (err error) {
+	err = global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
+		err = d.GetDeptDetailByDeptId()
+		if err != nil {
+			return err
+		}
+		err = tx.Select("parent_id", "name").Updates(d).Error
+		UserIdList, err := d.GetUserIDListByDepartmentID()
+		if err != nil {
+			return err
+		}
+		UserList := make([]DingUser, len(UserIdList))
+		for i := 0; i < len(UserList); i++ {
+			UserList[i].UserId = UserIdList[i]
+		}
+		err = tx.Model(d).Association("UserList").Replace(UserList)
+		return err
+	})
+	return err
+}
+func (d *DingDept) Delete() (err error) {
+	return global.GLOAB_DB.Unscoped().Select(clause.Associations).Delete(d).Error
 }
 
 // 获取用户的考勤信息
@@ -213,7 +257,7 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) (err error) {
 		},
 		RepeatTime: "立即发送",
 	}
-	err = (&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).SendMessage(p)
+	err = (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotCode}).SendMessage(p)
 	if err != nil {
 		return err
 	}
@@ -404,18 +448,14 @@ func (d *DingDept) SendFrequencyLate(startWeek int) (err error) {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3"}).CronSend(nil, p)
+	(&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotCode}).CronSend(nil, p)
 	return nil
 }
 
-type JinAndBlogClassify struct {
-	DeptId int          `gorm:"primaryKey" json:"dept_id"`
-	Name   string       `json:"name"`
-	Data   []JinAndBlog `json:"data" gorm:"many2many:user_dept"`
-}
-
-// 通过部门id获取部门用户详情 https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
+// 通过部门id获取部门用户idList https://open.dingtalk.com/document/isvapp/query-the-list-of-department-userids
 func (d *DingDept) GetUserIDListByDepartmentID() (useridList []string, err error) {
+	token, _ := (&DingToken{}).GetAccessToken()
+	d.Token = token
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -582,7 +622,7 @@ func DiffArray(a []DingDept, b []DingDept) []DingDept {
 
 	return diffArray
 }
-func DiffSilceDept(a []DingDept, b []DingDept) []DingDept {
+func DiffSliceDept(a []DingDept, b []DingDept) []DingDept {
 	var diffArray []DingDept
 	temp := map[int]struct{}{}
 
@@ -600,7 +640,7 @@ func DiffSilceDept(a []DingDept, b []DingDept) []DingDept {
 
 	return diffArray
 }
-func DiffSilceUser(a []DingUser, b []DingUser) []DingUser {
+func DiffSliceUser(a []DingUser, b []DingUser) []DingUser {
 	var diffArray []DingUser
 	temp := map[string]struct{}{}
 
@@ -702,7 +742,7 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 		DoUpdates: clause.AssignmentColumns([]string{"name", "parent_id"}),
 	}).Create(&DepartmentList).Error
 	//找到不存在的部门进行软删除,同时删除其关系
-	Deleted := DiffSilceDept(oldDept, DepartmentList)
+	Deleted := DiffSliceDept(oldDept, DepartmentList)
 	if Deleted != nil {
 		err = global.GLOAB_DB.Select(clause.Associations).Delete(&Deleted).Error
 	}
@@ -723,7 +763,7 @@ func (d *DingDept) ImportDeptData() (DepartmentList []DingDept, err error) {
 			return nil, err
 		}
 		//取差集找到需要删除的名单
-		userDeleted := DiffSilceUser(oldUserList, newUserList)
+		userDeleted := DiffSliceUser(oldUserList, newUserList)
 		if userDeleted != nil {
 			err = global.GLOAB_DB.Select(clause.Associations).Delete(&userDeleted).Error
 		}
@@ -856,7 +896,9 @@ func (d *DingDept) SendFirstPerson(cursor, size int) {
 }
 
 // 通过部门id获取部门详细信息（取钉钉接口）  https://open.dingtalk.com/document/isvapp-server/industry-address-book-api-for-obtaining-department-information
-func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
+func (d *DingDept) GetDeptDetailByDeptId() (err error) {
+	token, _ := (&DingToken{}).GetAccessToken()
+	d.Token = token
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -904,10 +946,11 @@ func (d *DingDept) GetDeptDetailByDeptId() (dept DingDept, err error) {
 		return
 	}
 	if r.Errcode != 0 {
-		return r.Dept, errors.New(r.Errmsg)
+		return errors.New(r.Errmsg)
 	}
 	// 此处举行具体的逻辑判断，然后返回即可
-	return r.Dept, nil
+	*d = r.Dept // 此处不可使用 d = &(r.Dept)
+	return
 }
 
 // 更新部门信息
@@ -921,10 +964,6 @@ func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
 	}
 	return err
 }
-func (d *DingAttendGroup) UpdateSchool(s *ding.ParameIsInSchool) (err error) {
-	err = global.GLOAB_DB.Model(&DingAttendGroup{}).Where("group_id", s.GroupId).Update("is_in_school", s.IsInSchool).Error
-	return
-}
 
 // 查询部门周报检测状态
 func (d *DingDept) GetDeptWeekCheckStatus() (depts []DingDept, err error) {
@@ -934,6 +973,6 @@ func (d *DingDept) GetDeptWeekCheckStatus() (depts []DingDept, err error) {
 
 // 更新部门周报检测状态
 func (d *DingDept) UpdateDeptWeekCheckStatus() (err error) {
-	err = global.GLOAB_DB.Model(d).Where("dept_id = ?", d.DeptId).Update("is_week_paper", d.IsWeekPaper).Error
+	err = global.GLOAB_DB.Model(d).Where("dept_id = ?", d.DeptId).Update("is_week_paper", d.IsStudyWeekPaper).Error
 	return
 }

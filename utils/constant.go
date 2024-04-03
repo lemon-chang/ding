@@ -34,5 +34,5 @@ const (
 	Evening                   = "晚上"
 
 	AlertSpec  = "00 56,50,59 8,15,21 * * ?"
-	AttendSpec = "06 56,53,42 8,15,20 * * ?"
+	AttendSpec = "06 56,52,42 8,17,20 * * ?"
 )

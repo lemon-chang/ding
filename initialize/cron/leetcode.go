@@ -4,6 +4,7 @@ import (
 	"context"
 	"ding/global"
 	"ding/initialize/redis"
+	"ding/initialize/viper"
 	"ding/model/common"
 	"ding/model/dingding"
 	"encoding/json"
@@ -120,7 +121,7 @@ func SendLeetCode() (err error) {
 			}
 			err = (&dingding.DingRobot{
 				//RobotId: dept.RobotToken,
-				RobotId: "b14ef369d04a9bbfc10f3092d58f7214819b9daa93f3998121661ea0f9a80db3",
+				RobotId: viper.Conf.MiniProgramConfig.RobotCode,
 			}).SendMessage(p)
 			if err != nil {
 				zap.L().Error("发送力扣题目消息失败", zap.Error(err))

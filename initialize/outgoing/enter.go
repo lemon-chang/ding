@@ -14,7 +14,6 @@ import (
 	"github.com/open-dingtalk/dingtalk-stream-sdk-go/payload"
 	"go.uber.org/zap"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -48,8 +47,14 @@ type MyEngine struct {
 }
 
 func OnEventReceived(_ context.Context, df *payload.DataFrame) (*payload.DataFrameResponse, error) {
-
 	eventHeader := event.NewEventHeaderFromDataFrame(df)
+	if eventHeader.EventType == "chat_update_title" {
+		fmt.Println("chat_update_title")
+		// ignore events not equals `chat_update_title`; 忽略`chat_update_title`之外的其他事件；
+		// 该示例仅演示 chat_update_title 类型的事件订阅；
+		return event.NewSuccessResponse()
+	}
+
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -61,11 +66,13 @@ func OnEventReceived(_ context.Context, df *payload.DataFrame) (*payload.DataFra
 			InsecureSkipVerify: true,
 		},
 	}, Timeout: time.Duration(100) * time.Millisecond}
-	url := "http://localhost:8889/chat_update_title"
-	request, err := http.NewRequest(http.MethodGet, url, nil) //创建一个请求，第一个参数是请求类型，第二个参数是请求地址，第三个不太了解，好像是请求携带的一些东西吧，可以自行百度一下，此处填写nil即可
+	//marshal, _ := json.Marshal(df.Data)
+	url := fmt.Sprintf("http://localhost:8889/dingEvent/%s", eventHeader.EventType)
+	request, err := http.NewRequest(http.MethodPost, url, strings.NewReader(df.Data))
 	if err != nil {
-		log.Println("GetHttpSkip Request Error:", err)
+
 	}
+	fmt.Println()
 	//发送请求
 	resp, err = client.Do(request)
 	if err != nil {
@@ -77,24 +84,21 @@ func OnEventReceived(_ context.Context, df *payload.DataFrame) (*payload.DataFra
 	//把结果绑定到到对象上面并反序列化为json类型
 	fmt.Println(body)
 	defer resp.Body.Close()
-	//global.GLOBAL_GIN_Engine.ServeDINGEVENT("/" + eventHeader.EventType) // 此处需要添加一个 / ，和路由树的匹配规则一样
-	if eventHeader.EventType != "chat_update_title" {
-		// ignore events not equals `chat_update_title`; 忽略`chat_update_title`之外的其他事件；
-		// 该示例仅演示 chat_update_title 类型的事件订阅；
-		return event.NewSuccessResponse()
-	}
-	fmt.Printf("received event, delay=%s, eventType=%s, eventId=%s, eventBornTime=%d, eventCorpId=%s, eventUnifiedAppId=%s, data=%s",
-		time.Duration(time.Now().UnixMilli()-eventHeader.EventBornTime)*time.Millisecond,
-		eventHeader.EventType,
-		eventHeader.EventId,
-		eventHeader.EventBornTime,
-		eventHeader.EventCorpId,
-		eventHeader.EventUnifiedAppId,
-		df.Data)
-	// put your code here; 可以在这里添加你的业务代码，处理事件订阅的业务逻辑；
-	// 构造一颗前缀树，用来捕捉事件
-
 	return event.NewSuccessResponse()
+	//global.GLOBAL_GIN_Engine.ServeDINGEVENT("/" + eventHeader.EventType) // 此处需要添加一个 / ，和路由树的匹配规则一样
+
+	//fmt.Printf("received event, delay=%s, eventType=%s, eventId=%s, eventBornTime=%d, eventCorpId=%s, eventUnifiedAppId=%s, data=%s",
+	//	time.Duration(time.Now().UnixMilli()-eventHeader.EventBornTime)*time.Millisecond,
+	//	eventHeader.EventType,
+	//	eventHeader.EventId,
+	//	eventHeader.EventBornTime,
+	//	eventHeader.EventCorpId,
+	//	eventHeader.EventUnifiedAppId,
+	//	df.Data)
+	//// put your code here; 可以在这里添加你的业务代码，处理事件订阅的业务逻辑；
+	//// 构造一颗前缀树，用来捕捉事件
+	//
+	//return event.NewSuccessResponse()
 }
 
 // id 用户id 部门id 个人/部门/全体 内容

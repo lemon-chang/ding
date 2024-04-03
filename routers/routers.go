@@ -22,9 +22,7 @@ func Setup(mode string) *gin.Engine {
 		gin.SetMode(gin.ReleaseMode) //设置为发布模式
 	}
 	r := gin.New()
-	r.GET("chat_update_title", func(context *gin.Context) {
-		fmt.Println("测试chat_update_title")
-	})
+
 	global.GLOBAL_GIN_Engine = r
 	//r.Use(cors.Default()) //第三方库
 	r.Use(middlewares.Cors())
@@ -47,6 +45,10 @@ func Setup(mode string) *gin.Engine {
 		username, _ := c.Get(global.CtxUserNameKey)
 		c.File(fmt.Sprintf("Screenshot_%s.png", username))
 	})
+	/*=========dingEvent事件回调路由==========*/
+	DingEvent := r.Group("dingEvent")
+	dingding.SetupDingEventSubscription(DingEvent)
+
 	/*=========具体业务路由==========*/
 	Ding := r.Group("/api/ding")
 	{

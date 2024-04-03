@@ -1,0 +1,40 @@
+app:
+  name: "dingding"
+  mode: "dev"
+  port: xxxx
+  version: "v0.0.1"
+  start_time: "2020-07-01"
+  machine_id: 1
+  #数据库
+mysql:
+  host: "xxxxx"
+  port: "xxxx"
+  user: "xxxx"
+  password: "xxxx"
+  dbname: "xxxx"
+  max_open_conns: 200
+  max_idle_conns: 50
+redis:
+  db: x
+  addr: xxxxx:6379
+  password: "xxxx"
+#  正式数据库
+log:
+  level: "info"
+  filename: "web_app.log"
+  max_size: 200
+  max_age: 30
+  max_backups: 7
+auth:
+  jwt_expire: 8760
+kafka:
+  address: "XXXX:9092"
+classCourse:
+  host: xxxx.xxxx.xxxx.xxxx
+  port: xxxx
+miniProgram:
+  appkey: xxxxxxx
+  appsecret: xxxxxxx
+
+
+

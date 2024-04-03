@@ -1,0 +1,40 @@
+app:
+  name: "dingding"
+  mode: "dev"
+  port: 8889
+  version: "v0.0.1"
+  start_time: "2020-07-01"
+  machine_id: 1
+  #测试数据库
+mysql:
+  host: "110.40.228.197"
+  port: "3306"
+  user: "root"
+  password: "3yueruanjian!"
+  dbname: "lezhi_ding_v3_marchsoft"
+  max_open_conns: 200
+  max_idle_conns: 50
+redis:
+  db: 2
+  addr: 110.40.228.197:6379
+  password: "3yueruanjian!"
+#  正式数据库
+log:
+  level: "info"
+  filename: "web_app.log"
+  max_size: 200
+  max_age: 30
+  max_backups: 7
+auth:
+  jwt_expire: 8760
+kafka:
+  address: "121.43.119.224:9092"
+classCourse:
+  host: 110.40.228.197
+  port: 8888
+miniProgram:
+  appkey: dinglyjekzn80ebnlyge
+  appsecret: zKsishrdIL3h3LvWSV2Sm0G1WBP5uVJgDpRnzUmli564HJO78W_10GIFEBrM9r-C
+
+
+

@@ -62,9 +62,10 @@ type ClassCourseConfig struct {
 	Port string `mapstructure:"port"`
 }
 type MiniProgramConfig struct {
-	AppKey    string `mapstructure:"appkey"`
-	AppSecret string `mapstructure:"appsecret"`
-	RobotCode string `mapstructure:"robotcode"`
+	AppKey     string `mapstructure:"appkey"`
+	AppSecret  string `mapstructure:"appsecret"`
+	RobotCode  string `mapstructure:"robotcode"`
+	RobotToken string `mapstructure:"robottoken"`
 }
 
 func Init() (err error) {

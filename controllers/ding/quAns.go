@@ -44,7 +44,7 @@ func UpdateData(c *gin.Context) {
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-	UserId, err := global.GetCurrentUserId(c)
+	UserId := global.GetCurrentUserId(c)
 	if err != nil {
 		zap.L().Error("token获取userid失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
@@ -77,14 +77,9 @@ func UpdateData(c *gin.Context) {
 
 // 删除资源
 func DeleteData(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		zap.L().Error("token获取userid失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-		return
-	}
+	UserId := global.GetCurrentUserId(c)
 	var data *Data
-	err = c.ShouldBindJSON(&data)
+	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		zap.L().Error("JSON绑定错误", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
@@ -125,14 +120,9 @@ func DeleteData(c *gin.Context) {
 
 // 修改资源
 func PutData(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		zap.L().Error("token获取userid失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-		return
-	}
+	UserId := global.GetCurrentUserId(c)
 	var data *Data
-	err = c.ShouldBindJSON(&data)
+	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		zap.L().Error("JSON绑定错误", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
@@ -186,14 +176,10 @@ func PutData(c *gin.Context) {
 
 // 查询资源
 func GetData(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		zap.L().Error("token获取userid失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-		return
-	}
+	UserId := global.GetCurrentUserId(c)
+
 	var data *Data
-	err = c.ShouldBindJSON(&data)
+	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		zap.L().Error("JSON绑定错误", zap.Error(err))
 		response.FailWithMessage("参数错误", c)

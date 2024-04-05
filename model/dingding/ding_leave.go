@@ -2,7 +2,6 @@ package dingding
 
 import (
 	"crypto/tls"
-	"ding/global"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -117,34 +116,4 @@ func (a *DingLeave) GetLeaveStatus(StartTime, EndTime int64, Offset, Size int, U
 	// 此处举行具体的逻辑判断，然后返回即可
 
 	return r.Result.DingLeave, hasMore, err
-}
-
-func (a *SubscriptionRelationship) SubscribeSomeone() (err error) {
-	//获取请假人姓名
-	user := DingUser{}
-	err = global.GLOAB_DB.Where("user_id = ?", a.Subscriber).First(&user).Error
-	err = global.GLOAB_DB.Where("user_id = ?", a.Subscribee).First(&user).Error
-	if err != nil {
-		return
-	}
-	err = global.GLOAB_DB.Create(a).Error
-	return
-}
-func (a *SubscriptionRelationship) UnsubscribeSomeone() (err error) {
-	sr := SubscriptionRelationship{}
-	err = global.GLOAB_DB.Where("subscriber = ?", a.Subscriber).First(&sr).Error
-	err = global.GLOAB_DB.Where("subscribee = ?", a.Subscribee).First(&sr).Error
-	if err != nil {
-		return
-	}
-	err = global.GLOAB_DB.Where("subscriber = ? And subscribee = ?", a.Subscriber, a.Subscribee).Delete(a).Error
-	return
-}
-
-func (a *SubscriptionRelationship) QuerySubscribed() (sr []SubscriptionRelationship, err error) {
-	err = global.GLOAB_DB.Where("is_curriculum = ?", true).Find(&sr).Error
-	if err != nil {
-		return
-	}
-	return
 }

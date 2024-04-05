@@ -36,14 +36,15 @@ type DingDept struct {
 	Name      string `json:"name"`
 	ParentId  int    `json:"parent_id"`
 	DingToken
-	IsSendFirstPerson int        `json:"is_send_first_person"` // 0为不推送，1为推送
-	RobotToken        string     `json:"robot_token"`
-	IsRobotAttendance int        `json:"is_robot_attendance"` //是否
-	IsJianShuOrBlog   int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
-	IsLeetCode        int        `json:"is_leet_code"`
-	IsStudyWeekPaper  int        `json:"is_study_week_paper"` // 学习周报
-	ResponsibleUsers  []DingUser `gorm:"-"`
-	Children          []DingDept `gorm:"-"`
+	IsSendFirstPerson     int        `json:"is_send_first_person"` // 0为不推送，1为推送
+	RobotToken            string     `json:"robot_token"`
+	IsRobotAttendance     int        `json:"is_robot_attendance"` //是否
+	IsJianShuOrBlog       int        `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+	IsLeetCode            int        `json:"is_leet_code"`
+	IsStudyWeekPaper      int        `json:"is_study_week_paper"`      // 学习周报
+	IsAttendanceWeekPaper bool       `json:"is_attendance_week_paper"` // 考勤周报
+	ResponsibleUsers      []DingUser `gorm:"-"`
+	Children              []DingDept `gorm:"-"`
 }
 type UserDept struct {
 	DingUserUserID string
@@ -236,20 +237,19 @@ func (d *DingDept) GetAttendanceData(userids []string, curTime *localTime.MySelf
 	}
 	return
 }
-func (d *DingDept) SendFrequencyLeave(startWeek int) (err error) {
+func (d *DingDept) SendFrequencyLeave(curTime *localTime.MySelfTime) (err error) {
 
-	key := redis.KeyDeptAveLeave + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
+	key := redis.KeyDeptAveLeave + strconv.Itoa(curTime.StartWeek) + ":dept:" + d.Name + ":detail:"
 	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
 	if err != nil {
 		return
 	}
-	msg := d.Name + "请假情况如下：\n"
+	msg := curTime.Semester + strconv.Itoa(curTime.StartWeek) + d.Name + "请假情况如下：\n"
 	for i := 0; i < len(results); i++ {
 		name := results[i].Member.(string)
 		time := int(results[i].Score)
 		msg += name + "请假次数：" + strconv.Itoa(time) + "\n"
 	}
-
 	p := &ParamCronTask{
 		MsgText: &common.MsgText{
 			Msgtype: "text",
@@ -257,10 +257,21 @@ func (d *DingDept) SendFrequencyLeave(startWeek int) (err error) {
 		},
 		RepeatTime: "立即发送",
 	}
-	err = (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotCode}).SendMessage(p)
+	err = (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotToken}).SendMessage(p)
 	if err != nil {
 		return err
 	}
+	// 周日下午应该集中公开一下
+	if curTime.Week == 7 && curTime.Duration == 2 {
+		err = (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotToken}).SendMessage(p)
+		if err != nil {
+			return err
+		}
+	}
+	return
+}
+func (d *DingDept) GetResponsibleUser() (userids []string, err error) {
+	err = global.GLOAB_DB.Table("user_dept").Where("is_responsible = ? and ding_dept_dept_id = ?", true, d.DeptId).Select("ding_user_user_id").Find(&userids).Error
 	return
 }
 
@@ -365,8 +376,8 @@ func (d *DingDept) SendFrequencyPrivateLeave(startWeek int) error {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: "4e1aecbc81c1d673a3817001b960a898e4b4efa61d1080757eb1d683685f0e8e"}).CronSend(nil, p)
-	return nil
+	err, _ := (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotToken}).CronSend(nil, p)
+	return err
 }
 
 // SendSubSectorPrivateLeave 发送子部门个人请假次数
@@ -427,9 +438,9 @@ func (d *DingDept) SendSubSectorPrivateLeave(startWeek int) error {
 	return nil
 }
 
-func (d *DingDept) SendFrequencyLate(startWeek int) (err error) {
+func (d *DingDept) SendFrequencyLate(curTime *localTime.MySelfTime) (err error) {
 	//从redis中取数据，封装，调用钉钉接口，发送即可
-	key := redis.KeyDeptAveLate + strconv.Itoa(startWeek) + ":dept:" + d.Name + ":detail:"
+	key := redis.KeyDeptAveLate + strconv.Itoa(curTime.StartWeek) + ":dept:" + d.Name + ":detail:"
 	results, err := global.GLOBAL_REDIS.ZRangeWithScores(context.Background(), key, 0, -1).Result()
 	if err != nil {
 		return
@@ -440,7 +451,7 @@ func (d *DingDept) SendFrequencyLate(startWeek int) (err error) {
 		time := int(results[i].Score)
 		msg += name + "迟到次数：" + strconv.Itoa(time) + "\n"
 	}
-	//fmt.Println("发送迟到频率了")
+
 	p := &ParamCronTask{
 		MsgText: &common.MsgText{
 			Msgtype: "text",
@@ -448,8 +459,15 @@ func (d *DingDept) SendFrequencyLate(startWeek int) (err error) {
 		},
 		RepeatTime: "立即发送",
 	}
-	(&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotCode}).CronSend(nil, p)
-	return nil
+	err, _ = (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotToken}).CronSend(nil, p)
+	// 周日下午应该集中公开一下
+	if curTime.Week == 7 && curTime.Duration == 2 {
+		err = (&DingRobot{RobotId: viper.Conf.MiniProgramConfig.RobotCode}).SendMessage(p)
+		if err != nil {
+			return err
+		}
+	}
+	return err
 }
 
 // 通过部门id获取部门用户idList https://open.dingtalk.com/document/isvapp/query-the-list-of-department-userids

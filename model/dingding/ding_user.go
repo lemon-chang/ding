@@ -20,7 +20,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -29,13 +28,6 @@ import (
 )
 
 const secret = "liwenzhou.com"
-
-var wg = sync.WaitGroup{}
-var hrefs []string
-var blogs []string
-var start int64 = 1676822400
-var end int64 = 1677427200
-var jin *DingUser
 
 type Strs []string
 
@@ -70,13 +62,6 @@ type DingUser struct {
 		} `json:"value"`
 	} `json:"ext_attrs" gorm:"-"`
 }
-
-// 用户签到
-// 如果dateStr没有传，那就是签到，如果传了特定日期，可以进行补签
-// 返回连续签到的次数
-// 用户签到
-
-// 统计用户在当前周连续签到的次数
 
 // 通过userid查询部门id
 func GetDeptByUserId(UserId string) (user *DingUser) {
@@ -644,19 +629,5 @@ func (u *DingUser) GetRobotList(p *ParamGetRobotList) (RobotList []DingRobot, co
 		db = db.Where("name = ?", p.Name)
 	}
 	err = db.Limit(limit).Offset(offset).Model(u).Association("DingRobots").Find(&RobotList)
-	return
-}
-func (u *DingUser) GetTaskList(p *ParamGetTaskList) (Tasks []Task, count int64, err error) {
-	limit := p.PageSize
-	offset := p.PageSize * (p.Page - 1)
-	db := global.GLOAB_DB
-	if p.Name != "" {
-		db = db.Where("task_name like ?", "%"+p.Name+"%")
-	}
-	if p.IsActive == 1 {
-		err = db.Limit(limit).Offset(offset).Unscoped().Where("user_id = ?", u.UserId).Find(&Tasks).Count(&count).Error
-	} else {
-		err = db.Limit(limit).Offset(offset).Unscoped().Where("user_id = ?", u.UserId).Find(&Tasks).Count(&count).Error
-	}
 	return
 }

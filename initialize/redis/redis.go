@@ -10,12 +10,14 @@ import (
 )
 
 const (
-	Perfix     = "ding:"
-	ActiveTask = "activeTask:" //活跃任务部分
-	Attendance = "attendance:" //考勤状态部分
-	User       = "user:"
-	UserSign   = "sign:"
-	LeetCode   = "leetCode:"
+	KeyDeptAveLeave = "leave:" // 根据各部门平均请假次数排序的集合
+	KeyDeptAveLate  = "late:"  // 根据各部门平均迟到次数排序的集合
+	Prefix          = "ding:"
+	ActiveTask      = "activeTask:" //活跃任务部分
+	Attendance      = "attendance:" //考勤状态部分
+	User            = "user:"
+	UserSign        = "sign:"
+	LeetCode        = "leetcode:"
 )
 
 func Init(redisCfg *viper.RedisConfig) (err error) {

@@ -20,7 +20,6 @@ import (
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -280,245 +279,39 @@ func (r *DingRobot) ChatSendGroupMessage(p *ParamChat) (map[string]interface{}, 
 	return res, nil
 }
 func (r *DingRobot) CronSend(c *gin.Context, p *ParamCronTask) (err error, task Task) {
-	robotId := r.RobotId
-	//转化时候出现问题
-	spec, detailTimeForUser, err := HandleSpec(p)
-	if p.Spec != "" {
-		spec = p.Spec
-	}
-	tid := "0"
-	UserId := ""
-	if c != nil {
-		UserId, err = global.GetCurrentUserId(c)
-	}
-
-	if err != nil {
-		UserId = ""
-	}
-	CurrentUser, err := (&DingUser{UserId: UserId}).GetUserInfo()
-	if err != nil {
-		CurrentUser = DingUser{}
-	}
-	r, err = (&DingRobot{RobotId: r.RobotId}).GetRobotByRobotId()
-	if err != nil {
-		zap.L().Error("通过机器人的robot_id获取机器人失败，是一个没有注册的机器人", zap.Error(err))
-	}
-	//a := "纪检部通知[广播][广播]:  \n断水断电不断简书，为谋其事必为总结[爱意]  \n[钉子]各期负责人于下周一晚上20：00前在钉钉简书小程序中标记优秀简书\n  \n[钉子]检查为机器人检查，大家要及时发表文章\n [灵感][灵感]注意：    \n  \n[对勾]简书严禁抄袭，坚持原创，我们会根据相关字段进行严格检查的哦[爱意]\n[对勾]纪检部同时也会对简书进行抽查[猫咪]\n[对勾]简书字数不能低于400字\n[钉子][钉子]重点！！！到周日20：00后财务部人员会在大群里面对简书未完成人员发起群收款[惊愕][惊愕]\n大家要注意了哦！！\n[灵感][灵感]提醒:   \n  \n [对勾]简书以及博客的时间为本周内，否则会被标记为未登记！\n  \n[爱意]希望大家多多参与简书投稿及评论互动[捧脸]并在此相互学习和借鉴哟[猫咪][猫咪]@所有人 "
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		r = &DingRobot{RobotId: robotId}
-		err = nil
-	}
-
-	//到了这里就说明这个用户有这个小机器人
-	//crontab := cron.New(cron.WithSeconds()) //精确到秒
-	//spec := "* 30 22 * * ?" //cron表达式，每五秒一次
-	if p.MsgText == nil && p.MsgLink == nil && p.MsgMarkDown == nil {
-		p.MsgText.Msgtype = "text"
-		p.RepeatTime = "立即发送"
-	}
-
-	if p.MsgText.Msgtype == "text" {
-		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
-			zap.L().Info("进入即时发送消息模式")
-			err = r.SendMessage(p)
-			if err != nil {
-				return err, Task{}
-			} else {
-				zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
-			}
-
-			return err, task
-		} else { //我要做定时任务
-			tasker := func() {}
-			zap.L().Info("进入定时任务模式")
-			tasker = func() {
-				err := r.SendMessage(p)
-				if err != nil {
-					return
-				} else {
-					zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
-				}
-			}
-			TaskID, err := global.GLOAB_CORN.AddFunc(spec, tasker)
-			tid = strconv.Itoa(int(TaskID))
-			if err != nil {
-				zap.L().Error("定时任务启动失败", zap.Error(err))
-				err = ErrorSpecInvalid
-				return err, Task{}
-			}
-			nextTime := global.GLOAB_CORN.Entry(TaskID).Next
-			//把定时任务添加到数据库中
-			task = Task{
-				TaskID:    tid,
-				TaskName:  p.TaskName,
-				UserId:    CurrentUser.UserId,
-				UserName:  CurrentUser.Name,
-				RobotId:   r.RobotId,
-				RobotName: r.Name,
-
-				DetailTimeForUser: detailTimeForUser, //给用户看的
-				Spec:              spec,              //cron后端定时规则
-				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
-				FrontDetailTime:   p.DetailTime,
-				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				NextTime:          nextTime,
-			}
-			err = (&task).InsertTask()
-			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因: %v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
-				return err, Task{}
-			}
-			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
-		}
-	} else if p.MsgLink.Msgtype == "link" {
-		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
-			zap.L().Info("进入即时发送消息模式")
-			err := r.SendMessage(p)
-			if err != nil {
-				return err, Task{}
-			} else {
-				zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
-			}
-			//定时任务
-			task = Task{
-				TaskID:    tid,
-				TaskName:  p.TaskName,
-				UserId:    CurrentUser.UserId,
-				UserName:  CurrentUser.Name,
-				RobotId:   r.RobotId,
-				RobotName: r.Name,
-
-				DetailTimeForUser: detailTimeForUser, //给用户看的
-				Spec:              spec,              //cron后端定时规则
-				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
-				FrontDetailTime:   p.DetailTime,
-				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				//MsgLink:           p.MsgLink,
-				//MsgMarkDown:       p.MsgMarkDown,
-			}
-			return err, task
-		} else { //我要做定时任务
-			tasker := func() {}
-			zap.L().Info("进入定时任务模式")
-			tasker = func() {
-				err := r.SendMessage(p)
-				if err != nil {
-					return
-				} else {
-					zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
-				}
-			}
-			TaskID, err := global.GLOAB_CORN.AddFunc(spec, tasker)
-			nextTime := global.GLOAB_CORN.Entry(TaskID).Next
-
-			tid = strconv.Itoa(int(TaskID))
-			if err != nil {
-				err = ErrorSpecInvalid
-				return err, Task{}
-			}
-			//把定时任务添加到数据库中
-			task = Task{
-				TaskID:    tid,
-				TaskName:  p.TaskName,
-				UserId:    CurrentUser.UserId,
-				UserName:  CurrentUser.Name,
-				RobotId:   r.RobotId,
-				RobotName: r.Name,
-
-				DetailTimeForUser: detailTimeForUser, //给用户看的
-				Spec:              spec,              //cron后端定时规则
-				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
-				FrontDetailTime:   p.DetailTime,
-				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				//MsgLink:           p.MsgLink,
-				//MsgMarkDown:       p.MsgMarkDown,
-				NextTime: nextTime,
-			}
-			err = (&task).InsertTask()
-			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因:%v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
-				return err, Task{}
-			}
-			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
-		}
-	} else if p.MsgMarkDown.Msgtype == "markdown" {
+	spec, detailTimeForUser := "", ""
+	if (p.RepeatTime) == "立即发送" {
+		err = r.SendMessage(p)
+		return
+	} else {
+		spec, detailTimeForUser, err = HandleSpec(p)
+		p.Spec = spec
 		if err != nil {
-			zap.L().Error("通过人名查询电话号码失败", zap.Error(err))
 			return
 		}
-		if (p.RepeatTime) == "立即发送" { //这个判断说明我只想单纯的发送一条消息，不用做定时任务
-			zap.L().Info("进入即时发送消息模式")
-			err := r.SendMessage(p)
-			if err != nil {
-				return err, Task{}
-			} else {
-				zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
-			}
-			//定时任务
-			task = Task{
-				TaskID:    tid,
-				TaskName:  p.TaskName,
-				UserId:    CurrentUser.UserId,
-				UserName:  CurrentUser.Name,
-				RobotId:   r.RobotId,
-				RobotName: r.Name,
-
-				DetailTimeForUser: detailTimeForUser, //给用户看的
-				Spec:              spec,              //cron后端定时规则
-				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
-				FrontDetailTime:   p.DetailTime,
-				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				//MsgLink:           p.MsgLink,
-				//MsgMarkDown:       p.MsgMarkDown,
-			}
-			return err, task
-		} else { //我要做定时任务
-			tasker := func() {}
-			zap.L().Info("进入定时任务模式")
-			tasker = func() {
-				err := r.SendMessage(p)
-				if err != nil {
-					return
-				} else {
-					zap.L().Info(fmt.Sprintf("发送消息成功！发送人:%s,对应机器人:%s", CurrentUser.Name, r.Name))
-				}
-			}
-			TaskID, err := global.GLOAB_CORN.AddFunc(spec, tasker)
-			tid = strconv.Itoa(int(TaskID))
-			if err != nil {
-				err = ErrorSpecInvalid
-				return err, Task{}
-			}
-			//把定时任务添加到数据库中
-			task = Task{
-				TaskID:    tid,
-				TaskName:  p.TaskName,
-				UserId:    CurrentUser.UserId,
-				UserName:  CurrentUser.Name,
-				RobotId:   r.RobotId,
-				RobotName: r.Name,
-
-				DetailTimeForUser: detailTimeForUser, //给用户看的
-				Spec:              spec,              //cron后端定时规则
-				FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
-				FrontDetailTime:   p.DetailTime,
-				MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
-				//MsgLink:           p.MsgLink,
-				//MsgMarkDown:       p.MsgMarkDown,
-			}
-			err = (&task).InsertTask()
-			if err != nil {
-				zap.L().Info(fmt.Sprintf("定时任务插入数据库数据失败!用户名：%s,机器名 ： %s,定时规则：%s ,失败原因:%v", CurrentUser.Name, r.Name, p.DetailTime, zap.Error(err)))
-				return err, Task{}
-			}
-			zap.L().Info(fmt.Sprintf("定时任务插入数据库数据成功!用户名：%s,机器名 ： %s,定时规则：%s", CurrentUser.Name, r.Name, p.DetailTime))
-		}
 	}
-
-	global.GLOAB_CORN.Start()
-
-	return err, task
-
+	userId, _ := c.Get(global.CtxUserIDKey)
+	UserName, _ := c.Get(global.CtxUserNameKey)
+	//把定时任务添加到数据库中
+	task = Task{
+		//TaskID:            int(TaskID),
+		TaskName:          p.TaskName,
+		UserId:            userId.(string),
+		UserName:          UserName.(string),
+		RobotId:           r.RobotId,
+		DetailTimeForUser: detailTimeForUser, //给用户看的
+		Spec:              spec,              //cron后端定时规则
+		FrontRepeatTime:   p.RepeatTime,      // 前端给的原始数据
+		FrontDetailTime:   p.DetailTime,
+		MsgText:           p.MsgText, //到时候此处只会存储一个MsgText的id字段
+		IsSuspend:         false,
+		NextTime:          time.Now(),
+	}
+	err = (&task).Insert(p)
+	if err != nil {
+		return
+	}
+	return
 }
 
 // SendMessage Function to send message
@@ -542,73 +335,11 @@ func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 			"text": map[string]string{
 				"content": p.MsgText.Text.Content,
 			},
-		}
-		if p.MsgText.At.IsAtAll {
-			msg["at"] = map[string]interface{}{
-				"isAtAll": p.MsgText.At.IsAtAll,
-			}
-		} else {
-			msg["at"] = map[string]interface{}{
+			"at": map[string]interface{}{
 				"atMobiles": atMobileStringArr, //字符串切片类型
 				"atUserIds": atUserIdStringArr,
 				"isAtAll":   p.MsgText.At.IsAtAll,
-			}
-		}
-		b, _ = json.Marshal(msg)
-
-	} else if p.MsgLink.Msgtype == "link" {
-		//直接序列化
-		b, _ = json.Marshal(p.MsgLink)
-	} else if p.MsgMarkDown.Msgtype == "markdown" {
-		msg := map[string]interface{}{}
-		atMobileStringArr := make([]string, len(p.MsgMarkDown.At.AtMobiles))
-		for i, atMobile := range p.MsgMarkDown.At.AtMobiles {
-			atMobileStringArr[i] = atMobile.AtMobile
-		}
-		msg = map[string]interface{}{
-			"msgtype": "markdown",
-			"markdown": map[string]string{
-				"title": p.MsgMarkDown.MarkDown.Title,
-				"text":  p.MsgMarkDown.MarkDown.Text,
 			},
-		}
-		if p.MsgText.At.IsAtAll {
-			msg["at"] = map[string]interface{}{
-				"isAtAll": p.MsgText.At.IsAtAll,
-			}
-		} else {
-			msg["at"] = map[string]interface{}{
-				"atMobiles": atMobileStringArr, //字符串切片类型
-				"isAtAll":   p.MsgText.At.IsAtAll,
-			}
-		}
-		b, _ = json.Marshal(msg)
-	} else {
-		msg := map[string]interface{}{}
-		atMobileStringArr := make([]string, len(p.MsgText.At.AtMobiles))
-		for i, atMobile := range p.MsgText.At.AtMobiles {
-			atMobileStringArr[i] = atMobile.AtMobile
-		}
-		atUserIdStringArr := make([]string, len(p.MsgText.At.AtUserIds))
-		for i, AtuserId := range p.MsgText.At.AtUserIds {
-			atUserIdStringArr[i] = AtuserId.AtUserId
-		}
-		msg = map[string]interface{}{
-			"msgtype": "text",
-			"text": map[string]string{
-				"content": p.MsgText.Text.Content,
-			},
-		}
-		if p.MsgText.At.IsAtAll {
-			msg["at"] = map[string]interface{}{
-				"isAtAll": p.MsgText.At.IsAtAll,
-			}
-		} else {
-			msg["at"] = map[string]interface{}{
-				"atMobiles": atMobileStringArr, //字符串切片类型
-				"atUserIds": atUserIdStringArr,
-				"isAtAll":   p.MsgText.At.IsAtAll,
-			}
 		}
 		b, _ = json.Marshal(msg)
 	}
@@ -645,18 +376,6 @@ func (t *DingRobot) getURLV2() string {
 	return url
 }
 
-//	func (t *DingRobot) StopTask(id string) (err error) {
-//		task := Task{
-//			TaskID: id,
-//		}
-//		taskID, err := mysql.StopTask(task)
-//
-//		if errors.Is(err, mysql.ErrorNotHasTask) {
-//			return mysql.ErrorNotHasTask
-//		}
-//		global.GLOAB_CORN.Remove(cron.EntryID(taskID))
-//		return err
-//	}
 func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
 	var msg map[string]interface{}
 	//如果@机器人的消息包含考勤，且包含三期或者四期，再加上时间限制
@@ -833,6 +552,10 @@ func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	spec = ""
 	detailTimeForUser = ""
 	n := len(p.DetailTime)
+	if p.Spec != "" {
+		spec = p.Spec
+		detailTimeForUser = p.Spec
+	}
 	if p.RepeatTime == "仅发送一次" {
 		second := p.DetailTime[n-2:]
 		minute := p.DetailTime[n-5 : n-3]
@@ -865,6 +588,73 @@ func HandleSpec(p *ParamCronTask) (spec, detailTimeForUser string, err error) {
 	}
 
 	if string([]rune(p.RepeatTime)[0:3]) == "月重复" {
+		var daymap map[int]string
+		daymap = make(map[int]string)
+		for i := 1; i <= 31; i++ {
+			daymap[i] += strconv.Itoa(i) + "号"
+		}
+		//字符串数组
+		days := strings.Split(p.RepeatTime, "/")[1:]
+		detailTimeForUser = "月重复 ："
+		day := ""
+		for i := 0; i < len(days); i++ {
+			atoi, _ := strconv.Atoi(days[i])
+			detailTimeForUser += daymap[atoi]
+			day += days[i] + ","
+		}
+		day = day[0 : len(day)-1]
+		HMS := strings.Split(p.DetailTime, ":")
+		second := HMS[2]
+		minute := HMS[1]
+		hour := HMS[0]
+		month := "*" //每个月的每个星期都发送
+		week := "?"
+		detailTimeForUser += hour + ":" + minute + ":" + second
+		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
+	}
+
+	if spec == "" || detailTimeForUser == "" {
+		return spec, detailTimeForUser, errors.New("cron定时规则转化错误")
+	}
+	return spec, detailTimeForUser, nil
+}
+
+func HandleSpec1(p *UpdateTask) (spec, detailTimeForUser string, err error) {
+	spec = ""
+	detailTimeForUser = ""
+	n := len(p.DetailTime)
+	if p.Spec != "" {
+		spec = p.Spec
+		detailTimeForUser = p.Spec
+	} else if p.RepeatTime == "仅发送一次" {
+		second := p.DetailTime[n-2:]
+		minute := p.DetailTime[n-5 : n-3]
+		hour := p.DetailTime[n-8 : n-6]
+		//year := p.DetailTime[:4]
+		month := p.DetailTime[5:7]
+		day := p.DetailTime[8:10]
+		week := "?" //问号代表放弃周
+		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
+		detailTimeForUser = "仅在" + p.DetailTime + "发送一次"
+	} else if string([]rune(p.RepeatTime)[0:3]) == "周重复" {
+		M := map[string]string{"0": "周日", "1": "周一", "2": "周二", "3": "周三", "4": "周四", "5": "周五", "6": "周六"}
+		detailTimeForUser = "周重复 ："
+		weeks := strings.Split(p.RepeatTime, "/")[1:]
+		week := ""
+		for i := 0; i < len(weeks); i++ {
+			detailTimeForUser += M[weeks[i]]
+			week += weeks[i] + ","
+		}
+		week = week[0 : len(week)-1]
+		HMS := strings.Split(p.DetailTime, ":")
+		second := HMS[2]
+		minute := HMS[1]
+		hour := HMS[0]
+		month := "*" //每个月的每个星期都发送
+		day := "?"   //选了星期就要放弃具体的某一天
+		detailTimeForUser += hour + "：" + minute + "：" + second
+		spec = second + " " + minute + " " + hour + " " + day + " " + month + " " + week
+	} else if string([]rune(p.RepeatTime)[0:3]) == "月重复" {
 		var daymap map[int]string
 		daymap = make(map[int]string)
 		for i := 1; i <= 31; i++ {
@@ -958,166 +748,6 @@ func GetImage(c *gin.Context) { //显示图片的方法
 	imageName := c.Query("imageName")     //截取get请求参数，也就是图片的路径，可是使用绝对路径，也可使用相对路径
 	file, _ := ioutil.ReadFile(imageName) //把要显示的图片读取到变量中
 	c.Writer.WriteString(string(file))    //关键一步，写给前端
-}
-func (t *DingRobot) StopTask(taskId string) (err error) {
-	//先来判断一下是否拥有这个定时任务
-	var task Task
-	err = global.GLOAB_DB.Where("task_id", taskId).First(&task).Error
-	if err != nil {
-		zap.L().Info("通过taskId查找定时任务失败", zap.Error(err))
-		return err
-	}
-	taskID, err := strconv.Atoi(task.TaskID)
-	if err != nil {
-		return err
-	}
-	//到了这里就说明我有这个定时任务，我要移除这个定时任务
-	err = global.GLOAB_DB.Delete(&task).Error
-	if err != nil {
-		zap.L().Error("删除定时任务失败", zap.Error(err))
-		return err
-	}
-	//global.GLOAB_CORN.
-	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
-	return err
-}
-func (t *DingRobot) GetTaskList(p *ParamGetTaskList) (tasks []Task, total int64, err error) {
-	limit := p.PageSize
-	offset := p.PageSize * (p.Page - 1)
-	db := global.GLOAB_DB
-
-	if p.Name != "" {
-		db = db.Where("task_name like ?", "%"+p.Name+"%")
-	}
-	if p.IsActive == 1 {
-		err = db.Model(&tasks).Where("robot_id = ?", t.RobotId).Count(&total).Error
-		err = db.Limit(limit).Offset(offset).Model(t).Association("Tasks").Find(&tasks) //通过机器人的id拿到机器人，拿到机器人后，我们就可以拿到所有的任务
-	} else {
-		err = db.Model(&tasks).Unscoped().Where("robot_id = ?", t.RobotId).Count(&total).Error
-		err = db.Limit(limit).Offset(offset).Model(t).Unscoped().Association("Tasks").Find(&tasks) //通过机器人的id拿到机器人，拿到机器人后，我们就可以拿到所有的任务
-	}
-
-	if err != nil {
-		zap.L().Error("通过机器人robot_id拿到该机器人的所有定时任务失败", zap.Error(err))
-		return
-	}
-	return
-}
-func (t *DingRobot) RemoveTask(taskId string) (err error) {
-	//先来判断一下是否拥有这个定时任务
-	var task Task
-	err = global.GLOAB_DB.Unscoped().Where("id = ?", taskId).First(&task).Error
-	if err != nil {
-		zap.L().Info("通过taskId查找定时任务失败", zap.Error(err))
-		return err
-	}
-	taskID, err := strconv.Atoi(task.TaskID)
-	if err != nil {
-		return err
-	}
-	//到了这里就说明我有这个定时任务，我要移除这个定时任务
-	err = global.GLOAB_DB.Unscoped().Delete(&task).Error
-	if err != nil {
-		zap.L().Error("删除定时任务失败", zap.Error(err))
-		return err
-	}
-	global.GLOAB_CORN.Remove(cron.EntryID(taskID))
-	return err
-}
-func (t *DingRobot) GetUnscopedTaskByID(id string) (task Task, err error) {
-	err = global.GLOAB_DB.Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").First(&task, id).Error
-	if err != nil {
-		zap.L().Error("通过主键id查询定时任务失败", zap.Error(err))
-		return
-	}
-	return
-}
-func (t *DingRobot) ReStartTask(id string) (task Task, err error) {
-	task, err = t.GetUnscopedTaskByID(id)
-	if err != nil {
-		return
-	}
-	//根据这个id主键查询到被删除的数据
-	err = global.GLOAB_DB.Unscoped().Model(&task).Update("deleted_at", nil).Error //这个地方必须加上Unscoped()，否则不报错，但是却无法更新
-	p := ParamCronTask{
-		MsgText:     task.MsgText,
-		MsgLink:     task.MsgLink,
-		MsgMarkDown: task.MsgMarkDown,
-		RobotId:     task.RobotId,
-	}
-	d := DingRobot{
-		RobotId: task.RobotId,
-	}
-	tasker := func() {
-		err := d.SendMessage(&p)
-		if err != nil {
-			//zap.L().Error(fmt.Sprintf("恢复任务失败！发送人:%s,对应机器人:%s", username, robotname), zap.Error(err))
-			return
-		} else {
-			//zap.L().Info(fmt.Sprintf("恢复任务成功！发送人:%s,对应机器人:%s", username, robotname))
-		}
-	}
-	//	// 添加定时任务
-	TaskID, err := global.GLOAB_CORN.AddFunc(task.Spec, tasker)
-	if err != nil {
-		//zap.L().Error("项目重启后恢复定时任务失败,失败原因：", zap.Error(err))
-		//zap.L().Error(fmt.Sprintf("该任务所属人：%s,所属机器人：%s,"+
-		//"人物名：%s,任务具体消息:%s,任务具体定时规则：%s", username, robotname, message, detailTimeForUser))
-		return
-	}
-	tid := int(TaskID)
-	oldId := task.TaskID
-	err = global.GLOAB_DB.Table("tasks").Where("task_id = ? ", oldId).Update("task_id", tid).Error
-	if err != nil {
-		//zap.L().Error("重启项目后更新任务id失败", zap.Error(err))
-		return
-	}
-	return
-}
-
-func (t *DingRobot) EditTaskContent(p *EditTaskContentParam) (err error) {
-	//根据任务id查询该任务的msg
-	task := Task{
-		Model: gorm.Model{ID: p.ID},
-	}
-	err = global.GLOAB_DB.Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").First(&task).Error
-	if err != nil {
-		zap.L().Error("EditTaskContent err", zap.Error(err))
-		return
-	}
-	task.MsgText.Text.Content = p.Content
-	err = global.GLOAB_DB.Save(&task.MsgText.Text).Error
-	if err != nil {
-		zap.L().Error("EditTaskContent err", zap.Error(err))
-		return
-	}
-	//杀死旧任务
-	oldtaskId, _ := strconv.Atoi(task.TaskID)
-	global.GLOAB_CORN.Remove(cron.EntryID(oldtaskId))
-	//启动新任务
-	paramCronTask := ParamCronTask{
-		MsgText:     task.MsgText,
-		MsgLink:     task.MsgLink,
-		MsgMarkDown: task.MsgMarkDown,
-		RobotId:     task.RobotId,
-	}
-	d := DingRobot{
-		RobotId: task.RobotId,
-	}
-	tasker := func() {
-		err := d.SendMessage(&paramCronTask)
-		if err != nil {
-			zap.L().Error(fmt.Sprintf("重启定时任务失败"), zap.Error(err))
-			return
-		}
-	}
-	taskId, err := global.GLOAB_CORN.AddFunc(task.Spec, tasker)
-	err = global.GLOAB_DB.Table("tasks").Where("task_id = ? ", task.TaskID).Update("task_id", taskId).Error
-	if err != nil {
-		zap.L().Error("重启项目后更新任务id失败", zap.Error(err))
-		return
-	}
-	return
 }
 
 // 获取所有的公共机器人

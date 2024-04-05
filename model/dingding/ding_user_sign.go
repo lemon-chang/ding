@@ -112,14 +112,6 @@ func (d *DingUser) GetWeekSignNum(Semester string, startWeek int) (WeekSignNum i
 	}
 	return
 }
-func (d *DingUser) SendFrequencyLeave(start int) error {
-	fmt.Println("推送个人请假频率")
-	return nil
-}
-func (d *DingUser) CountFrequencyLeave(startWeek int, result map[string][]DingAttendance) error {
-	fmt.Println("存储个人请假频率")
-	return nil
-}
 
 func (d *DingUser) GetUserGroupID() (groupId int, err error) {
 	var client *http.Client

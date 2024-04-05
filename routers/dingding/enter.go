@@ -61,25 +61,14 @@ func SetupDing(System *gin.RouterGroup) {
 		Robot.GET("/getSharedRobot", ding2.GetSharedRobot) // （查）
 		Robot.GET("/getRobotList", ding2.GetRobotList)     //获取所有机器人（查）
 
-		Robot.POST("/cronTask", ding2.CronTask)                 //发送定时任务（增）
-		Robot.DELETE("/removeTask", ding2.RemoveTask)           //移除定时任务 （删）
-		Robot.POST("/stopTask", ding2.StopTask)                 //暂停定时任务 (改)
-		Robot.PUT("/editTaskContent", ding2.EditTaskContent)    //编辑定时任务的内容 (改)
-		Robot.POST("/reStartTask", ding2.ReStartTask)           //重启定时任务 （改）
-		Robot.GET("/getTaskDetail", ding2.GetTaskDetail)        //获取定时任务详情 （详细查）
-		Robot.POST("/getRobotTaskList", ding2.GetRobotTaskList) //加载机器人定时任务（查）
-		Robot.POST("/getUserTaskList", ding2.GetUserTaskList)   //加载机器人定时任务（查）
 	}
 	CronTask := System.Group("cronTask")
 	{
-		CronTask.POST("/cronTask", ding2.CronTask)                 //发送定时任务（增）
-		CronTask.DELETE("/removeTask", ding2.RemoveTask)           //移除定时任务 （删）
-		CronTask.POST("/stopTask", ding2.StopTask)                 //暂停定时任务 (改)
-		CronTask.PUT("/editTaskContent", ding2.EditTaskContent)    //编辑定时任务的内容 (改)
-		CronTask.POST("/reStartTask", ding2.ReStartTask)           //重启定时任务 （改）
-		CronTask.GET("/getTaskDetail", ding2.GetTaskDetail)        //获取定时任务详情 （详细查）
-		CronTask.POST("/getRobotTaskList", ding2.GetRobotTaskList) //加载机器人定时任务（查）
-		CronTask.POST("/getUserTaskList", ding2.GetUserTaskList)   //加载机器人定时任务（查）
+		CronTask.POST("/addTask", ding2.AddTask)                    //发送定时任务（增）
+		CronTask.DELETE("/removeTask", ding2.RemoveTask)            //移除定时任务 （删）
+		CronTask.PUT("/updateTask", ding2.UpdateTask)               // 更新定时任务
+		CronTask.GET("/getTaskDetailByID", ding2.GetTaskDetailByID) //获取定时任务详情 （详细查）
+		CronTask.POST("/getTaskList", ding2.GetTaskList)            //加载机器人定时任务（查）
 	}
 	//机器人问答模块
 	QuAndAn := System.Group("/quAndAn")

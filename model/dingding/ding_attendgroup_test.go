@@ -9,29 +9,6 @@ func TestTimeTransFrom(t *testing.T) {
 	//TimeTransFrom()
 }
 
-func Test_timestampTran(t *testing.T) {
-	type args struct {
-		format string
-		t      int64
-	}
-	tests := []struct {
-		name  string
-		args  args
-		wantS string
-	}{
-		// TODO: Add test cases.
-		{"case1", args{format: "2006:01:02 15:04:05", t: 1672976808000}, ""},
-		{"case1", args{format: "15:04:05", t: 1672976808000}, ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if gotS := timestampTran(tt.args.format, tt.args.t); gotS != tt.wantS {
-				t.Errorf("timestampTran() = %v, want %v", gotS, tt.wantS)
-			}
-		})
-	}
-}
-
 func TestDingAttendGroup_GetGroupDeptNumber(t *testing.T) {
 	type fields struct {
 		GroupId       int

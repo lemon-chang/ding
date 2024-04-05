@@ -3,13 +3,10 @@ package dingding
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"crypto/tls"
 	"ding/global"
 	"ding/initialize/viper"
 	"ding/utils"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -346,7 +343,7 @@ func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 
 	var resp *http.Response
 	var err error
-	resp, err = http.Post(t.getURLV2(), "application/json", bytes.NewBuffer(b))
+	resp, err = http.Post("https://oapi.dingtalk.com/robot/send?access_token="+t.RobotId, "application/json", bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -361,19 +358,7 @@ func (t *DingRobot) SendMessage(p *ParamCronTask) error {
 		fmt.Println(r.Errmsg)
 		return errors.New(r.Errmsg)
 	}
-
 	return nil
-}
-
-func (t *DingRobot) hmacSha256(stringToSign string, secret string) string {
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write([]byte(stringToSign))
-	return base64.StdEncoding.EncodeToString(h.Sum(nil))
-}
-
-func (t *DingRobot) getURLV2() string {
-	url := "https://oapi.dingtalk.com/robot/send?access_token=" + t.RobotId //拼接token路径
-	return url
 }
 
 func (*DingRobot) SendSessionWebHook(p *ParamReveiver) (err error) {
@@ -944,42 +929,6 @@ func (t *DingRobot) RobotSendMessageToPerson(resp *RobotAtResp, dataByStr []Resu
 	err = t.ChatSendMessage(param)
 	if err != nil {
 		zap.L().Error("发送chatSendMessageToPerson错误" + err.Error())
-	}
-	return
-}
-func (u *DingRobot) GetOpenConversationId(access_token, chatId string) (openConversationId string, _err error) {
-	client, _err := createClient()
-	if _err != nil {
-		return
-	}
-
-	chatIdToOpenConversationIdHeaders := &dingtalkim_1_0.ChatIdToOpenConversationIdHeaders{}
-	chatIdToOpenConversationIdHeaders.XAcsDingtalkAccessToken = tea.String(access_token)
-	tryErr := func() (_e error) {
-		defer func() {
-			if r := tea.Recover(recover()); r != nil {
-				_e = r
-			}
-		}()
-		result, _err := client.ChatIdToOpenConversationIdWithOptions(tea.String(chatId), chatIdToOpenConversationIdHeaders, &util.RuntimeOptions{})
-		if _err != nil {
-			return _err
-		}
-		openConversationId = *(result.Body.OpenConversationId)
-		return nil
-	}()
-
-	if tryErr != nil {
-		var err = &tea.SDKError{}
-		if _t, ok := tryErr.(*tea.SDKError); ok {
-			err = _t
-		} else {
-			err.Message = tea.String(tryErr.Error())
-		}
-		if !tea.BoolValue(util.Empty(err.Code)) && !tea.BoolValue(util.Empty(err.Message)) {
-			// err 中含有 code 和 message 属性，可帮助开发定位问题
-		}
-
 	}
 	return
 }

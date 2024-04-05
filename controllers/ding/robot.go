@@ -48,7 +48,7 @@ func AddRobot(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	UserId, _ := global.GetCurrentUserId(c)
+	UserId := global.GetCurrentUserId(c)
 	user, _ := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	//说明插入的内部机器人
 	dingRobot := &dingding.DingRobot{
@@ -115,7 +115,7 @@ func GetRobotList(c *gin.Context) {
 		response.FailWithMessage("参数有误", c)
 		return
 	}
-	uid, err := global.GetCurrentUserId(c)
+	uid := global.GetCurrentUserId(c)
 	//查询到所有的机器人
 	robots, count, err := (&dingding.DingUser{UserId: uid}).GetRobotList(&p)
 	if err != nil {

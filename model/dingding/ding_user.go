@@ -264,42 +264,6 @@ func (d *DingUser) GetUserDetailByUserId() (err error) {
 	return
 }
 
-// ImportUserToMysql 把钉钉用户信息导入到数据库中
-func (d *DingUser) ImportUserToMysql() error {
-	return global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
-		token, err := (&DingToken{}).GetAccessToken()
-		if err != nil {
-			zap.L().Error("从redis中取出token失败", zap.Error(err))
-			return err
-		}
-		var deptIdList []int
-		err = tx.Model(&DingDept{}).Select("dept_id").Find(&deptIdList).Error
-		if err != nil {
-			zap.L().Error("从数据库中取出所有部门id失败", zap.Error(err))
-			return err
-		}
-		for i := 0; i < len(deptIdList); i++ {
-			Dept := &DingDept{DeptId: deptIdList[i], DingToken: DingToken{Token: token}}
-			DeptUserList, _, err := Dept.GetUserListByDepartmentID(0, 100)
-
-			if err != nil {
-				zap.L().Error("获取部门成员失败", zap.Error(err))
-				continue
-			}
-			tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "user_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"name", "title"}),
-			}).Create(&DeptUserList)
-			if err != nil {
-				zap.L().Error(fmt.Sprintf("存储部门:%s成员到数据库失败", Dept.Name), zap.Error(err))
-				continue
-			}
-		}
-		return err
-	})
-
-}
-
 func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, authorityId int, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
 	limit := p.PageSize
 	offset := p.PageSize * (p.Page - 1)

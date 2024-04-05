@@ -78,15 +78,6 @@ type DingAttendanceGroupMemberList struct {
 	MemberID string `json:"member_id"`
 }
 
-func (DingAttendGroup *DingAttendGroup) BeforeCreate(tx *gorm.DB) (err error) {
-	DingAttendGroup.CreatedAt = time.Now()
-	return
-}
-
-func (DingAttendGroup *DingAttendGroup) BeforeUpdate(tx *gorm.DB) (err error) {
-	DingAttendGroup.UpdatedAt = time.Now()
-	return
-}
 func (a *DingAttendGroup) Insert() (err error) {
 	err = a.GetAttendancesGroupById()
 	if err != nil {
@@ -673,16 +664,17 @@ func (g *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 		return
 	}
 	AttendTask := func() {
-		zap.L().Info(fmt.Sprintf("进入定时任务，定时任务id:%v，对应考勤组:%v", taskID, g.GroupName))
-		err = global.GLOAB_DB.First(g).Error
-		if g.IsRobotAttendance == false {
+		zap.L().Info(fmt.Sprintf("进入定时任务，定时任务id:%v，对应考勤组:%v", taskID, groupid))
+		newGroup := &DingAttendGroup{GroupId: groupid}
+		err = global.GLOAB_DB.First(newGroup).Error
+		if newGroup.IsRobotAttendance == false {
 			zap.L().Info("考勤组级别，IsRobotAttendance为false，无需考勤")
 			return
 		}
 		token, err = (&DingToken{}).GetAccessToken()
-		g.Token = token
+		newGroup.Token = token
 		//获取一天上下班的时间
-		commutingTimes, _, _, _, restTime, isInSchool, err := g.GetCommutingTimeAndSpec()
+		commutingTimes, _, _, _, restTime, isInSchool, err := newGroup.GetCommutingTimeAndSpec()
 		if err != nil {
 			zap.L().Error("根据考勤组id获取一天上下班失败失败", zap.Error(err))
 			return
@@ -702,7 +694,7 @@ func (g *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 		}
 		//获取考勤组部门成员，已经筛掉了不参与考勤的个人，每个部门都要设置无需考勤的，同一个人如果需要的话，需要在每个考勤组里面设置多次
 		//注意一定要放在task里面，这样当纪检部更新了考勤组之后，每次加载人员都是最新的
-		deptAttendanceUser, err := g.GetGroupDeptNumber()
+		deptAttendanceUser, err := newGroup.GetGroupDeptNumber()
 		if err != nil {
 			zap.L().Error("获取考勤组部门成员(已经筛掉了不参与考勤的个人)失败", zap.Error(err))
 			return
@@ -769,11 +761,11 @@ func (g *DingAttendGroup) AllDepartAttendByRobot(groupid int) (taskID cron.Entry
 			//	DeptDetail.SendSubSectorPrivateLeave(curTime.StartWeek)
 			//}
 		}
-		if g.IsAttendWeekPaper {
-			g.SendWeekPaper(curTime.Semester, curTime.StartWeek, curTime.Week, curTime.Duration)
+		if newGroup.IsAttendWeekPaper {
+			newGroup.SendWeekPaper(curTime.Semester, curTime.StartWeek, curTime.Week, curTime.Duration)
 		}
 		if curTime.Week == 7 && curTime.Duration == 2 && g.IsAttendWeekPaper {
-			g.SendWeekPaper(curTime.Semester, curTime.StartWeek, curTime.Week, curTime.Duration)
+			newGroup.SendWeekPaper(curTime.Semester, curTime.StartWeek, curTime.Week, curTime.Duration)
 		}
 		return
 	}

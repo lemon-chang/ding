@@ -28,7 +28,7 @@ func InitCorn() {
 	} else {
 		zap.L().Debug("AttendanceByRobot init success...")
 	}
-	//周报考勤，采用企业日志检测
+	//======周报考勤，采用企业日志检测=======
 	if err := weeklyCheckByRobot(); err != nil {
 		zap.L().Error("weeklyCheckByRobot init fail", zap.Error(err))
 	} else {

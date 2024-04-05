@@ -5,7 +5,6 @@ import (
 	"ding/model/common/request"
 	"ding/model/common/response"
 	"ding/model/system"
-	"ding/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -26,16 +25,6 @@ func GetMenuByToken(c *gin.Context) {
 func AddBaseMenu(c *gin.Context) {
 	var menu system.SysBaseMenu
 	err := c.ShouldBindJSON(&menu)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(menu, utils.MenuVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(menu.Meta, utils.MenuMetaVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -61,10 +50,6 @@ func AddMenuAuthority(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	if err := utils.Verify(authorityMenu, utils.AuthorityIdVerify); err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
 	if err := (&system.SysBaseMenu{}).AddMenuAuthority(authorityMenu.Menus, authorityMenu.AuthorityId); err != nil {
 		zap.L().Error("添加失败!", zap.Error(err))
 		response.FailWithMessage("添加失败", c)
@@ -75,11 +60,6 @@ func AddMenuAuthority(c *gin.Context) {
 func DeleteBaseMenu(c *gin.Context) {
 	var menu request.GetById
 	err := c.ShouldBindJSON(&menu)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(menu, utils.IdVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -100,16 +80,6 @@ func UpdateBaseMenu(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	err = utils.Verify(menu, utils.MenuVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(menu.Meta, utils.MenuMetaVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
 	err = (&system.SysBaseMenu{}).UpdateBaseMenu(menu)
 	if err != nil {
 		zap.L().Error("更新失败!", zap.Error(err))
@@ -121,11 +91,6 @@ func UpdateBaseMenu(c *gin.Context) {
 func GetMenuById(c *gin.Context) {
 	var idInfo request.GetById
 	err := c.ShouldBindJSON(&idInfo)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(idInfo, utils.IdVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -145,11 +110,6 @@ func GetMenuAuthority(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	err = utils.Verify(param, utils.AuthorityIdVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
 	menus, err := (&system.SysBaseMenu{}).GetMenuAuthority(&param)
 	if err != nil {
 		zap.L().Error("获取失败!", zap.Error(err))
@@ -161,11 +121,6 @@ func GetMenuAuthority(c *gin.Context) {
 func GetMenuList(c *gin.Context) {
 	var pageInfo request.PageInfo
 	err := c.ShouldBindJSON(&pageInfo)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(pageInfo, utils.PageInfoVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

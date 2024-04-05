@@ -53,10 +53,6 @@ type UserDept struct {
 	Deleted        gorm.DeletedAt
 }
 
-// 自定义表名建表
-func (UserDept) user_dept() string {
-	return "user_dept"
-}
 func (d *DingDept) Insert() (err error) {
 	err = global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
 		err = d.GetDeptDetailByDeptId()
@@ -99,6 +95,18 @@ func (d *DingDept) UpdateByDingEvent() (err error) {
 }
 func (d *DingDept) Delete() (err error) {
 	return global.GLOAB_DB.Unscoped().Select(clause.Associations).Delete(d).Error
+}
+
+// UpdateDept 更新部门信息
+func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
+	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog, IsLeetCode: p.IsLeetCode}
+	// 使用select更新选中的字段
+	err = global.GLOAB_DB.Select("IsSendFirstPerson", "IsRobotAttendance", "RobotToken", "IsJianShuOrBlog", "IsLeetCode", "ResponsibleUserIds").Updates(dept).Error
+	if len(p.ResponsibleUserIds) > 0 {
+		err = global.GLOAB_DB.Table("user_dept").Where("ding_dept_dept_id = ?", p.DeptID).Update("is_responsible", false).Error
+		err = global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.ResponsibleUserIds, p.DeptID).Update("is_responsible", true).Error
+	}
+	return err
 }
 
 // 获取用户的考勤信息
@@ -470,7 +478,7 @@ func (d *DingDept) SendFrequencyLate(curTime *localTime.MySelfTime) (err error) 
 	return err
 }
 
-// 通过部门id获取部门用户idList https://open.dingtalk.com/document/isvapp/query-the-list-of-department-userids
+// GetUserIDListByDepartmentID 通过部门id获取部门用户idList https://open.dingtalk.com/document/isvapp/query-the-list-of-department-userids
 func (d *DingDept) GetUserIDListByDepartmentID() (useridList []string, err error) {
 	token, _ := (&DingToken{}).GetAccessToken()
 	d.Token = token
@@ -529,7 +537,7 @@ func (d *DingDept) GetUserIDListByDepartmentID() (useridList []string, err error
 	return
 }
 
-// 通过部门id获取部门用户详情（无法获取到额外信息） https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
+// GetUserListByDepartmentID 通过部门id获取部门用户详情（无法获取到额外信息） https://open.dingtalk.com/document/isvapp/queries-the-complete-information-of-a-department-user
 func (d *DingDept) GetUserListByDepartmentID(cursor, size int) (userList []DingUser, hasMore bool, err error) {
 	var client *http.Client
 	var request *http.Request
@@ -861,12 +869,6 @@ func (d *DingDept) GetDeptByIDFromMysql() (err error) {
 	err = global.GLOAB_DB.First(d, d.DeptId).Error
 	return
 }
-
-// 获得需要进行周报检测的部门
-func (d *DingDept) GetDeptByWeekPaper(num int) (depts []DingDept, err error) {
-	err = global.GLOAB_DB.Where("is_week_paper = ?", num).Find(&depts).Error
-	return
-}
 func (d *DingDept) GetDeptByListFromMysql(p *params.ParamGetDeptListFromMysql) (deptList []DingDept, total int64, err error) {
 	limit := p.PageSize
 	offset := p.PageSize * (p.Page - 1)
@@ -905,12 +907,6 @@ func (d *DingDept) findChildrenDepartment(department *DingDept) (err error) {
 		}
 	}
 	return err
-}
-
-// 查看部门推送情况开启推送情况
-func (d *DingDept) SendFirstPerson(cursor, size int) {
-	var depts []DingDept
-	global.GLOAB_DB.Select("Name").Find(&depts)
 }
 
 // 通过部门id获取部门详细信息（取钉钉接口）  https://open.dingtalk.com/document/isvapp-server/industry-address-book-api-for-obtaining-department-information
@@ -971,18 +967,6 @@ func (d *DingDept) GetDeptDetailByDeptId() (err error) {
 	return
 }
 
-// 更新部门信息
-func (d *DingDept) UpdateDept(p *ding.ParamUpdateDept) (err error) {
-	dept := &DingDept{DeptId: p.DeptID, IsSendFirstPerson: p.IsSendFirstPerson, IsRobotAttendance: p.IsRobotAttendance, RobotToken: p.RobotToken, IsJianShuOrBlog: p.IsJianshuOrBlog, IsLeetCode: p.IsLeetCode}
-	// 使用select更新选中的字段
-	err = global.GLOAB_DB.Select("IsSendFirstPerson", "IsRobotAttendance", "RobotToken", "IsJianShuOrBlog", "IsLeetCode", "ResponsibleUserIds").Updates(dept).Error
-	if len(p.ResponsibleUserIds) > 0 {
-		err = global.GLOAB_DB.Table("user_dept").Where("ding_dept_dept_id = ?", p.DeptID).Update("is_responsible", false).Error
-		err = global.GLOAB_DB.Table("user_dept").Where("ding_user_user_id IN ? AND ding_dept_dept_id = ?", p.ResponsibleUserIds, p.DeptID).Update("is_responsible", true).Error
-	}
-	return err
-}
-
 // 查询部门周报检测状态
 func (d *DingDept) GetDeptWeekCheckStatus() (depts []DingDept, err error) {
 	err = global.GLOAB_DB.Model(d).Select("dept_id", "name", "is_week_paper").Find(&depts).Error
@@ -992,5 +976,11 @@ func (d *DingDept) GetDeptWeekCheckStatus() (depts []DingDept, err error) {
 // 更新部门周报检测状态
 func (d *DingDept) UpdateDeptWeekCheckStatus() (err error) {
 	err = global.GLOAB_DB.Model(d).Where("dept_id = ?", d.DeptId).Update("is_week_paper", d.IsStudyWeekPaper).Error
+	return
+}
+
+// GetDeptByWeekPaper 获得需要进行周报检测的部门
+func (d *DingDept) GetDeptByWeekPaper(num int) (depts []DingDept, err error) {
+	err = global.GLOAB_DB.Where("is_week_paper = ?", num).Find(&depts).Error
 	return
 }

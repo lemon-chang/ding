@@ -148,7 +148,7 @@ func (t *Task) GetAllActiveTask() (tasks []Task, err error) {
 			zap.L().Info("定时任务序列化失败", zap.Error(err))
 			continue
 		}
-		err = global.GLOBAL_REDIS.Set(context.Background(), redis2.GetTaskKey(strconv.Itoa(task.TaskID)), string(taskValue), 0).Err()
+		err = global.GLOBAL_REDIS.Set(context.Background(), redis2.Prefix+redis2.ActiveTask+(strconv.Itoa(task.TaskID)), string(taskValue), 0).Err()
 		if err != nil {
 			zap.L().Error(fmt.Sprintf("从mysql获取所有活跃任务存入redis失败，失败任务id：%s，任务名：%s,执行人：%s,对应机器人：%s", task.TaskID, task.TaskName, task.UserName, task.RobotName), zap.Error(err))
 			continue

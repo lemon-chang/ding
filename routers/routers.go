@@ -6,7 +6,6 @@ import (
 	"ding/initialize/logger"
 	"ding/middlewares"
 	"ding/routers/dingding"
-	"ding/routers/personal"
 	"ding/routers/system"
 	"github.com/gin-gonic/gin"
 
@@ -24,9 +23,6 @@ func Setup(mode string) *gin.Engine {
 	System := r.Group("/api/system") // 此处engine可以直接调用RouterGroup的方法，原因不详
 	System.Use(middlewares.JWTAuthMiddleware())
 	system.SetupSystem(System)
-	/*=========私人个性化路由==========*/
-	Personal := r.Group("/api/personal")
-	personal.SetupPersonal(Personal)
 	/*=========钉钉回调、无需token验证路由==========*/
 	V3 := r.Group("/api/v3")
 	//V3.POST("/outgoing", ding2.OutGoing) //outgoing接口是让官方

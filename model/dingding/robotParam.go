@@ -28,23 +28,29 @@ type ParamPingRobot struct {
 	Version string
 	RobotId string `binding:"required" json:"robot_id"`
 }
-type ParamStopTask struct {
-	TaskID string `json:"task_id"`
-}
-type ParamRestartTask struct {
-	ID string `json:"id"`
-}
-type ParamGetTaskDeatil struct {
-	TaskID string `json:"task_id"`
-}
 type ParamRemoveTask struct {
-	TaskID string `json:"task_id"`
+	ID uint `json:"id"`
+}
+type UpdateTask struct {
+	ID                uint            `json:"id"`
+	IsSuspend         bool            `json:"is_suspend"`   //是否暂停
+	TaskName          string          `json:"task_name"`    //任务名字
+	MsgText           *common.MsgText `json:"msg_text"`     // content和要@的人
+	RepeatTime        string          `json:"repeat_time" ` //前端给的重复频率，仅重复一次，周重复，月重复
+	DetailTime        string          `json:"detail_time"`  //在给定的重复频率下的具体执行时间
+	Spec              string          `json:"spec"`         // 给懂cron定时库的人用
+	DetailTimeForUser string          `json:"detail_time_for_user"`
+	RobotId           string          `json:"robot_id" binding:"required"` //使用机器人的robot_id来确定机器人
+}
+
+type ParamGetTaskDeatil struct {
+	ID uint `json:"id" form:"id"`
 }
 type ParamGetTaskList struct {
 	request.PageInfo
-	RobotId  string `json:"robot_id"`
-	IsActive int    `json:"is_active"`
-	Name     string `json:"name"`
+	RobotId   string `json:"robot_id"`
+	IsSuspend bool   `json:"is_suspend"` //是否暂停
+	TaskName  string `json:"task_name"`
 }
 type ParamChat struct {
 	RobotCode          string   `json:"robotCode"`
@@ -62,6 +68,7 @@ type ParamCronTask struct {
 	DetailTime  string              `json:"detail_time"`                  //在给定的重复频率下的具体执行时间
 	TaskName    string              `json:"task_name" binding:"required"` //给这个任务起一个名字
 	Spec        string              `json:"spec"`                         //通过spec进行调用
+	ID          uint                `json:"id"`
 }
 
 type ParamUpdateRobot struct {

@@ -5,7 +5,6 @@ import (
 	"ding/model/common/response"
 	param "ding/model/params/system"
 	"ding/model/system"
-	"ding/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -50,11 +49,6 @@ func UpdateAuthority(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	err = utils.Verify(auth, utils.AuthorityVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
 	authority, err := (&system.SysAuthority{}).UpdateAuthority(auth)
 	if err != nil {
 		zap.L().Error("更新失败!", zap.Error(err))
@@ -67,11 +61,6 @@ func UpdateAuthority(c *gin.Context) {
 func GetAuthorityList(c *gin.Context) {
 	var pageInfo request.PageInfo
 	err := c.ShouldBindJSON(&pageInfo)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(pageInfo, utils.PageInfoVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

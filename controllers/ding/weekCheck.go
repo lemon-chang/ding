@@ -15,7 +15,7 @@ func UpdateDeptWeekCheckStatus(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	dep := dingding2.DingDept{DeptId: p.DeptId, IsWeekPaper: p.IsWeekPaper}
+	dep := dingding2.DingDept{DeptId: p.DeptId, IsStudyWeekPaper: p.IsStudyWeekPaper}
 	err = dep.UpdateDeptWeekCheckStatus()
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
@@ -35,9 +35,9 @@ func GetDeptWeekCheckStatus(c *gin.Context) {
 	ps := []ding.ParamDeptWeekPaperCheck{}
 	for _, dept := range depts {
 		p := ding.ParamDeptWeekPaperCheck{
-			DeptId:      dept.DeptId,
-			Name:        dept.Name,
-			IsWeekPaper: dept.IsWeekPaper,
+			DeptId:           dept.DeptId,
+			Name:             dept.Name,
+			IsStudyWeekPaper: dept.IsStudyWeekPaper,
 		}
 		ps = append(ps, p)
 	}
@@ -52,7 +52,7 @@ func UpdateUserWeekCheckStatus(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	user := dingding2.DingUser{UserId: p.UserId, IsWeekPaper: p.IsWeekPaper}
+	user := dingding2.DingUser{UserId: p.UserId, IsStudyWeekPaper: p.IsWeekPaper}
 	err = user.UpdateUserWeekCheckStatus()
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
@@ -76,7 +76,7 @@ func GetUserWeekCheckStatus(c *gin.Context) {
 		var p ding.ParamUserWeekPaperCheck
 		p.Name = user.Name
 		p.UserId = user.UserId
-		p.IsWeekPaper = user.IsWeekPaper
+		p.IsWeekPaper = user.IsStudyWeekPaper
 		paramUserWeekPaperChecks = append(paramUserWeekPaperChecks, p)
 	}
 	if err != nil {

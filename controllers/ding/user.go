@@ -25,20 +25,6 @@ import (
 
 var wg = sync.WaitGroup{}
 
-func ImportDingUserData(c *gin.Context) {
-	var DingUser dingding.DingUser
-	t := dingding.DingToken{}
-	token, err := t.GetAccessToken()
-	DingUser.DingToken.Token = token
-	err = DingUser.ImportUserToMysql()
-	if err != nil {
-		response.FailWithMessage("导入组织架构用户数据失败", c)
-		return
-	}
-	response.OkWithMessage("导入组织架构用户数据成功", c)
-
-}
-
 // SelectAllUsers 查询所有用户
 func SelectAllUsers(c *gin.Context) {
 	var pageInfo request.PageInfo
@@ -240,7 +226,7 @@ func GetTasks(c *gin.Context) {
 		response.FailWithMessage("参数有误", c)
 		return
 	}
-	user_id, _ := global.GetCurrentUserId(c)
+	user_id := global.GetCurrentUserId(c)
 	//err := global.GLOAB_DB.Model(&tasks).Where("user_id", user_id).Unscoped().Preload("MsgText.At.AtMobiles").Preload("MsgText.At.AtUserIds").Preload("MsgText.Text").Find(&tasks).Error
 	tasks, err := (&dingding.Task{}).GetTasks(user_id, &p)
 	if err != nil {
@@ -331,12 +317,7 @@ func GetWeekSignDetail(c *gin.Context) {
 
 // 通过userid查询部门id
 func GetDeptByUserId(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		zap.L().Error("token获取userid失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-		return
-	}
+	UserId := global.GetCurrentUserId(c)
 	user := dingding.GetDeptByUserId(UserId)
 	response.OkWithDetailed(user.DeptList, "该用户的部门信息列表", c)
 }

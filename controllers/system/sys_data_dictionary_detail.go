@@ -4,7 +4,6 @@ import (
 	"ding/model/common/response"
 	request "ding/model/params/system"
 	"ding/model/system"
-	"ding/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -90,11 +89,6 @@ func UpdateSysDataDictionaryDetail(c *gin.Context) {
 func FindSysDataDictionaryDetail(c *gin.Context) {
 	var detail system.SysDataDictionaryDetail
 	err := c.ShouldBindQuery(&detail)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(detail, utils.IdVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

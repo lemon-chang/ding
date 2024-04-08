@@ -2,10 +2,14 @@ package dingding
 
 import (
 	"crypto/tls"
+	"ding/initialize/viper"
+	"ding/model/common"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,7 +24,7 @@ type DingAttendance struct {
 }
 
 // 获取考勤数据//获取考勤结果（可以根据userid批量查询） https://open.dingtalk.com/document/orgapp/attendance-clock-in-record-is-open
-func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom string, CheckDateTo string) (Recordresult []DingAttendance, err error) {
+func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom string, CheckDateTo string) (RecordResult []DingAttendance, err error) {
 
 	var client *http.Client
 	var request *http.Request
@@ -66,7 +70,7 @@ func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom strin
 	}
 	r := struct {
 		DingResponseCommon
-		Recordresult []DingAttendance `json:"recordresult"`
+		RecordResult []DingAttendance `json:"recordresult"`
 	}{}
 
 	//把请求到的结构反序列化到专门接受返回值的对象上面
@@ -79,5 +83,49 @@ func (a *DingAttendance) GetAttendanceList(userIds []string, CheckDateFrom strin
 		return nil, errors.New(r.Errmsg)
 	}
 	// 此处举行具体的逻辑判断，然后返回即可
-	return r.Recordresult, nil
+	return r.RecordResult, nil
+}
+func (g *DingAttendGroup) SendWeekPaper(semester string, startWeek, weekDay, MNE int) {
+	// 获取部门中的每一位开启考勤的用户，该数据从钉钉接口获取
+	deptAttendanceUser, err := g.GetGroupDeptNumber()
+	for deptId, users := range deptAttendanceUser {
+		deptIdInt, _ := strconv.Atoi(deptId)
+		dept := (&DingDept{DeptId: deptIdInt})
+		err = dept.GetDeptByIDFromMysql()
+		if err != nil {
+			return
+		}
+		message := ""
+		if !dept.IsAttendanceWeekPaper {
+			message = fmt.Sprintf("该部门:%s 未开启考勤周报", dept.Name)
+			continue
+		} else {
+			message = dept.Name + semester + "第" + strconv.Itoa(startWeek) + "周考勤周报如下：\n"
+			for i := 0; i < len(users); i++ {
+				consecutiveSignNum, err := users[i].GetConsecutiveSignNum(semester, startWeek, weekDay, MNE)
+				if err != nil {
+					return
+				}
+				num, err := users[i].GetWeekSignNum(semester, startWeek)
+				if err != nil {
+					return
+				}
+				signDetail, err := users[i].GetWeekSignDetail(semester, startWeek)
+				if err != nil {
+					return
+				}
+				message += fmt.Sprintf("%v 连续签到次数 : %v 签到总次数：%v 签到详情：%v\n", users[i].Name, consecutiveSignNum, num, signDetail)
+			}
+
+		}
+		p := &ParamCronTask{
+			MsgText:    &common.MsgText{Text: common.Text{Content: message}, At: common.At{}, Msgtype: "text"},
+			RepeatTime: "立即发送",
+			RobotId:    viper.Conf.MiniProgramConfig.RobotToken,
+		}
+		err, _ := (&DingRobot{RobotId: p.RobotId}).CronSend(nil, p)
+		if err != nil {
+			return
+		}
+	}
 }

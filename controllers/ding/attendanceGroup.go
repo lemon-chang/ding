@@ -23,20 +23,19 @@ func ImportAttendanceGroupData(c *gin.Context) {
 // UpdateAttendanceGroup 更新考勤组
 func UpdateAttendanceGroup(c *gin.Context) {
 	var p ding.ParamUpdateUpdateAttendanceGroup
-	if err := c.ShouldBindJSON(&p); err != nil {
+	if err := c.ShouldBindJSON(&p); err != nil || p.GroupId == 0 {
 		zap.L().Error("参数错误", zap.Error(err))
 		response.FailWithMessage("参数有误", c)
-	}
-	if p.GroupId == 0 {
-		response.FailWithMessage("考勤名称或者id不能为空", c)
 		return
 	}
-	token, err := (&dingding2.DingToken{}).GetAccessToken()
-	if err != nil {
-		response.FailWithMessage("钉钉token获取失败！", c)
-		return
-	}
-	err = (&dingding2.DingAttendGroup{GroupId: p.GroupId, DingToken: dingding2.DingToken{Token: token}}).UpdateAttendGroup()
+	token, _ := (&dingding2.DingToken{}).GetAccessToken()
+	err := (&dingding2.DingAttendGroup{
+		GroupId:           p.GroupId,
+		IsSendFirstPerson: p.IsSendFirstPerson,
+		IsRobotAttendance: p.IsRobotAttendance,
+		DelayTime:         p.DelayTime,
+		AlertTime:         p.AlertTime,
+		DingToken:         dingding2.DingToken{Token: token}}).UpdateAttendGroup()
 	if err != nil {
 		response.FailWithMessage("更新考勤组信息失败！", c)
 		return

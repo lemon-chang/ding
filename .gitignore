@@ -1,3 +1,4 @@
 *.xml
-conf/config.yaml
-conf/config_test.yaml
+conf/leizhi_config.yaml
+conf/leizhi_config_test.yaml
+conf/temi_config_test.yaml

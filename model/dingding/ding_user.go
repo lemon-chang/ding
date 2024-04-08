@@ -160,7 +160,7 @@ func (d *DingUser) InitInsertDeptId(deptId int) (err error) {
 }
 func (d *DingUser) GetIsWeekPaperUsersByDeptId(deptId, flg int) (users []DingUser, err error) {
 	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("ding_dept_dept_id=? ", deptId)
-	err = global.GLOAB_DB.Where("is_week_paper = ? and user_id IN (?)", flg, userIds).Find(&users).Error
+	err = global.GLOAB_DB.Where("is_study_week_paper = ? and user_id IN (?)", flg, userIds).Find(&users).Error
 	return
 }
 func (d *DingUser) GetWeekPaperUsersStatusByDeptId(deptId int) (users []DingUser, err error) {

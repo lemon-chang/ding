@@ -981,6 +981,6 @@ func (d *DingDept) UpdateDeptWeekCheckStatus() (err error) {
 
 // GetDeptByWeekPaper 获得需要进行周报检测的部门
 func (d *DingDept) GetDeptByWeekPaper(num int) (depts []DingDept, err error) {
-	err = global.GLOAB_DB.Where("is_week_paper = ?", num).Find(&depts).Error
+	err = global.GLOAB_DB.Where("is_study_week_paper = ?", num).Find(&depts).Error
 	return
 }

@@ -5,7 +5,6 @@ import (
 	request "ding/model/params/system"
 	"ding/model/system"
 
-	"ding/utils"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -13,12 +12,6 @@ import (
 func CreateSysDataDictionary(c *gin.Context) {
 	var dictionary system.SysDataDictionary
 	err := c.ShouldBindJSON(&dictionary)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-
-	err = utils.Verify(dictionary, utils.DictionaryVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -40,11 +33,6 @@ func DeleteSysDataDictionary(c *gin.Context) {
 		return
 	}
 
-	err = utils.Verify(dictionary.Model, utils.IdVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
 	var d system.SysDataDictionary
 	err = d.DeleteSysDataDictionary(dictionary)
 	if err != nil {
@@ -57,17 +45,6 @@ func DeleteSysDataDictionary(c *gin.Context) {
 func UpdateSysDataDictionary(c *gin.Context) {
 	var dictionary system.SysDataDictionary
 	err := c.ShouldBindJSON(&dictionary)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-
-	err = utils.Verify(dictionary.Model, utils.IdVerify)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(dictionary, utils.DictionaryVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return
@@ -88,14 +65,6 @@ func FindSysDataDictionary(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-
-	// 由于id和type是二必选一，因此这里做两次参数校验,如果同时为空则返回异常响应
-	idErr := utils.Verify(dictionary.Model, utils.IdVerify)
-	typeErr := utils.Verify(dictionary, utils.DictionaryTypeVerify)
-	if idErr != nil && typeErr != nil {
-		response.FailWithMessage(idErr.Error(), c)
-		return
-	}
 	var d system.SysDataDictionary
 	sysDataDictionary, err := d.GetSysDataDictionary(dictionary.Type, dictionary.ID, dictionary.Status)
 	if err != nil {
@@ -108,11 +77,6 @@ func FindSysDataDictionary(c *gin.Context) {
 func GetSysDataDictionaryList(c *gin.Context) {
 	var pageInfo request.SysDataDictionarySearch
 	err := c.ShouldBindQuery(&pageInfo)
-	if err != nil {
-		response.FailWithMessage(err.Error(), c)
-		return
-	}
-	err = utils.Verify(pageInfo.PageInfo, utils.PageInfoVerify)
 	if err != nil {
 		response.FailWithMessage(err.Error(), c)
 		return

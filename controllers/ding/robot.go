@@ -7,11 +7,10 @@ import (
 	response2 "ding/model/common/response"
 	"ding/model/dingding"
 	"ding/response"
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	"net/http"
+	"gorm.io/gorm"
 	"strconv"
 	"strings"
 )
@@ -49,7 +48,7 @@ func AddRobot(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	UserId, _ := global.GetCurrentUserId(c)
+	UserId := global.GetCurrentUserId(c)
 	user, _ := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
 	//说明插入的内部机器人
 	dingRobot := &dingding.DingRobot{
@@ -116,7 +115,7 @@ func GetRobotList(c *gin.Context) {
 		response.FailWithMessage("参数有误", c)
 		return
 	}
-	uid, err := global.GetCurrentUserId(c)
+	uid := global.GetCurrentUserId(c)
 	//查询到所有的机器人
 	robots, count, err := (&dingding.DingUser{UserId: uid}).GetRobotList(&p)
 	if err != nil {
@@ -132,15 +131,7 @@ func GetRobotList(c *gin.Context) {
 	}, "获取成功", c)
 }
 
-func CronTask(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		UserId = ""
-	}
-	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
-	if err != nil {
-		CurrentUser = dingding.DingUser{}
-	}
+func AddTask(c *gin.Context) {
 	var p *dingding.ParamCronTask
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
@@ -148,12 +139,11 @@ func CronTask(c *gin.Context) {
 		return
 	}
 	err, task := (&dingding.DingRobot{RobotId: p.RobotId}).CronSend(c, p)
-
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("使用机器人发送定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
-		response.FailWithMessage("发送定时任务失败", c)
+		zap.L().Error("定时任务失败", zap.Error(err))
+		response.FailWithMessage("创建定时任务失败", c)
 	} else {
-		response.OkWithDetailed(task, "发送定时任务成功", c)
+		response.OkWithDetailed(task, "创建定时任务成功", c)
 	}
 }
 func PingRobot(c *gin.Context) {
@@ -177,36 +167,14 @@ func PingRobot(c *gin.Context) {
 		response.OkWithMessage("发送定时任务成功", c)
 	}
 }
-func StopTask(c *gin.Context) {
-	UserId, err := global.GetCurrentUserId(c)
-	if err != nil {
-		UserId = ""
-	}
-	CurrentUser, err := (&dingding.DingUser{UserId: UserId}).GetUserInfo()
-	if err != nil {
-		CurrentUser = dingding.DingUser{}
-	}
-	var p *dingding.ParamStopTask
-	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("暂停定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-	}
-	err = (&dingding.DingRobot{}).StopTask(p.TaskID)
 
-	if err != nil {
-		zap.L().Error(fmt.Sprintf("暂停定时任务失败，发送人：%v,发送人id:%v", CurrentUser.Name, CurrentUser.UserId), zap.Error(err))
-		response.FailWithMessage("暂停定时任务失败", c)
-	} else {
-		response.OkWithMessage("暂停定时任务成功", c)
-	}
-}
-func GetRobotTaskList(c *gin.Context) {
+func GetTaskList(c *gin.Context) {
 	var p dingding.ParamGetTaskList
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("GetTaskList做定时任务参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
-	tasks, total, err := (&dingding.DingRobot{RobotId: p.RobotId}).GetTaskList(&p)
+	tasks, total, err := (&dingding.Task{RobotId: p.RobotId}).GetTaskList(&p, c)
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("获取定时任务列表失败"), zap.Error(err))
 		response.FailWithMessage("获取定时任务列表失败", c)
@@ -219,35 +187,14 @@ func GetRobotTaskList(c *gin.Context) {
 		}, "获取定时任务列表成功", c)
 	}
 }
-func GetUserTaskList(c *gin.Context) {
-	var p dingding.ParamGetTaskList
-	if err := c.ShouldBindJSON(&p); err != nil {
-		zap.L().Error("GetTaskList做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-	}
-	UserId, _ := global.GetCurrentUserId(c)
 
-	tasks, total, err := (&dingding.DingUser{UserId: UserId}).GetTaskList(&p)
-	if err != nil {
-		zap.L().Error(fmt.Sprintf("获取定时任务列表失败"), zap.Error(err))
-		response.FailWithMessage("获取定时任务列表失败", c)
-	} else {
-		response.OkWithDetailed(response2.PageResult{
-			List:     tasks,
-			Total:    total,
-			Page:     p.Page,
-			PageSize: p.PageSize,
-		}, "获取定时任务列表成功", c)
-	}
-
-}
 func RemoveTask(c *gin.Context) {
-	var p *dingding.ParamStopTask
+	var p *dingding.ParamRemoveTask
 	if err := c.ShouldBindJSON(&p); err != nil {
 		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
-	err := (&dingding.DingRobot{}).RemoveTask(p.TaskID)
+	err := (&dingding.Task{}).Remove()
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("移除定时任务失败"), zap.Error(err))
 		response.FailWithMessage("移除定时任务失败", c)
@@ -255,48 +202,37 @@ func RemoveTask(c *gin.Context) {
 		response.OkWithMessage("移除定时任务成功", c)
 	}
 }
-func ReStartTask(c *gin.Context) {
-	var p *dingding.ParamRestartTask
-	err := c.ShouldBindJSON(&p)
-	if err != nil || p.ID == "" {
-		zap.L().Error("CronTask做定时任务参数绑定失败", zap.Error(err))
-		response.FailWithMessage("CronTask做定时任务参数绑定失败", c)
-		return
-	}
-	_, err = (&dingding.DingRobot{}).ReStartTask(p.ID)
-	if err != nil {
-		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
-		response.FailWithMessage(err.Error(), c)
-		return
-	} else {
-		response.OkWithMessage("ReStartTask定时任务成功", c)
-	}
-}
-
-// EditTaskContent 修改定时任务的内容
-func EditTaskContent(c *gin.Context) {
-	var r *dingding.EditTaskContentParam
-	err := c.ShouldBindJSON(&r)
-	if err != nil && r.TaskID == "" {
-		zap.L().Error("编辑定时任务内容参数绑定失败", zap.Error(err))
+func UpdateTask(c *gin.Context) {
+	var p *dingding.UpdateTask
+	if err := c.ShouldBindJSON(&p); err != nil {
+		zap.L().Error("UpdateTask参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 		return
 	}
-	err = (&dingding.DingRobot{}).EditTaskContent(r)
+	spec, detailTimeForUser, err := dingding.HandleSpec1(p)
 	if err != nil {
-		zap.L().Error("编辑失败", zap.Error(err))
-		response.FailWithMessage("编辑失败", c)
 		return
 	}
-	response.OkWithMessage("修改成功", c)
+	p.Spec = spec
+	p.DetailTimeForUser = detailTimeForUser
+
+	err = (&dingding.Task{Model: gorm.Model{ID: p.ID}}).UpdateTask(p)
+	if err != nil {
+		zap.L().Error("更新失败", zap.Error(err))
+		response.FailWithMessage("更新失败", c)
+	} else {
+		response.OkWithMessage("更新成功", c)
+	}
 }
-func GetTaskDetail(c *gin.Context) {
+
+func GetTaskDetailByID(c *gin.Context) {
 	var p *dingding.ParamGetTaskDeatil
 	if err := c.ShouldBindQuery(&p); err != nil {
 		zap.L().Error("GetTaskDetail参数绑定失败", zap.Error(err))
 		response.FailWithMessage("参数错误", c)
 	}
-	task, err := (&dingding.DingRobot{}).GetUnscopedTaskByID(p.TaskID)
+	task := &dingding.Task{Model: gorm.Model{ID: p.ID}}
+	err := task.GetTaskDetailByID()
 	if err != nil {
 		zap.L().Error(fmt.Sprintf("ReStartTask定时任务失败"), zap.Error(err))
 		response.FailWithMessage("ReStartTask定时任务失败", c)
@@ -304,128 +240,7 @@ func GetTaskDetail(c *gin.Context) {
 		response.OkWithDetailed(task, "ReStartTask定时任务成功", c)
 	}
 }
-func SubscribeTo(c *gin.Context) {
-	// 1. 参数获取
-	signature := c.Query("signature")
-	timestamp := c.Query("timestamp")
-	nonce := c.Query("nonce")
-	zap.L().Info(fmt.Sprintf("signature: " + signature + ", timestamp: " + timestamp + ", nonce: " + nonce))
-	var m map[string]interface{}
-	if err := c.ShouldBindJSON(&m); err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-	zap.L().Info(fmt.Sprintf("encrypt: %v", m))
 
-	// 2. 参数解密
-	//测试回调的时候使用
-	callbackCrypto := dingding.NewDingTalkCrypto("marchSoft", "xoN8265gQVD4YXpcAPqV4LAm6nsvipEm1QiZoqlQslj", "dingepndjqy7etanalhi")
-	//解密后的数据是一个json字符串
-	decryptMsg, _ := callbackCrypto.GetDecryptMsg(signature, timestamp, nonce, m["encrypt"].(string))
-	// 3. 反序列化回调事件json数据
-	//把取值不方便的json字符串反序列化带map中
-	result := make(map[string]interface{})
-	err := json.Unmarshal([]byte(decryptMsg), &result)
-	if err != nil {
-		return
-	}
-	//事件类型
-	eventType := result["EventType"].(string)
-	subscription := dingding.NewDingSubscribe(result)
-
-	// 4.根据EventType分类处理
-	if eventType == "check_url" {
-		// 测试回调url的正确性
-		zap.L().Info("测试回调url的正确性\n")
-	} else if eventType == "chat_add_member" {
-		// 处理通讯录用户增加事件
-		zap.L().Info("发生了：" + eventType + "事件")
-		subscription.UserAddOrg(c)
-	} else if eventType == "chat_remove_member" {
-		// 处理通讯录用户减少事件
-		zap.L().Info("发生了：" + eventType + "事件")
-		subscription.UserLeaveOrg(c)
-	} else if eventType == "check_in" {
-		// 用户签到事件
-		subscription.CheckIn(c)
-	} else if eventType == "bpms_instance_change" {
-		title := result["title"].(string)
-		s := result["type"].(string)
-		if strings.Contains(title, "请假") && s == "start" {
-			//c.Get(global.CtxUserIDKey) 是通过用户登录后生成的token 中取到 user_id
-			//c.Query("user_id")  是取前端通过 发来的params参数中的 user_id字段
-			subscription.Leave(result)
-		} else {
-
-		}
-	} else {
-		// 添加其他已注册的
-		zap.L().Info("发生了：" + eventType + "事件")
-	}
-
-	// 5. 返回success的加密数据
-	successMap, _ := callbackCrypto.GetEncryptMsg("success")
-	c.JSON(http.StatusOK, successMap)
-}
-
-type ParamLeetCodeAddr struct {
-	UserId       string `json:"user_id"`
-	LeetCodeAddr string `json:"leetCodeAddr"`
-}
-
-func RobotAt(c *gin.Context) {
-	var resp *dingding.RobotAtResp
-	if err := c.ShouldBindJSON(&resp); err != nil {
-		zap.L().Error("RobotAtResp", zap.Error(err))
-		response.FailWithMessage("参数错误", c)
-	}
-	fmt.Println("内容为:", resp.Text)
-	//userId := resp.SenderStaffId
-	conversationType := resp.ConversationType               //聊天类型
-	str := strings.TrimSpace(resp.Text["content"].(string)) //用户发给机器人的内容,去除前后空格
-	dingRobot := &dingding.DingRobot{}
-
-	//获得的字符串状态
-	var staus int
-	//单聊
-	if conversationType == "1" {
-		dataByStr, err := GetAllDataByStr(str, resp.SenderStaffId)
-		if err != nil {
-			zap.L().Error("GetAllDataByStr", zap.Error(err))
-			response.FailWithMessage("通过字符串获取资源失败", c)
-		}
-		fmt.Println(dataByStr)
-		for _, data := range dataByStr {
-			if data.DataName == str {
-				staus++
-			}
-		}
-		//if staus != len(dataByStr) && len(dataByStr) != 1 {
-		if staus != len(dataByStr) {
-			//发送卡片信息
-			fmt.Println("卡片")
-			err := dingRobot.RobotSendCardToPerson(resp, dataByStr)
-			if err != nil {
-				zap.L().Error("RobotSendCardToPerson", zap.Error(err))
-			}
-		} else {
-			//发送直接数据
-			err := dingRobot.RobotSendMessageToPerson(resp, dataByStr)
-			if err != nil {
-				zap.L().Error("RobotSendMessageToPerson", zap.Error(err))
-			}
-		}
-
-	} else if conversationType == "2" {
-		if str == "打字邀请码" {
-			//_ 代表res["processQueryKey"]可以查看已读状态
-			_, err := dingRobot.RobotSendGroupInviteCode(resp)
-			if err != nil {
-				return
-			}
-		}
-	}
-}
 func GetAllDataByStr(str string, userId string) (DatasByStr []dingding.Result, err error) {
 	var AllDatas []dingding.Result
 	//查询所有个人资源

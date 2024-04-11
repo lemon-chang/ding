@@ -13,16 +13,14 @@ import (
 //		return cron.New(cron.WithParser(secondParser), cron.WithChain())
 //	}
 func InitCorn() {
-	var Gcontab = cron.New(cron.WithSeconds()) //精确到秒
-	global.GLOAB_CORN = Gcontab
+	global.GLOAB_CORN = cron.New(cron.WithSeconds()) //精确到秒
 	global.GLOAB_CORN.Start()
-	//======重启定时任务=======
+	// ======重启定时任务=======
 	if err := Reboot(); err != nil {
 		zap.L().Error(fmt.Sprintf("重启定时任务失败:%v\n", err))
 	} else {
 		zap.L().Debug("重启定时任务成功...")
 	}
-
 	//======重启考勤=======
 	//上班考勤
 	if err := AttendanceByRobot(); err != nil {
@@ -30,28 +28,15 @@ func InitCorn() {
 	} else {
 		zap.L().Debug("AttendanceByRobot init success...")
 	}
-	//周报考勤，采用企业日志检测
+	//======周报考勤，采用企业日志检测=======
 	if err := weeklyCheckByRobot(); err != nil {
 		zap.L().Error("weeklyCheckByRobot init fail", zap.Error(err))
 	} else {
 		zap.L().Debug("weeklyCheckByRobot init success...")
 	}
-	//======重启订阅关系=======
-	//if err := RegularlySendCourses(); err != nil {
-	//	zap.L().Error("RegularlySendCourses init fail", zap.Error(err))
-	//} else {
-	//	zap.L().Debug("RegularlySendCourses init success...")
-	//}
-
 	//======发送爬取力扣的题目数=======
-	//err := SendLeetCode()
-	//if err != nil {
-	//	zap.L().Error("SendLeetCode init fail", zap.Error(err))
-	//}
-	////重启考勤周报
-	//err = dingding.AttendWeeklyNewsPaper()
-	//if err != nil {
-	//	zap.L().Error("AttendWeeklyNewsPaper init fail...")
-	//}
-	//return
+	err := SendLeetCode()
+	if err != nil {
+		zap.L().Error("SendLeetCode init fail", zap.Error(err))
+	}
 }

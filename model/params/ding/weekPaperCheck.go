@@ -1,9 +1,9 @@
 package ding
 
 type ParamDeptWeekPaperCheck struct {
-	DeptId      int    `json:"dept_id"  form:"dept_id"` //部门id
-	Name        string `json:"name"`                    //部门名称
-	IsWeekPaper int    `json:"is_week_paper"`           //部门是否参与周报检测
+	DeptId           int    `json:"dept_id"  form:"dept_id"` //部门id
+	Name             string `json:"name"`                    //部门名称
+	IsStudyWeekPaper int    `json:"is_study_week_paper"`     //部门是否参与周报检测
 }
 
 type ParamUserWeekPaperCheck struct {

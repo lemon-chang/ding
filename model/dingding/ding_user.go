@@ -20,7 +20,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -30,37 +29,32 @@ import (
 
 const secret = "liwenzhou.com"
 
-var wg = sync.WaitGroup{}
-var hrefs []string
-var blogs []string
-var start int64 = 1676822400
-var end int64 = 1677427200
-var jin *DingUser
-
 type Strs []string
 
 type DingUser struct {
-	UserId       string                `gorm:"primaryKey;foreignKey:UserId" json:"userid"`
-	DingRobots   []DingRobot           `json:"omitempty"`
-	Deleted      gorm.DeletedAt        `json:"omitempty"`
-	Name         string                `json:"name"`
-	Mobile       string                `json:"mobile"`
-	Password     string                `json:"password,omitempty" `
-	DeptIdList   []int                 `json:"dept_id_list,omitempty" gorm:"-"` //所属部门
-	DeptId       int                   `json:"dept_id"`
-	DeptList     []DingDept            `json:"dept_list,omitempty" gorm:"many2many:user_dept"`
-	AuthorityId  uint                  `json:"authorityId,omitempty" gorm:"default:888;comment:用户角色ID"`
-	Authority    system.SysAuthority   `json:"authority,omitempty" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
-	Authorities  []system.SysAuthority `json:"authorities,omitempty" gorm:"many2many:sys_user_authority;"`
-	IsWeekPaper  int                   `json:"is_week_paper"`
-	Title        string                `json:"title,omitempty"` //职位
-	JianshuAddr  string                `json:"jianshu_addr"`
-	BlogAddr     string                `json:"blog_addr"`
-	LeetcodeAddr string                `json:"leetcode_addr"`
-	AuthToken    string                `json:"auth_token" gorm:"-"`
-	DingToken    `json:"ding_token,omitempty" gorm:"-"`
-	Admin        bool `json:"admin,omitempty" gorm:"-"`
-	ExtAttrs     []struct {
+	UserId           string      `gorm:"primaryKey;foreignKey:UserId" json:"userid"`
+	DingRobots       []DingRobot `json:"ding_robots,omitempty"`
+	Deleted          gorm.DeletedAt
+	Name             string                `json:"name"`
+	Mobile           string                `json:"mobile"`
+	Password         string                `json:"password,omitempty" `
+	DeptIdList       []int                 `json:"dept_id_list,omitempty" gorm:"-"` //所属部门
+	DeptId           int                   `json:"dept_id"`
+	DeptList         []DingDept            `json:"dept_list,omitempty" gorm:"many2many:user_dept"`
+	AuthorityId      uint                  `json:"authorityId,omitempty" gorm:"default:888;comment:用户角色ID"`
+	Authority        system.SysAuthority   `json:"authority,omitempty" gorm:"foreignKey:AuthorityId;references:AuthorityId;comment:用户角色"`
+	Authorities      []system.SysAuthority `json:"authorities,omitempty" gorm:"many2many:sys_user_authority;"`
+	IsStudyWeekPaper int                   `json:"is_study_week_paper"` // 是否学习周报
+	IsLeetCode       int                   `json:"is_leet_code"`
+	IsJianShuOrBlog  int                   `json:"is_jianshu_or_blog" gorm:"column:is_jianshu_or_blog"`
+	Title            string                `json:"title,omitempty"` // 职位
+	JianshuAddr      string                `json:"jianshu_addr"`
+	BlogAddr         string                `json:"blog_addr"`
+	LeetcodeAddr     string                `json:"leetcode_addr"`
+	AuthToken        string                `json:"auth_token" gorm:"-"`
+	DingToken        `json:"ding_token,omitempty" gorm:"-"`
+	Admin            bool `json:"admin,omitempty" gorm:"-"`
+	ExtAttrs         []struct {
 		Code  string `json:"code"`
 		Name  string `json:"name"`
 		Value struct {
@@ -68,13 +62,6 @@ type DingUser struct {
 		} `json:"value"`
 	} `json:"ext_attrs" gorm:"-"`
 }
-
-// 用户签到
-// 如果dateStr没有传，那就是签到，如果传了特定日期，可以进行补签
-// 返回连续签到的次数
-// 用户签到
-
-// 统计用户在当前周连续签到的次数
 
 // 通过userid查询部门id
 func GetDeptByUserId(UserId string) (user *DingUser) {
@@ -86,20 +73,66 @@ func GetDeptByUserId(UserId string) (user *DingUser) {
 	return
 }
 
-type JinAndBlog struct {
-	UserId            string `gorm:"primary_key" json:"id"`
-	Name              string `json:"name"`
-	JianShuArticleURL Strs   `gorm:"type:longtext" json:"jian_shu_article_url"`
-	BlogArticleURL    Strs   `gorm:"type:longtext" json:"blog_article_url"`
-	IsExcellent       bool   `json:"is_excellent"`
-}
-
 func (d *DingUser) GetUserInfo() (user DingUser, err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).First(&user).Error
 	return
 }
 func (d *DingUser) GetUserInfoDetailByUserId() (err error) {
 	err = global.GLOAB_DB.Where("user_id = ?", d.UserId).Preload("Authority").Preload("Authorities").Preload("DeptList").First(&d).Error
+	return
+}
+func (d *DingUser) Delete() (err error) {
+	err = global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
+		err = tx.Unscoped().Delete(d).Error
+		if err != nil {
+			return err
+		}
+		// 添加部门信息
+		err = tx.Model(d).Association("DeptList").Clear()
+		if err != nil {
+			return err
+		}
+		return err
+	})
+	return
+}
+func (d *DingUser) Add() (err error) {
+	err = global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
+		err = d.GetUserDetailByUserId()
+		d.DeptList = make([]DingDept, len(d.DeptIdList))
+		for i := 0; i < len(d.DeptList); i++ {
+			d.DeptList[i].DeptId = d.DeptIdList[i]
+		}
+		err = tx.Create(d).Error
+		if err != nil {
+			return err
+		}
+		// 添加部门信息
+		err = tx.Model(d).Association("DeptList").Replace(d.DeptList)
+		if err != nil {
+			return err
+		}
+		return err
+	})
+	return
+}
+func (d *DingUser) UpdateByDingEvent() (err error) {
+	d.DeptList = make([]DingDept, len(d.DeptIdList))
+	for i := 0; i < len(d.DeptList); i++ {
+		d.DeptList[i].DeptId = d.DeptIdList[i]
+	}
+	err = global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
+		err = tx.Select("name", "title", "jianshu_addr", "blog_addr", "mobile", "leetcode_addr").Updates(d).Error
+		if err != nil {
+			return err
+		}
+		err = tx.Model(d).Association("DeptList").Replace(d.DeptList)
+		return err
+	})
+	return
+}
+func (d *DingUser) Update() (err error) {
+	err = global.GLOAB_DB.Select("name", "title", "jianshu_addr", "blog_addr", "mobile", "leetcode_addr", "is_study_week_paper", "is_leet_code", "is_jianshu_or_blog").Updates(d).Error
 	return
 }
 
@@ -127,7 +160,7 @@ func (d *DingUser) InitInsertDeptId(deptId int) (err error) {
 }
 func (d *DingUser) GetIsWeekPaperUsersByDeptId(deptId, flg int) (users []DingUser, err error) {
 	userIds := global.GLOAB_DB.Table("user_dept").Select("ding_user_user_id").Where("ding_dept_dept_id=? ", deptId)
-	err = global.GLOAB_DB.Where("is_week_paper = ? and user_id IN (?)", flg, userIds).Find(&users).Error
+	err = global.GLOAB_DB.Where("is_study_week_paper = ? and user_id IN (?)", flg, userIds).Find(&users).Error
 	return
 }
 func (d *DingUser) GetWeekPaperUsersStatusByDeptId(deptId int) (users []DingUser, err error) {
@@ -144,7 +177,7 @@ func (d *DingUser) GetUserDeptIdByUserId() (dept DingDept, err error) {
 
 // 更新部门周报检测状态
 func (d *DingUser) UpdateUserWeekCheckStatus() (err error) {
-	err = global.GLOAB_DB.Model(d).Where("user_id", d.UserId).Update("is_week_paper", d.IsWeekPaper).Error
+	err = global.GLOAB_DB.Model(d).Where("user_id", d.UserId).Update("is_week_paper", d.IsStudyWeekPaper).Error
 	return
 }
 func (d *DingUser) InitUserWeekPaper(num int) (err error) {
@@ -167,6 +200,8 @@ func (m *DingUser) UserAuthorityDefaultRouter(user *DingUser) {
 
 // https://open.dingtalk.com/document/isvapp/query-user-details
 func (d *DingUser) GetUserDetailByUserId() (err error) {
+	token, err := (&DingToken{}).GetAccessToken()
+	d.Token = token
 	var client *http.Client
 	var request *http.Request
 	var resp *http.Response
@@ -217,43 +252,16 @@ func (d *DingUser) GetUserDetailByUserId() (err error) {
 	}
 	// 此处举行具体的逻辑判断，然后返回即可
 	*d = r.User
+	for j := 0; j < len(d.ExtAttrs); j++ {
+		if d.ExtAttrs[j].Code == "1263467522" {
+			d.JianshuAddr = d.ExtAttrs[j].Value.Text
+		} else if d.ExtAttrs[j].Code == "1263534303" {
+			d.BlogAddr = d.ExtAttrs[j].Value.Text
+		} else if d.ExtAttrs[j].Code == "1263581295" {
+			d.LeetcodeAddr = d.ExtAttrs[j].Value.Text
+		}
+	}
 	return
-}
-
-// ImportUserToMysql 把钉钉用户信息导入到数据库中
-func (d *DingUser) ImportUserToMysql() error {
-	return global.GLOAB_DB.Transaction(func(tx *gorm.DB) error {
-		token, err := (&DingToken{}).GetAccessToken()
-		if err != nil {
-			zap.L().Error("从redis中取出token失败", zap.Error(err))
-			return err
-		}
-		var deptIdList []int
-		err = tx.Model(&DingDept{}).Select("dept_id").Find(&deptIdList).Error
-		if err != nil {
-			zap.L().Error("从数据库中取出所有部门id失败", zap.Error(err))
-			return err
-		}
-		for i := 0; i < len(deptIdList); i++ {
-			Dept := &DingDept{DeptId: deptIdList[i], DingToken: DingToken{Token: token}}
-			DeptUserList, _, err := Dept.GetUserListByDepartmentID(0, 100)
-
-			if err != nil {
-				zap.L().Error("获取部门成员失败", zap.Error(err))
-				continue
-			}
-			tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "user_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"name", "title"}),
-			}).Create(&DeptUserList)
-			if err != nil {
-				zap.L().Error(fmt.Sprintf("存储部门:%s成员到数据库失败", Dept.Name), zap.Error(err))
-				continue
-			}
-		}
-		return err
-	})
-
 }
 
 func (d *DingUser) FindDingUsersInfo(name, mobile string, deptId int, authorityId int, p request.PageInfo, c *gin.Context) (us []DingUser, total int64, err error) {
@@ -585,19 +593,5 @@ func (u *DingUser) GetRobotList(p *ParamGetRobotList) (RobotList []DingRobot, co
 		db = db.Where("name = ?", p.Name)
 	}
 	err = db.Limit(limit).Offset(offset).Model(u).Association("DingRobots").Find(&RobotList)
-	return
-}
-func (u *DingUser) GetTaskList(p *ParamGetTaskList) (Tasks []Task, count int64, err error) {
-	limit := p.PageSize
-	offset := p.PageSize * (p.Page - 1)
-	db := global.GLOAB_DB
-	if p.Name != "" {
-		db = db.Where("task_name like ?", "%"+p.Name+"%")
-	}
-	if p.IsActive == 1 {
-		err = db.Limit(limit).Offset(offset).Unscoped().Where("user_id = ?", u.UserId).Find(&Tasks).Count(&count).Error
-	} else {
-		err = db.Limit(limit).Offset(offset).Unscoped().Where("user_id = ?", u.UserId).Find(&Tasks).Count(&count).Error
-	}
 	return
 }
